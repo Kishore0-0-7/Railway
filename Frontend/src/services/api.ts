@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Base API URL - Backend server address
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "https://railway-api.artechnology.pro/api";
+  import.meta.env.VITE_API_URL || "http://localhost:5127/api";
 
 // Create axios instance with default config
 const apiClient = axios.create({
