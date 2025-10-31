@@ -439,18 +439,7 @@ const Dashboard = () => {
 
             <div className="text-center mb-3 md:mb-4">
               {/* Year Selection Dropdown */}
-              <Select value={selectedYear} onValueChange={setSelectedYear}>
-                <SelectTrigger className="w-24 mx-auto text-sm font-bold">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {years.map((year) => (
-                    <SelectItem key={year} value={year}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              
             </div>
 
             {/* Scrollable Chart Container for Mobile */}
