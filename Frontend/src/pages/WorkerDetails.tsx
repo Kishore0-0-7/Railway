@@ -25,6 +25,14 @@ const WorkerDetails = () => {
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState({
+    totalRevenue: 0,
+    totalBookings: 0,
+    completedBookings: 0,
+    activeBookings: 0,
+    sittingBooked: 0,
+    sleeperBooked: 0,
+  });
 
   // helper to determine worker id to call backend with. Prefer worker_id from API/other pages.
   const workerId =
@@ -47,14 +55,49 @@ const WorkerDetails = () => {
 
           // Fetch bookings assigned to this worker
           const bResp = await bookingAPI.getWorkerBookings(String(workerId));
+          let fetchedBookings: any[] = [];
+          
           if (bResp?.data?.bookings) {
-            setBookings(bResp.data.bookings);
+            fetchedBookings = bResp.data.bookings;
           } else if (Array.isArray(bResp?.data)) {
-            setBookings(bResp.data);
+            fetchedBookings = bResp.data;
           } else if (bResp?.data?.data) {
-            // sometimes wrapped
-            setBookings(bResp.data.data);
+            fetchedBookings = bResp.data.data;
           }
+          
+          setBookings(fetchedBookings);
+
+          // Calculate statistics from bookings
+          const totalRevenue = fetchedBookings.reduce((sum, booking) => {
+            return sum + (parseFloat(booking.total_amount || booking.totalAmount || 0));
+          }, 0);
+
+          const completedBookings = fetchedBookings.filter(
+            (b) => b.booking_status === "completed" || b.status === "Completed"
+          ).length;
+
+          const activeBookings = fetchedBookings.filter(
+            (b) => b.booking_status === "active" || b.status === "Active" || b.status === "Booked"
+          ).length;
+
+          const sittingBooked = fetchedBookings.filter(
+            (b) => (b.booking_type === "Sitting" || b.type === "Sitting") && 
+                   (b.booking_status === "active" || b.status === "Active" || b.status === "Booked")
+          ).length;
+
+          const sleeperBooked = fetchedBookings.filter(
+            (b) => (b.booking_type === "Sleeper" || b.type === "Sleeper") && 
+                   (b.booking_status === "active" || b.status === "Active" || b.status === "Booked")
+          ).length;
+
+          setStats({
+            totalRevenue,
+            totalBookings: fetchedBookings.length,
+            completedBookings,
+            activeBookings,
+            sittingBooked,
+            sleeperBooked,
+          });
         }
       } catch (err: any) {
         console.error("Error fetching worker or bookings:", err);
@@ -113,10 +156,19 @@ const WorkerDetails = () => {
       <Navigation />
       <main className="p-6">
         <div className="max-w-7xl mx-auto space-y-6">
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              <p className="font-medium">Error loading data</p>
+              <p className="text-sm">{error}</p>
+            </div>
+          )}
           {/* Header */}
           <div className="bg-black text-white rounded-xl p-6 flex flex-col md:flex-row items-center justify-between">
             <div className="flex items-center">
-              <h1 className="text-2xl font-semibold">{worker.name}</h1>
+              <h1 className="text-2xl font-semibold">
+                {worker.full_name || worker.name}
+              </h1>
             </div>
             <div className="flex gap-3 mt-4 md:mt-0">
               <Button
@@ -143,31 +195,45 @@ const WorkerDetails = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-black text-white p-5 rounded-xl">
               <p className="text-sm text-gray-300">Total Revenue</p>
-              <h2 className="text-3xl font-semibold mt-2">₹45,000</h2>
-              <p className="text-green-400 text-sm mt-1">+2.81% From last month</p>
+              <h2 className="text-3xl font-semibold mt-2">
+                ₹{loading ? "..." : stats.totalRevenue.toLocaleString("en-IN")}
+              </h2>
+              <p className="text-gray-400 text-sm mt-1">From all bookings</p>
             </div>
 
             <div className="bg-white border border-gray-200 p-5 rounded-xl">
               <p className="text-gray-600 text-sm">Total Bookings</p>
-              <h2 className="text-3xl font-semibold mt-2">60</h2>
-              <p className="text-red-500 text-sm mt-1">-5 From last day</p>
+              <h2 className="text-3xl font-semibold mt-2">
+                {loading ? "..." : stats.totalBookings}
+              </h2>
+              <p className="text-gray-500 text-sm mt-1">All time bookings</p>
             </div>
 
             <div className="bg-white border border-gray-200 p-5 rounded-xl">
               <p className="text-gray-600 text-sm">Completed</p>
-              <h2 className="text-3xl font-semibold mt-2">18</h2>
-              <p className="text-green-500 text-sm mt-1">+2 From last month</p>
+              <h2 className="text-3xl font-semibold mt-2">
+                {loading ? "..." : stats.completedBookings}
+              </h2>
+              <p className="text-green-500 text-sm mt-1">
+                {stats.totalBookings > 0 
+                  ? `${((stats.completedBookings / stats.totalBookings) * 100).toFixed(1)}% completion rate`
+                  : "No bookings yet"}
+              </p>
             </div>
 
             <div className="bg-white border border-gray-200 p-5 rounded-xl">
-              <p className="text-gray-600 text-sm">Booked</p>
+              <p className="text-gray-600 text-sm">Active Bookings</p>
               <div className="flex justify-between mt-2">
                 <div>
-                  <h2 className="text-xl font-semibold">42/50</h2>
+                  <h2 className="text-xl font-semibold">
+                    {loading ? "..." : stats.sittingBooked}
+                  </h2>
                   <p className="text-xs text-gray-500">Sitting</p>
                 </div>
                 <div>
-                  <h2 className="text-xl font-semibold">42/50</h2>
+                  <h2 className="text-xl font-semibold">
+                    {loading ? "..." : stats.sleeperBooked}
+                  </h2>
                   <p className="text-xs text-gray-500">Sleeper</p>
                 </div>
               </div>
@@ -223,25 +289,42 @@ const WorkerDetails = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {bookings.map((b, i) => (
-                      <tr key={i} className="border-t hover:bg-gray-50 transition-colors">
-                        <td className="py-3 px-4">{b.id}</td>
-                        <td className="py-3 px-4">{b.name}</td>
-                        <td className="py-3 px-4">{b.phone}</td>
-                        <td className="py-3 px-4">{b.persons}</td>
-                        <td className="py-3 px-4">{b.type}</td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`font-medium ${b.status === "Completed"
-                                ? "text-green-600"
-                                : "text-orange-500"
-                              }`}
-                          >
-                            {b.status}
-                          </span>
+                    {loading ? (
+                      <tr>
+                        <td colSpan={6} className="py-8 text-center text-gray-500">
+                          Loading bookings...
                         </td>
                       </tr>
-                    ))}
+                    ) : bookings.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-8 text-center text-gray-500">
+                          No bookings found for this worker
+                        </td>
+                      </tr>
+                    ) : (
+                      bookings.map((b, i) => (
+                        <tr key={i} className="border-t hover:bg-gray-50 transition-colors">
+                          <td className="py-3 px-4">{b.booking_id || b.id}</td>
+                          <td className="py-3 px-4">{b.guest_name || b.name}</td>
+                          <td className="py-3 px-4">{b.phone_number || b.phone}</td>
+                          <td className="py-3 px-4">{b.number_of_persons || b.persons}</td>
+                          <td className="py-3 px-4">{b.booking_type || b.type}</td>
+                          <td className="py-3 px-4">
+                            <span
+                              className={`font-medium ${
+                                (b.booking_status === "completed" || b.status === "Completed")
+                                  ? "text-green-600"
+                                  : "text-orange-500"
+                              }`}
+                            >
+                              {b.booking_status 
+                                ? b.booking_status.charAt(0).toUpperCase() + b.booking_status.slice(1)
+                                : b.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -250,39 +333,72 @@ const WorkerDetails = () => {
             {/* Worker Details */}
             <div className="bg-white border border-gray-200 rounded-xl p-6">
               <h2 className="text-lg font-semibold text-gray-800 mb-6">Worker Details</h2>
-              <div className="space-y-4 text-sm">
-                <div>
-                  <p className="text-gray-500">Login ID</p>
-                  <p className="text-gray-900 font-medium">{worker.loginId}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Name</p>
-                  <p className="text-gray-900 font-medium">{worker.name}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Gender</p>
-                  <p className="text-gray-900 font-medium">{worker.gender}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Phone No.</p>
-                  <p className="text-gray-900 font-medium">{worker.phone}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Joining Date</p>
-                  <p className="text-gray-900 font-medium">{worker.joiningDate}</p>
-                </div>
-                <div>
-                  <p className="text-gray-500">Status</p>
-                  <p
-                    className={`font-medium ${worker.status === "Active"
-                        ? "text-green-600"
-                        : "text-amber-500"
+              {loading ? (
+                <div className="text-center text-gray-500 py-8">Loading...</div>
+              ) : (
+                <div className="space-y-4 text-sm">
+                  <div>
+                    <p className="text-gray-500">Login ID</p>
+                    <p className="text-gray-900 font-medium">
+                      {worker.worker_id || worker.loginId || worker.id}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Name</p>
+                    <p className="text-gray-900 font-medium">
+                      {worker.full_name || worker.name}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Gender</p>
+                    <p className="text-gray-900 font-medium">
+                      {worker.gender || "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Phone No.</p>
+                    <p className="text-gray-900 font-medium">
+                      {worker.mobile_number || worker.phone}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Joining Date</p>
+                    <p className="text-gray-900 font-medium">
+                      {worker.created_at 
+                        ? new Date(worker.created_at).toLocaleDateString("en-IN", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })
+                        : worker.joiningDate || "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Status</p>
+                    <p
+                      className={`font-medium ${
+                        worker.status === "Active"
+                          ? "text-green-600"
+                          : "text-amber-500"
                       }`}
-                  >
-                    {worker.status}
-                  </p>
+                    >
+                      {worker.status || "Active"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Total Bookings</p>
+                    <p className="text-gray-900 font-medium">
+                      {stats.totalBookings}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Total Revenue</p>
+                    <p className="text-gray-900 font-medium">
+                      ₹{stats.totalRevenue.toLocaleString("en-IN")}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
