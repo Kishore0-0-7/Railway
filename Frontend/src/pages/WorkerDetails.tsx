@@ -1,113 +1,93 @@
 import { useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Search, Calendar } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { workerAPI, bookingAPI } from "@/services/api";
 
 const WorkerDetails = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const worker = location.state?.worker || {
+  // navigation may pass worker object in state; start with that as a seed while we fetch fresh data
+  const seedWorker = location.state?.worker || {
     id: 1,
+    worker_id: "#1223",
     loginId: "#1223",
     name: "Paul Walker",
     gender: "Male",
     phone: "9516155854",
     joiningDate: "20 Sep 2025",
-    status: "Active"
+    status: "Active",
   };
 
-  const bookings = [
-    { id: "#1223", name: "Alex Fisher", phone: "+91 902 543 3001", persons: 3, type: "Sleeper", status: "Completed" },
-    { id: "#1224", name: "Anna Baker", phone: "+91 902 543 3001", persons: 5, type: "Sitting", status: "Active" },
-    { id: "#1224", name: "Anna Baker", phone: "+91 902 543 3001", persons: 2, type: "Sleeper", status: "Active" },
-    { id: "#1223", name: "Alex Fisher", phone: "+91 902 543 3001", persons: 1, type: "Sleeper", status: "Completed" },
-    { id: "#1223", name: "Alex Fisher", phone: "+91 902 543 3001", persons: 1, type: "Sitting", status: "Completed" },
-    { id: "#1223", name: "Alex Fisher", phone: "+91 902 543 3001", persons: 6, type: "Sleeper", status: "Active" },
-    { id: "#1223", name: "Alex Fisher", phone: "+91 902 543 3001", persons: 3, type: "Sleeper", status: "Active" },
-  ];
+  const [worker, setWorker] = useState<any>(seedWorker);
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleStatusToggle = () => {
+  // helper to determine worker id to call backend with. Prefer worker_id from API/other pages.
+  const workerId =
+    location.state?.worker?.worker_id || location.state?.worker?.id || seedWorker.worker_id || seedWorker.id || seedWorker.loginId;
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        // Fetch fresh worker details if we have an id
+        if (workerId) {
+          const wResp = await workerAPI.getWorkerById(String(workerId));
+          if (wResp?.data?.worker) {
+            setWorker(wResp.data.worker);
+          } else if (wResp?.data) {
+            // some APIs return the object at data directly
+            setWorker(wResp.data);
+          }
+
+          // Fetch bookings assigned to this worker
+          const bResp = await bookingAPI.getWorkerBookings(String(workerId));
+          if (bResp?.data?.bookings) {
+            setBookings(bResp.data.bookings);
+          } else if (Array.isArray(bResp?.data)) {
+            setBookings(bResp.data);
+          } else if (bResp?.data?.data) {
+            // sometimes wrapped
+            setBookings(bResp.data.data);
+          }
+        }
+      } catch (err: any) {
+        console.error("Error fetching worker or bookings:", err);
+        setError(err.response?.data?.message || err.message || "Failed to load data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workerId]);
+
+  const handleStatusToggle = async () => {
     try {
-      // Get current workers from localStorage
-      const savedWorkers = localStorage.getItem('workers');
-      let workers = [];
-
-      if (savedWorkers) {
-        workers = JSON.parse(savedWorkers);
-      } else {
-        // If no workers in localStorage, create initial data
-        workers = [
-          {
-            id: 1,
-            name: "Paul Walker",
-            loginId: "#1223",
-            phone: "9516155854",
-            gender: "Male",
-            joiningDate: "20 Sep 2025",
-            totalBookings: 30,
-            status: "Active",
-          },
-          {
-            id: 2,
-            name: "John Doe",
-            loginId: "#1224",
-            phone: "7516155855",
-            gender: "Male",
-            joiningDate: "30 Aug 2025",
-            totalBookings: 34,
-            status: "Active",
-          },
-          {
-            id: 3,
-            name: "Jane Smith",
-            loginId: "#1225",
-            phone: "6416155856",
-            gender: "Male",
-            joiningDate: "16 May 2021",
-            totalBookings: 48,
-            status: "Active",
-          },
-          {
-            id: 4,
-            name: "Mike Johnson",
-            loginId: "#1226",
-            phone: "8216155857",
-            gender: "Male",
-            joiningDate: "20 Jun 2021",
-            totalBookings: 0,
-            status: "Inactive",
-          },
-          {
-            id: 5,
-            name: "Sarah Wilson",
-            loginId: "#1227",
-            phone: "7716155858",
-            gender: "Male",
-            joiningDate: "12 Jun 2020",
-            totalBookings: 112,
-            status: "Inactive",
-          },
-        ];
+      const newStatus = worker?.status === "Active" ? "Inactive" : "Active";
+      // Prefer using worker_id for API calls
+      const idForApi = worker?.worker_id || worker?.id || workerId;
+      if (!idForApi) {
+        throw new Error("No worker id available to update status");
       }
 
-      // Update the specific worker's status
-      const updatedWorkers = workers.map((w) =>
-        w.id === worker.id
-          ? {
-            ...w,
-            status: worker.status === "Active" ? "Inactive" : "Active"
-          }
-          : w
-      );
+      // Call backend to update worker status
+      await workerAPI.updateWorker(String(idForApi), { status: newStatus });
 
-      // Save back to localStorage
-      localStorage.setItem('workers', JSON.stringify(updatedWorkers));
+      // update local state for immediate UI feedback
+      setWorker((prev: any) => ({ ...(prev || {}), status: newStatus }));
 
-      // Navigate back to worker list using -1 to go back to previous page
+      // Navigate back to worker list
       navigate(-1);
-    } catch (error) {
-      console.error('Error updating worker status:', error);
+    } catch (err) {
+      console.error("Error updating worker status:", err);
+      setError((err as any)?.response?.data?.message || (err as any)?.message || "Failed to update status");
     }
   };
 
