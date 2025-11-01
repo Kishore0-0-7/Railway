@@ -3,7 +3,13 @@ import { useEffect, useState } from "react";
 import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Search, Calendar } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { workerAPI, bookingAPI } from "@/services/api";
 
 const WorkerDetails = () => {
@@ -36,7 +42,11 @@ const WorkerDetails = () => {
 
   // helper to determine worker id to call backend with. Prefer worker_id from API/other pages.
   const workerId =
-    location.state?.worker?.worker_id || location.state?.worker?.id || seedWorker.worker_id || seedWorker.id || seedWorker.loginId;
+    location.state?.worker?.worker_id ||
+    location.state?.worker?.id ||
+    seedWorker.worker_id ||
+    seedWorker.id ||
+    seedWorker.loginId;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -56,7 +66,7 @@ const WorkerDetails = () => {
           // Fetch bookings assigned to this worker
           const bResp = await bookingAPI.getWorkerBookings(String(workerId));
           let fetchedBookings: any[] = [];
-          
+
           if (bResp?.data?.bookings) {
             fetchedBookings = bResp.data.bookings;
           } else if (Array.isArray(bResp?.data)) {
@@ -64,12 +74,14 @@ const WorkerDetails = () => {
           } else if (bResp?.data?.data) {
             fetchedBookings = bResp.data.data;
           }
-          
+
           setBookings(fetchedBookings);
 
           // Calculate statistics from bookings
           const totalRevenue = fetchedBookings.reduce((sum, booking) => {
-            return sum + (parseFloat(booking.total_amount || booking.totalAmount || 0));
+            return (
+              sum + parseFloat(booking.total_amount || booking.totalAmount || 0)
+            );
           }, 0);
 
           const completedBookings = fetchedBookings.filter(
@@ -77,17 +89,26 @@ const WorkerDetails = () => {
           ).length;
 
           const activeBookings = fetchedBookings.filter(
-            (b) => b.booking_status === "active" || b.status === "Active" || b.status === "Booked"
+            (b) =>
+              b.booking_status === "active" ||
+              b.status === "Active" ||
+              b.status === "Booked"
           ).length;
 
           const sittingBooked = fetchedBookings.filter(
-            (b) => (b.booking_type === "Sitting" || b.type === "Sitting") && 
-                   (b.booking_status === "active" || b.status === "Active" || b.status === "Booked")
+            (b) =>
+              (b.booking_type === "Sitting" || b.type === "Sitting") &&
+              (b.booking_status === "active" ||
+                b.status === "Active" ||
+                b.status === "Booked")
           ).length;
 
           const sleeperBooked = fetchedBookings.filter(
-            (b) => (b.booking_type === "Sleeper" || b.type === "Sleeper") && 
-                   (b.booking_status === "active" || b.status === "Active" || b.status === "Booked")
+            (b) =>
+              (b.booking_type === "Sleeper" || b.type === "Sleeper") &&
+              (b.booking_status === "active" ||
+                b.status === "Active" ||
+                b.status === "Booked")
           ).length;
 
           setStats({
@@ -101,7 +122,9 @@ const WorkerDetails = () => {
         }
       } catch (err: any) {
         console.error("Error fetching worker or bookings:", err);
-        setError(err.response?.data?.message || err.message || "Failed to load data");
+        setError(
+          err.response?.data?.message || err.message || "Failed to load data"
+        );
       } finally {
         setLoading(false);
       }
@@ -130,13 +153,17 @@ const WorkerDetails = () => {
       navigate(-1);
     } catch (err) {
       console.error("Error updating worker status:", err);
-      setError((err as any)?.response?.data?.message || (err as any)?.message || "Failed to update status");
+      setError(
+        (err as any)?.response?.data?.message ||
+          (err as any)?.message ||
+          "Failed to update status"
+      );
     }
   };
 
   const handleEditDetails = () => {
     // Navigate to ManageLogin page with worker data
-    navigate('/manage-login', {
+    navigate("/manage-login", {
       state: {
         editingWorker: {
           name: worker.name,
@@ -145,9 +172,9 @@ const WorkerDetails = () => {
           joiningDate: worker.joiningDate,
           gender: worker.gender,
           totalBookings: worker.totalBookings || 0,
-          status: worker.status
-        }
-      }
+          status: worker.status,
+        },
+      },
     });
   };
 
@@ -173,10 +200,11 @@ const WorkerDetails = () => {
             <div className="flex gap-3 mt-4 md:mt-0">
               <Button
                 variant="destructive"
-                className={`${worker.status === "Active"
+                className={`${
+                  worker.status === "Active"
                     ? "bg-red-600 hover:bg-red-700"
                     : "bg-green-600 hover:bg-green-700"
-                  } text-white`}
+                } text-white`}
                 onClick={handleStatusToggle}
               >
                 {worker.status === "Active" ? "Remove Worker" : "Re-Join"}
@@ -215,8 +243,11 @@ const WorkerDetails = () => {
                 {loading ? "..." : stats.completedBookings}
               </h2>
               <p className="text-green-500 text-sm mt-1">
-                {stats.totalBookings > 0 
-                  ? `${((stats.completedBookings / stats.totalBookings) * 100).toFixed(1)}% completion rate`
+                {stats.totalBookings > 0
+                  ? `${(
+                      (stats.completedBookings / stats.totalBookings) *
+                      100
+                    ).toFixed(1)}% completion rate`
                   : "No bookings yet"}
               </p>
             </div>
@@ -269,7 +300,7 @@ const WorkerDetails = () => {
                       <SelectItem value="today">Today</SelectItem>
                       <SelectItem value="week">Week</SelectItem>
                       <SelectItem value="month">Month</SelectItem>
-                       <SelectItem value="year">Year</SelectItem>
+                      <SelectItem value="year">Year</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -291,34 +322,53 @@ const WorkerDetails = () => {
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={6} className="py-8 text-center text-gray-500">
+                        <td
+                          colSpan={6}
+                          className="py-8 text-center text-gray-500"
+                        >
                           Loading bookings...
                         </td>
                       </tr>
                     ) : bookings.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-8 text-center text-gray-500">
+                        <td
+                          colSpan={6}
+                          className="py-8 text-center text-gray-500"
+                        >
                           No bookings found for this worker
                         </td>
                       </tr>
                     ) : (
                       bookings.map((b, i) => (
-                        <tr key={i} className="border-t hover:bg-gray-50 transition-colors">
+                        <tr
+                          key={i}
+                          className="border-t hover:bg-gray-50 transition-colors"
+                        >
                           <td className="py-3 px-4">{b.booking_id || b.id}</td>
-                          <td className="py-3 px-4">{b.guest_name || b.name}</td>
-                          <td className="py-3 px-4">{b.phone_number || b.phone}</td>
-                          <td className="py-3 px-4">{b.number_of_persons || b.persons}</td>
-                          <td className="py-3 px-4">{b.booking_type || b.type}</td>
+                          <td className="py-3 px-4">
+                            {b.guest_name || b.name}
+                          </td>
+                          <td className="py-3 px-4">
+                            {b.phone_number || b.phone}
+                          </td>
+                          <td className="py-3 px-4">
+                            {b.number_of_persons || b.persons}
+                          </td>
+                          <td className="py-3 px-4">
+                            {b.booking_type || b.type}
+                          </td>
                           <td className="py-3 px-4">
                             <span
                               className={`font-medium ${
-                                (b.booking_status === "completed" || b.status === "Completed")
+                                b.booking_status === "completed" ||
+                                b.status === "Completed"
                                   ? "text-green-600"
                                   : "text-orange-500"
                               }`}
                             >
-                              {b.booking_status 
-                                ? b.booking_status.charAt(0).toUpperCase() + b.booking_status.slice(1)
+                              {b.booking_status
+                                ? b.booking_status.charAt(0).toUpperCase() +
+                                  b.booking_status.slice(1)
                                 : b.status}
                             </span>
                           </td>
@@ -332,7 +382,9 @@ const WorkerDetails = () => {
 
             {/* Worker Details */}
             <div className="bg-white border border-gray-200 rounded-xl p-6">
-              <h2 className="text-lg font-semibold text-gray-800 mb-6">Worker Details</h2>
+              <h2 className="text-lg font-semibold text-gray-800 mb-6">
+                Worker Details
+              </h2>
               {loading ? (
                 <div className="text-center text-gray-500 py-8">Loading...</div>
               ) : (
@@ -364,12 +416,15 @@ const WorkerDetails = () => {
                   <div>
                     <p className="text-gray-500">Joining Date</p>
                     <p className="text-gray-900 font-medium">
-                      {worker.created_at 
-                        ? new Date(worker.created_at).toLocaleDateString("en-IN", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })
+                      {worker.created_at
+                        ? new Date(worker.created_at).toLocaleDateString(
+                            "en-IN",
+                            {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            }
+                          )
                         : worker.joiningDate || "N/A"}
                     </p>
                   </div>
