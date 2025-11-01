@@ -1,6 +1,15 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { User, LogOut, Menu, X, Home, Users, Settings, BarChart3 } from "lucide-react";
+import {
+  User,
+  LogOut,
+  Menu,
+  X,
+  Home,
+  Users,
+  Settings,
+  BarChart3,
+} from "lucide-react";
 
 const Navigation = () => {
   const navigate = useNavigate();
@@ -15,9 +24,9 @@ const Navigation = () => {
     };
 
     checkScreenSize();
-    window.addEventListener('resize', checkScreenSize);
-    
-    return () => window.removeEventListener('resize', checkScreenSize);
+    window.addEventListener("resize", checkScreenSize);
+
+    return () => window.removeEventListener("resize", checkScreenSize);
   }, []);
 
   const navItems = [
@@ -28,8 +37,14 @@ const Navigation = () => {
   ];
 
   const handleLogout = () => {
+    // Clear all authentication data from localStorage
+    localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("email");
+    localStorage.removeItem("adminId");
+    localStorage.removeItem("adminName");
+
     console.log("User logged out");
-    navigate("/");
+    navigate("/", { replace: true });
   };
 
   const handleNavClick = (path: string) => {
@@ -43,15 +58,15 @@ const Navigation = () => {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (isMobile && menuOpen) {
-        const sidebar = document.querySelector('.mobile-sidebar');
+        const sidebar = document.querySelector(".mobile-sidebar");
         if (sidebar && !sidebar.contains(event.target as Node)) {
           setMenuOpen(false);
         }
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isMobile, menuOpen]);
 
   return (
@@ -67,14 +82,16 @@ const Navigation = () => {
                 onClick={() => setMenuOpen(!menuOpen)}
                 className="text-gray-300 hover:text-white focus:outline-none"
               >
-                {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                {menuOpen ? (
+                  <X className="w-6 h-6" />
+                ) : (
+                  <Menu className="w-6 h-6" />
+                )}
               </button>
             </div>
-            
+
             {/* Brand/Logo - Show only on mobile */}
-            <div className="md:hidden text-white font-bold text-lg">
-              Admin
-            </div>
+            <div className="md:hidden text-white font-bold text-lg">Admin</div>
 
             {/* Desktop Navigation - Moved to left corner */}
             <div className="hidden md:flex space-x-6 items-center">
@@ -83,8 +100,8 @@ const Navigation = () => {
                   key={item.path}
                   onClick={() => navigate(item.path)}
                   className={`transition-colors ${
-                    location.pathname === item.path 
-                      ? "text-white font-medium" 
+                    location.pathname === item.path
+                      ? "text-white font-medium"
                       : "hover:text-white"
                   }`}
                 >
@@ -118,9 +135,7 @@ const Navigation = () => {
       {/* Mobile Sidebar Overlay - Only for mobile */}
       {isMobile && menuOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden">
-          <div 
-            className="mobile-sidebar fixed left-0 top-0 h-full w-64 bg-black text-gray-300 z-50 transform transition-transform duration-300 ease-in-out"
-          >
+          <div className="mobile-sidebar fixed left-0 top-0 h-full w-64 bg-black text-gray-300 z-50 transform transition-transform duration-300 ease-in-out">
             {/* Sidebar Header */}
             <div className="flex items-center justify-between p-4 border-b border-gray-700">
               <div className="text-white font-bold text-lg">Admin Panel</div>
@@ -141,8 +156,8 @@ const Navigation = () => {
                     key={item.path}
                     onClick={() => handleNavClick(item.path)}
                     className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg transition-all ${
-                      location.pathname === item.path 
-                        ? "bg-gray-800 text-white font-medium" 
+                      location.pathname === item.path
+                        ? "bg-gray-800 text-white font-medium"
                         : "hover:bg-gray-800 hover:text-white"
                     }`}
                   >
@@ -160,11 +175,13 @@ const Navigation = () => {
                   <User className="w-6 h-6 text-black" />
                 </div>
                 <div className="flex-1">
-                  <div className="text-white text-sm font-medium">Admin User</div>
+                  <div className="text-white text-sm font-medium">
+                    Admin User
+                  </div>
                   <div className="text-gray-400 text-xs">Administrator</div>
                 </div>
               </div>
-              
+
               <button
                 onClick={handleLogout}
                 className="w-full flex items-center space-x-3 px-3 py-3 rounded-lg hover:bg-gray-800 hover:text-white transition-all"

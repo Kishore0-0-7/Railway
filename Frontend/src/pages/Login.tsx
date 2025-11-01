@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,14 @@ const Login = () => {
   const navigate = useNavigate();
 
   const passwordRef = useRef<HTMLInputElement>(null); // 👈 reference for password field
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+    if (isLoggedIn) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [navigate]);
 
   const handleLogin = async () => {
     const normalizedEmail = email.trim().toLowerCase();

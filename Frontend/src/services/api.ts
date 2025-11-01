@@ -33,10 +33,16 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Unauthorized - redirect to login
+      // Unauthorized - clear authentication and redirect to login
       localStorage.removeItem("isLoggedIn");
-      localStorage.removeItem("username");
-      window.location.href = "/";
+      localStorage.removeItem("email");
+      localStorage.removeItem("adminId");
+      localStorage.removeItem("adminName");
+
+      // Only redirect if not already on login page
+      if (window.location.pathname !== "/") {
+        window.location.href = "/";
+      }
     }
     return Promise.reject(error);
   }

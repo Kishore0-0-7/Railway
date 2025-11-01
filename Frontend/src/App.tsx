@@ -17,15 +17,9 @@ import NotFound from "./pages/NotFound";
 import WorkerList from "./pages/WorkerList";
 import WorkerDetails from "./pages/WorkerDetails";
 import MainLayout from "./components/MainLayout";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
-
-// ✅ Small helper for protected routes
-// ⚠️ COMMENTED OUT FOR DEVELOPMENT - Remove comments to enable authentication
-// const PrivateRoute = ({ element }: { element: JSX.Element }) => {
-//   const isAuthenticated = localStorage.getItem("isLoggedIn") === "true"; // simple flag
-//   return isAuthenticated ? element : <Navigate to="/" replace />;
-// };
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -40,23 +34,44 @@ const App = () => (
           {/* Catch-all route */}
           <Route path="*" element={<NotFound />} />
 
-          {/* Routes with Footer */}
+          {/* Protected Routes with Footer */}
           <Route element={<MainLayout />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/workerlist" element={<WorkerList />} />
+            <Route
+              path="/dashboard"
+              element={<ProtectedRoute element={<Dashboard />} />}
+            />
+            <Route
+              path="/workerlist"
+              element={<ProtectedRoute element={<WorkerList />} />}
+            />
             <Route
               path="/booking-details-active/:id"
-              element={<BookingDetailsActive />}
+              element={<ProtectedRoute element={<BookingDetailsActive />} />}
             />
             <Route
               path="/booking-details-completed/:id"
-              element={<BookingDetailsCompleted />}
+              element={<ProtectedRoute element={<BookingDetailsCompleted />} />}
             />
-            <Route path="/worker-details/:id" element={<WorkerDetails />} />
-            <Route path="/submit-booking/:id" element={<SubmitBooking />} />
-            <Route path="/add-login" element={<AddLogin />} />
-            <Route path="/manage-login" element={<ManageLogin />} />
-            <Route path="/report" element={<Report />} />
+            <Route
+              path="/worker-details/:id"
+              element={<ProtectedRoute element={<WorkerDetails />} />}
+            />
+            <Route
+              path="/submit-booking/:id"
+              element={<ProtectedRoute element={<SubmitBooking />} />}
+            />
+            <Route
+              path="/add-login"
+              element={<ProtectedRoute element={<AddLogin />} />}
+            />
+            <Route
+              path="/manage-login"
+              element={<ProtectedRoute element={<ManageLogin />} />}
+            />
+            <Route
+              path="/report"
+              element={<ProtectedRoute element={<Report />} />}
+            />
           </Route>
         </Routes>
       </BrowserRouter>
