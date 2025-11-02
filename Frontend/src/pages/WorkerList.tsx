@@ -24,7 +24,12 @@ const WorkerList = () => {
       const response = await workerAPI.getAllWorkers();
       
       if (response.data && response.data.workers) {
-        setWorkers(response.data.workers);
+        // normalize status field (some backends return worker_status)
+        const normalized = response.data.workers.map((w: any) => ({
+          ...w,
+          status: w.status || w.worker_status || w.workerStatus || "active",
+        }));
+        setWorkers(normalized);
       }
     } catch (error: any) {
       console.error("Error fetching workers:", error);

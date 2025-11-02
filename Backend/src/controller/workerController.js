@@ -251,7 +251,7 @@ const getWorkersByAdminId = async (req, res) => {
 // Update Worker Details
 const updateWorker = async (req, res) => {
   const { id } = req.params;
-  const { full_name, mobile_number, joining_date, gender, user_name, status } =
+  const { full_name, mobile_number, joining_date, gender, user_name, status, worker_status } =
     req.body;
 
   if (!id || id.trim() === "") {
@@ -259,7 +259,7 @@ const updateWorker = async (req, res) => {
   }
 
   // Check if at least one field is provided for update
-  if (!full_name && !mobile_number && !joining_date && !gender && !user_name && !status) {
+  if (!full_name && !mobile_number && !joining_date && !gender && !user_name && !status && !worker_status) {
     return res.status(400).json({
       message: "At least one field must be provided for update",
     });
@@ -300,6 +300,9 @@ const updateWorker = async (req, res) => {
     }
 
     // Update worker
+    // Prefer worker_status if provided, otherwise use status
+    const statusValue = worker_status || status;
+    
     const updateQuery = `
       UPDATE worker_accounts
       SET full_name = COALESCE($1, full_name),
@@ -319,7 +322,7 @@ const updateWorker = async (req, res) => {
       joining_date,
       gender,
       user_name,
-      status,
+      statusValue,
       id,
     ];
 

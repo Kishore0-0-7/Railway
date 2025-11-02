@@ -57,10 +57,18 @@ const WorkerDetails = () => {
         if (workerId) {
           const wResp = await workerAPI.getWorkerById(String(workerId));
           if (wResp?.data?.worker) {
-            setWorker(wResp.data.worker);
+            const wk = wResp.data.worker;
+            setWorker({
+              ...wk,
+              status: wk.status || wk.worker_status || wk.workerStatus || "active",
+            });
           } else if (wResp?.data) {
             // some APIs return the object at data directly
-            setWorker(wResp.data);
+            const wk = wResp.data;
+            setWorker({
+              ...wk,
+              status: wk.status || wk.worker_status || wk.workerStatus || "active",
+            });
           }
 
           // Fetch bookings assigned to this worker
@@ -146,7 +154,11 @@ const WorkerDetails = () => {
       }
 
       // Call backend to update worker status
-      await workerAPI.updateWorker(String(idForApi), { status: newStatus });
+      // send both keys to be compatible with remote/backwards-compatible APIs
+      await workerAPI.updateWorker(String(idForApi), {
+        status: newStatus,
+        worker_status: newStatus,
+      });
 
       // update local state for immediate UI feedback
       setWorker((prev: any) => ({ ...(prev || {}), status: newStatus }));
