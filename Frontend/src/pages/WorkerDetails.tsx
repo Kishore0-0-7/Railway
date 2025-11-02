@@ -24,7 +24,7 @@ const WorkerDetails = () => {
     gender: "Male",
     phone: "9516155854",
     joiningDate: "20 Sep 2025",
-    status: "Active",
+    status: "active",
   };
 
   const [worker, setWorker] = useState<any>(seedWorker);
@@ -136,7 +136,9 @@ const WorkerDetails = () => {
 
   const handleStatusToggle = async () => {
     try {
-      const newStatus = worker?.status === "Active" ? "Inactive" : "Active";
+      // normalize status to lowercase for API (DB uses 'active'/'inactive')
+      const current = (worker?.status || "active").toString().toLowerCase();
+      const newStatus = current === "active" ? "inactive" : "active";
       // Prefer using worker_id for API calls
       const idForApi = worker?.worker_id || worker?.id || workerId;
       if (!idForApi) {
@@ -201,13 +203,17 @@ const WorkerDetails = () => {
               <Button
                 variant="destructive"
                 className={`${
-                  worker.status === "Active"
+                  (worker.status || "active").toString().toLowerCase() ===
+                  "active"
                     ? "bg-red-600 hover:bg-red-700"
                     : "bg-green-600 hover:bg-green-700"
                 } text-white`}
                 onClick={handleStatusToggle}
               >
-                {worker.status === "Active" ? "Remove Worker" : "Re-Join"}
+                {(worker.status || "active").toString().toLowerCase() ===
+                "active"
+                  ? "Remove Worker"
+                  : "Re-Join"}
               </Button>
               <Button
                 variant="outline"
@@ -432,12 +438,18 @@ const WorkerDetails = () => {
                     <p className="text-gray-500">Status</p>
                     <p
                       className={`font-medium ${
-                        worker.status === "Active"
+                        (worker.status || "active").toString().toLowerCase() ===
+                        "active"
                           ? "text-green-600"
                           : "text-amber-500"
                       }`}
                     >
-                      {worker.status || "Active"}
+                      {(
+                        ((worker.status || "active") as string)
+                          .charAt(0)
+                          .toUpperCase() +
+                        ((worker.status || "active") as string).slice(1)
+                      )}
                     </p>
                   </div>
                   <div>
