@@ -120,8 +120,17 @@ const WorkerList = () => {
                       <td className="px-4 py-3">{formatDate(worker.joining_date)}</td>
                       <td className="px-4 py-3">-</td>
                       <td className="px-4 py-3">
-                        <span className="text-green-600 font-medium">
-                          Active
+                        <span
+                          className={`font-medium ${
+                            (worker.status || "active").toLowerCase() === "active"
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {((worker.status || "active") as string)
+                            .charAt(0)
+                            .toUpperCase() +
+                            ((worker.status || "active") as string).slice(1)}
                         </span>
                       </td>
                     </tr>

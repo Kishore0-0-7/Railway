@@ -92,7 +92,7 @@ const createWorker = async (req, res) => {
       INSERT INTO worker_accounts (
         worker_id, admin_id, full_name, mobile_number, joining_date, gender, user_name, password_hash
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING worker_id, admin_id, full_name, mobile_number, joining_date, gender, user_name, created_at, updated_at;
+      RETURNING worker_id, admin_id, full_name, mobile_number, worker_status AS status, joining_date, gender, user_name, created_at, updated_at;
     `;
 
     const values = [
@@ -133,6 +133,7 @@ const getAllWorkers = async (req, res) => {
         w.admin_id, 
         w.full_name, 
         w.mobile_number, 
+        w.worker_status AS status,
         w.joining_date, 
         w.gender, 
         w.user_name, 
@@ -175,6 +176,7 @@ const getWorkerById = async (req, res) => {
         w.admin_id, 
         w.full_name, 
         w.mobile_number, 
+        w.worker_status AS status,
         w.joining_date, 
         w.gender, 
         w.user_name, 
@@ -220,6 +222,7 @@ const getWorkersByAdminId = async (req, res) => {
         admin_id, 
         full_name, 
         mobile_number, 
+        worker_status AS status,
         joining_date, 
         gender, 
         user_name, 
@@ -248,7 +251,7 @@ const getWorkersByAdminId = async (req, res) => {
 // Update Worker Details
 const updateWorker = async (req, res) => {
   const { id } = req.params;
-  const { full_name, mobile_number, joining_date, gender, user_name } =
+  const { full_name, mobile_number, joining_date, gender, user_name, status } =
     req.body;
 
   if (!id || id.trim() === "") {
@@ -256,7 +259,7 @@ const updateWorker = async (req, res) => {
   }
 
   // Check if at least one field is provided for update
-  if (!full_name && !mobile_number && !joining_date && !gender && !user_name) {
+  if (!full_name && !mobile_number && !joining_date && !gender && !user_name && !status) {
     return res.status(400).json({
       message: "At least one field must be provided for update",
     });
@@ -304,9 +307,10 @@ const updateWorker = async (req, res) => {
           joining_date = COALESCE($3, joining_date),
           gender = COALESCE($4, gender),
           user_name = COALESCE($5, user_name),
+          worker_status = COALESCE($6, worker_status),
           updated_at = CURRENT_TIMESTAMP
-      WHERE worker_id = $6
-      RETURNING worker_id, admin_id, full_name, mobile_number, joining_date, gender, user_name, created_at, updated_at;
+      WHERE worker_id = $7
+      RETURNING worker_id, admin_id, full_name, mobile_number, worker_status AS status, joining_date, gender, user_name, created_at, updated_at;
     `;
 
     const values = [
@@ -315,6 +319,7 @@ const updateWorker = async (req, res) => {
       joining_date,
       gender,
       user_name,
+      status,
       id,
     ];
 

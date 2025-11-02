@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS worker_accounts (
     gender VARCHAR(10) CHECK (gender IN ('Male', 'Female', 'Other')),
     user_name VARCHAR(100) NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
+    worker_status VARCHAR(20) DEFAULT 'active' CHECK (worker_status IN ('active','inactive')),
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
