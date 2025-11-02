@@ -139,9 +139,13 @@ const getAllWorkers = async (req, res) => {
         w.user_name, 
         w.created_at, 
         w.updated_at,
-        a.full_name as admin_name
+        a.full_name as admin_name,
+        COALESCE(COUNT(b.booking_id), 0) as total_bookings
       FROM worker_accounts w
       LEFT JOIN admin_accounts a ON w.admin_id = a.admin_id
+      LEFT JOIN bookings b ON w.worker_id = b.worker_id
+      GROUP BY w.worker_id, w.admin_id, w.full_name, w.mobile_number, w.worker_status, 
+               w.joining_date, w.gender, w.user_name, w.created_at, w.updated_at, a.full_name
       ORDER BY w.created_at DESC;
     `;
 
