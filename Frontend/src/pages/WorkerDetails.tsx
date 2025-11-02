@@ -1,477 +1,477 @@
-// import { useLocation, useNavigate } from "react-router-dom";
-// import { useEffect, useState } from "react";
-// import Navigation from "@/components/Navigation";
-// import { Button } from "@/components/ui/button";
-// import { Search, Calendar } from "lucide-react";
-// import {
-//   Select,
-//   SelectContent,
-//   SelectItem,
-//   SelectTrigger,
-//   SelectValue,
-// } from "@/components/ui/select";
-// import { workerAPI, bookingAPI } from "@/services/api";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import Navigation from "@/components/Navigation";
+import { Button } from "@/components/ui/button";
+import { Search, Calendar } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { workerAPI, bookingAPI } from "@/services/api";
 
-// const WorkerDetails = () => {
-//   const location = useLocation();
-//   const navigate = useNavigate();
-//   // navigation may pass worker object in state; start with that as a seed while we fetch fresh data
-//   const seedWorker = location.state?.worker || {
-//     id: 1,
-//     worker_id: "#1223",
-//     loginId: "#1223",
-//     name: "Paul Walker",
-//     gender: "Male",
-//     phone: "9516155854",
-//     joiningDate: "20 Sep 2025",
-//     status: "active",
-//   };
+const WorkerDetails = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  // navigation may pass worker object in state; start with that as a seed while we fetch fresh data
+  const seedWorker = location.state?.worker || {
+    id: 1,
+    worker_id: "#1223",
+    loginId: "#1223",
+    name: "Paul Walker",
+    gender: "Male",
+    phone: "9516155854",
+    joiningDate: "20 Sep 2025",
+    status: "active",
+  };
 
-//   const [worker, setWorker] = useState<any>(seedWorker);
-//   const [bookings, setBookings] = useState<any[]>([]);
-//   const [loading, setLoading] = useState<boolean>(true);
-//   const [error, setError] = useState<string | null>(null);
-//   const [stats, setStats] = useState({
-//     totalRevenue: 0,
-//     totalBookings: 0,
-//     completedBookings: 0,
-//     activeBookings: 0,
-//     sittingBooked: 0,
-//     sleeperBooked: 0,
-//   });
+  const [worker, setWorker] = useState<any>(seedWorker);
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState({
+    totalRevenue: 0,
+    totalBookings: 0,
+    completedBookings: 0,
+    activeBookings: 0,
+    sittingBooked: 0,
+    sleeperBooked: 0,
+  });
 
-//   // helper to determine worker id to call backend with. Prefer worker_id from API/other pages.
-//   const workerId =
-//     location.state?.worker?.worker_id ||
-//     location.state?.worker?.id ||
-//     seedWorker.worker_id ||
-//     seedWorker.id ||
-//     seedWorker.loginId;
+  // helper to determine worker id to call backend with. Prefer worker_id from API/other pages.
+  const workerId =
+    location.state?.worker?.worker_id ||
+    location.state?.worker?.id ||
+    seedWorker.worker_id ||
+    seedWorker.id ||
+    seedWorker.loginId;
 
-//   useEffect(() => {
-//     const fetchData = async () => {
-//       setLoading(true);
-//       setError(null);
-//       try {
-//         // Fetch fresh worker details if we have an id
-//         if (workerId) {
-//           const wResp = await workerAPI.getWorkerById(String(workerId));
-//           if (wResp?.data?.worker) {
-//             setWorker(wResp.data.worker);
-//           } else if (wResp?.data) {
-//             // some APIs return the object at data directly
-//             setWorker(wResp.data);
-//           }
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        // Fetch fresh worker details if we have an id
+        if (workerId) {
+          const wResp = await workerAPI.getWorkerById(String(workerId));
+          if (wResp?.data?.worker) {
+            setWorker(wResp.data.worker);
+          } else if (wResp?.data) {
+            // some APIs return the object at data directly
+            setWorker(wResp.data);
+          }
 
-//           // Fetch bookings assigned to this worker
-//           const bResp = await bookingAPI.getWorkerBookings(String(workerId));
-//           let fetchedBookings: any[] = [];
+          // Fetch bookings assigned to this worker
+          const bResp = await bookingAPI.getWorkerBookings(String(workerId));
+          let fetchedBookings: any[] = [];
 
-//           if (bResp?.data?.bookings) {
-//             fetchedBookings = bResp.data.bookings;
-//           } else if (Array.isArray(bResp?.data)) {
-//             fetchedBookings = bResp.data;
-//           } else if (bResp?.data?.data) {
-//             fetchedBookings = bResp.data.data;
-//           }
+          if (bResp?.data?.bookings) {
+            fetchedBookings = bResp.data.bookings;
+          } else if (Array.isArray(bResp?.data)) {
+            fetchedBookings = bResp.data;
+          } else if (bResp?.data?.data) {
+            fetchedBookings = bResp.data.data;
+          }
 
-//           setBookings(fetchedBookings);
+          setBookings(fetchedBookings);
 
-//           // Calculate statistics from bookings
-//           const totalRevenue = fetchedBookings.reduce((sum, booking) => {
-//             return (
-//               sum + parseFloat(booking.total_amount || booking.totalAmount || 0)
-//             );
-//           }, 0);
+          // Calculate statistics from bookings
+          const totalRevenue = fetchedBookings.reduce((sum, booking) => {
+            return (
+              sum + parseFloat(booking.total_amount || booking.totalAmount || 0)
+            );
+          }, 0);
 
-//           const completedBookings = fetchedBookings.filter(
-//             (b) => b.booking_status === "completed" || b.status === "Completed"
-//           ).length;
+          const completedBookings = fetchedBookings.filter(
+            (b) => b.booking_status === "completed" || b.status === "Completed"
+          ).length;
 
-//           const activeBookings = fetchedBookings.filter(
-//             (b) =>
-//               b.booking_status === "active" ||
-//               b.status === "Active" ||
-//               b.status === "Booked"
-//           ).length;
+          const activeBookings = fetchedBookings.filter(
+            (b) =>
+              b.booking_status === "active" ||
+              b.status === "Active" ||
+              b.status === "Booked"
+          ).length;
 
-//           const sittingBooked = fetchedBookings.filter(
-//             (b) =>
-//               (b.booking_type === "Sitting" || b.type === "Sitting") &&
-//               (b.booking_status === "active" ||
-//                 b.status === "Active" ||
-//                 b.status === "Booked")
-//           ).length;
+          const sittingBooked = fetchedBookings.filter(
+            (b) =>
+              (b.booking_type === "Sitting" || b.type === "Sitting") &&
+              (b.booking_status === "active" ||
+                b.status === "Active" ||
+                b.status === "Booked")
+          ).length;
 
-//           const sleeperBooked = fetchedBookings.filter(
-//             (b) =>
-//               (b.booking_type === "Sleeper" || b.type === "Sleeper") &&
-//               (b.booking_status === "active" ||
-//                 b.status === "Active" ||
-//                 b.status === "Booked")
-//           ).length;
+          const sleeperBooked = fetchedBookings.filter(
+            (b) =>
+              (b.booking_type === "Sleeper" || b.type === "Sleeper") &&
+              (b.booking_status === "active" ||
+                b.status === "Active" ||
+                b.status === "Booked")
+          ).length;
 
-//           setStats({
-//             totalRevenue,
-//             totalBookings: fetchedBookings.length,
-//             completedBookings,
-//             activeBookings,
-//             sittingBooked,
-//             sleeperBooked,
-//           });
-//         }
-//       } catch (err: any) {
-//         console.error("Error fetching worker or bookings:", err);
-//         setError(
-//           err.response?.data?.message || err.message || "Failed to load data"
-//         );
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
+          setStats({
+            totalRevenue,
+            totalBookings: fetchedBookings.length,
+            completedBookings,
+            activeBookings,
+            sittingBooked,
+            sleeperBooked,
+          });
+        }
+      } catch (err: any) {
+        console.error("Error fetching worker or bookings:", err);
+        setError(
+          err.response?.data?.message || err.message || "Failed to load data"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
 
-//     fetchData();
-//     // eslint-disable-next-line react-hooks/exhaustive-deps
-//   }, [workerId]);
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workerId]);
 
-//   const handleStatusToggle = async () => {
-//     try {
-//       // normalize status to lowercase for API (DB uses 'active'/'inactive')
-//       const current = (worker?.status || "active").toString().toLowerCase();
-//       const newStatus = current === "active" ? "inactive" : "active";
-//       // Prefer using worker_id for API calls
-//       const idForApi = worker?.worker_id || worker?.id || workerId;
-//       if (!idForApi) {
-//         throw new Error("No worker id available to update status");
-//       }
+  const handleStatusToggle = async () => {
+    try {
+      // normalize status to lowercase for API (DB uses 'active'/'inactive')
+      const current = (worker?.status || "active").toString().toLowerCase();
+      const newStatus = current === "active" ? "inactive" : "active";
+      // Prefer using worker_id for API calls
+      const idForApi = worker?.worker_id || worker?.id || workerId;
+      if (!idForApi) {
+        throw new Error("No worker id available to update status");
+      }
 
-//       // Call backend to update worker status
-//       await workerAPI.updateWorker(String(idForApi), { status: newStatus });
+      // Call backend to update worker status
+      await workerAPI.updateWorker(String(idForApi), { status: newStatus });
 
-//       // update local state for immediate UI feedback
-//       setWorker((prev: any) => ({ ...(prev || {}), status: newStatus }));
+      // update local state for immediate UI feedback
+      setWorker((prev: any) => ({ ...(prev || {}), status: newStatus }));
 
-//       // Navigate back to worker list
-//       navigate(-1);
-//     } catch (err) {
-//       console.error("Error updating worker status:", err);
-//       setError(
-//         (err as any)?.response?.data?.message ||
-//           (err as any)?.message ||
-//           "Failed to update status"
-//       );
-//     }
-//   };
+      // Navigate back to worker list
+      navigate(-1);
+    } catch (err) {
+      console.error("Error updating worker status:", err);
+      setError(
+        (err as any)?.response?.data?.message ||
+          (err as any)?.message ||
+          "Failed to update status"
+      );
+    }
+  };
 
-//   const handleEditDetails = () => {
-//     // Navigate to ManageLogin page with worker data
-//     navigate("/manage-login", {
-//       state: {
-//         editingWorker: {
-//           name: worker.name,
-//           mobile: worker.phone,
-//           loginId: worker.loginId,
-//           joiningDate: worker.joiningDate,
-//           gender: worker.gender,
-//           totalBookings: worker.totalBookings || 0,
-//           status: worker.status,
-//         },
-//       },
-//     });
-//   };
+  const handleEditDetails = () => {
+    // Navigate to ManageLogin page with worker data
+    navigate("/manage-login", {
+      state: {
+        editingWorker: {
+          name: worker.name,
+          mobile: worker.phone,
+          loginId: worker.loginId,
+          joiningDate: worker.joiningDate,
+          gender: worker.gender,
+          totalBookings: worker.totalBookings || 0,
+          status: worker.status,
+        },
+      },
+    });
+  };
 
-//   return (
-//     <div className="min-h-screen bg-gray-50">
-//       <Navigation />
-//       <main className="p-6">
-//         <div className="max-w-7xl mx-auto space-y-6">
-//           {/* Error Message */}
-//           {error && (
-//             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-//               <p className="font-medium">Error loading data</p>
-//               <p className="text-sm">{error}</p>
-//             </div>
-//           )}
-//           {/* Header */}
-//           <div className="bg-black text-white rounded-xl p-6 flex flex-col md:flex-row items-center justify-between">
-//             <div className="flex items-center">
-//               <h1 className="text-2xl font-semibold">
-//                 {worker.full_name || worker.name}
-//               </h1>
-//             </div>
-//             <div className="flex gap-3 mt-4 md:mt-0">
-//               <Button
-//                 variant="destructive"
-//                 className={`${
-//                   (worker.status || "active").toString().toLowerCase() ===
-//                   "active"
-//                     ? "bg-red-600 hover:bg-red-700"
-//                     : "bg-green-600 hover:bg-green-700"
-//                 } text-white`}
-//                 onClick={handleStatusToggle}
-//               >
-//                 {(worker.status || "active").toString().toLowerCase() ===
-//                 "active"
-//                   ? "Remove Worker"
-//                   : "Re-Join"}
-//               </Button>
-//               <Button
-//                 variant="outline"
-//                 className="bg-white text-black hover:bg-gray-100"
-//                 onClick={handleEditDetails}
-//               >
-//                 Edit Details
-//               </Button>
-//             </div>
-//           </div>
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navigation />
+      <main className="p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              <p className="font-medium">Error loading data</p>
+              <p className="text-sm">{error}</p>
+            </div>
+          )}
+          {/* Header */}
+          <div className="bg-black text-white rounded-xl p-6 flex flex-col md:flex-row items-center justify-between">
+            <div className="flex items-center">
+              <h1 className="text-2xl font-semibold">
+                {worker.full_name || worker.name}
+              </h1>
+            </div>
+            <div className="flex gap-3 mt-4 md:mt-0">
+              <Button
+                variant="destructive"
+                className={`${
+                  (worker.status || "active").toString().toLowerCase() ===
+                  "active"
+                    ? "bg-red-600 hover:bg-red-700"
+                    : "bg-green-600 hover:bg-green-700"
+                } text-white`}
+                onClick={handleStatusToggle}
+              >
+                {(worker.status || "active").toString().toLowerCase() ===
+                "active"
+                  ? "Remove Worker"
+                  : "Re-Join"}
+              </Button>
+              <Button
+                variant="outline"
+                className="bg-white text-black hover:bg-gray-100"
+                onClick={handleEditDetails}
+              >
+                Edit Details
+              </Button>
+            </div>
+          </div>
 
-//           {/* Stats */}
-//           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-//             <div className="bg-black text-white p-5 rounded-xl">
-//               <p className="text-sm text-gray-300">Total Revenue</p>
-//               <h2 className="text-3xl font-semibold mt-2">
-//                 ₹{loading ? "..." : stats.totalRevenue.toLocaleString("en-IN")}
-//               </h2>
-//               <p className="text-gray-400 text-sm mt-1">From all bookings</p>
-//             </div>
+          {/* Stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-black text-white p-5 rounded-xl">
+              <p className="text-sm text-gray-300">Total Revenue</p>
+              <h2 className="text-3xl font-semibold mt-2">
+                ₹{loading ? "..." : stats.totalRevenue.toLocaleString("en-IN")}
+              </h2>
+              <p className="text-gray-400 text-sm mt-1">From all bookings</p>
+            </div>
 
-//             <div className="bg-white border border-gray-200 p-5 rounded-xl">
-//               <p className="text-gray-600 text-sm">Total Bookings</p>
-//               <h2 className="text-3xl font-semibold mt-2">
-//                 {loading ? "..." : stats.totalBookings}
-//               </h2>
-//               <p className="text-gray-500 text-sm mt-1">All time bookings</p>
-//             </div>
+            <div className="bg-white border border-gray-200 p-5 rounded-xl">
+              <p className="text-gray-600 text-sm">Total Bookings</p>
+              <h2 className="text-3xl font-semibold mt-2">
+                {loading ? "..." : stats.totalBookings}
+              </h2>
+              <p className="text-gray-500 text-sm mt-1">All time bookings</p>
+            </div>
 
-//             <div className="bg-white border border-gray-200 p-5 rounded-xl">
-//               <p className="text-gray-600 text-sm">Completed</p>
-//               <h2 className="text-3xl font-semibold mt-2">
-//                 {loading ? "..." : stats.completedBookings}
-//               </h2>
-//               <p className="text-green-500 text-sm mt-1">
-//                 {stats.totalBookings > 0
-//                   ? `${(
-//                       (stats.completedBookings / stats.totalBookings) *
-//                       100
-//                     ).toFixed(1)}% completion rate`
-//                   : "No bookings yet"}
-//               </p>
-//             </div>
+            <div className="bg-white border border-gray-200 p-5 rounded-xl">
+              <p className="text-gray-600 text-sm">Completed</p>
+              <h2 className="text-3xl font-semibold mt-2">
+                {loading ? "..." : stats.completedBookings}
+              </h2>
+              <p className="text-green-500 text-sm mt-1">
+                {stats.totalBookings > 0
+                  ? `${(
+                      (stats.completedBookings / stats.totalBookings) *
+                      100
+                    ).toFixed(1)}% completion rate`
+                  : "No bookings yet"}
+              </p>
+            </div>
 
-//             <div className="bg-white border border-gray-200 p-5 rounded-xl">
-//               <p className="text-gray-600 text-sm">Active Bookings</p>
-//               <div className="flex justify-between mt-2">
-//                 <div>
-//                   <h2 className="text-xl font-semibold">
-//                     {loading ? "..." : stats.sittingBooked}
-//                   </h2>
-//                   <p className="text-xs text-gray-500">Sitting</p>
-//                 </div>
-//                 <div>
-//                   <h2 className="text-xl font-semibold">
-//                     {loading ? "..." : stats.sleeperBooked}
-//                   </h2>
-//                   <p className="text-xs text-gray-500">Sleeper</p>
-//                 </div>
-//               </div>
-//             </div>
-//           </div>
-//           {/* Bookings and Worker Details */}
-//           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-//             {/* Bookings Table */}
-//             <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl p-4 sm:p-5 shadow-sm">
-//               {/* Header Section */}
-//               <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-4">
-//                 <h2 className="text-base sm:text-lg font-semibold text-gray-800">
-//                   Bookings by {worker.name}
-//                 </h2>
+            <div className="bg-white border border-gray-200 p-5 rounded-xl">
+              <p className="text-gray-600 text-sm">Active Bookings</p>
+              <div className="flex justify-between mt-2">
+                <div>
+                  <h2 className="text-xl font-semibold">
+                    {loading ? "..." : stats.sittingBooked}
+                  </h2>
+                  <p className="text-xs text-gray-500">Sitting</p>
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold">
+                    {loading ? "..." : stats.sleeperBooked}
+                  </h2>
+                  <p className="text-xs text-gray-500">Sleeper</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* Bookings and Worker Details */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Bookings Table */}
+            <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl p-4 sm:p-5 shadow-sm">
+              {/* Header Section */}
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-4">
+                <h2 className="text-base sm:text-lg font-semibold text-gray-800">
+                  Bookings by {worker.name}
+                </h2>
 
-//                 {/* Search & Filter */}
-//                 <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-//                   <div className="relative w-full sm:w-auto">
-//                     <Search className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
-//                     <input
-//                       type="text"
-//                       placeholder="Search"
-//                       className="w-full sm:w-[160px] pl-9 pr-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300"
-//                     />
-//                   </div>
+                {/* Search & Filter */}
+                <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+                  <div className="relative w-full sm:w-auto">
+                    <Search className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
+                    <input
+                      type="text"
+                      placeholder="Search"
+                      className="w-full sm:w-[160px] pl-9 pr-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300"
+                    />
+                  </div>
 
-//                   <Select>
-//                     <SelectTrigger className="w-full sm:w-[120px]">
-//                       <Calendar className="mr-2 w-4 h-4" />
-//                       <SelectValue placeholder="Today" />
-//                     </SelectTrigger>
-//                     <SelectContent>
-//                       <SelectItem value="today">Today</SelectItem>
-//                       <SelectItem value="week">Week</SelectItem>
-//                       <SelectItem value="month">Month</SelectItem>
-//                       <SelectItem value="year">Year</SelectItem>
-//                     </SelectContent>
-//                   </Select>
-//                 </div>
-//               </div>
+                  <Select>
+                    <SelectTrigger className="w-full sm:w-[120px]">
+                      <Calendar className="mr-2 w-4 h-4" />
+                      <SelectValue placeholder="Today" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="today">Today</SelectItem>
+                      <SelectItem value="week">Week</SelectItem>
+                      <SelectItem value="month">Month</SelectItem>
+                      <SelectItem value="year">Year</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
 
-//               {/* Table */}
-//               <div className="overflow-x-auto">
-//                 <table className="w-full text-sm text-gray-700 min-w-[600px]">
-//                   <thead className="bg-gray-100 text-left text-gray-800">
-//                     <tr>
-//                       <th className="py-3 px-4">Booking ID</th>
-//                       <th className="py-3 px-4">Name</th>
-//                       <th className="py-3 px-4">Phone Number</th>
-//                       <th className="py-3 px-4">Persons</th>
-//                       <th className="py-3 px-4">Type</th>
-//                       <th className="py-3 px-4">Status</th>
-//                     </tr>
-//                   </thead>
-//                   <tbody>
-//                     {loading ? (
-//                       <tr>
-//                         <td
-//                           colSpan={6}
-//                           className="py-8 text-center text-gray-500"
-//                         >
-//                           Loading bookings...
-//                         </td>
-//                       </tr>
-//                     ) : bookings.length === 0 ? (
-//                       <tr>
-//                         <td
-//                           colSpan={6}
-//                           className="py-8 text-center text-gray-500"
-//                         >
-//                           No bookings found for this worker
-//                         </td>
-//                       </tr>
-//                     ) : (
-//                       bookings.map((b, i) => (
-//                         <tr
-//                           key={i}
-//                           className="border-t hover:bg-gray-50 transition-colors"
-//                         >
-//                           <td className="py-3 px-4">{b.booking_id || b.id}</td>
-//                           <td className="py-3 px-4">
-//                             {b.guest_name || b.name}
-//                           </td>
-//                           <td className="py-3 px-4">
-//                             {b.phone_number || b.phone}
-//                           </td>
-//                           <td className="py-3 px-4">
-//                             {b.number_of_persons || b.persons}
-//                           </td>
-//                           <td className="py-3 px-4">
-//                             {b.booking_type || b.type}
-//                           </td>
-//                           <td className="py-3 px-4">
-//                             <span
-//                               className={`font-medium ${
-//                                 b.booking_status === "completed" ||
-//                                 b.status === "Completed"
-//                                   ? "text-green-600"
-//                                   : "text-orange-500"
-//                               }`}
-//                             >
-//                               {b.booking_status
-//                                 ? b.booking_status.charAt(0).toUpperCase() +
-//                                   b.booking_status.slice(1)
-//                                 : b.status}
-//                             </span>
-//                           </td>
-//                         </tr>
-//                       ))
-//                     )}
-//                   </tbody>
-//                 </table>
-//               </div>
-//             </div>
+              {/* Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-gray-700 min-w-[600px]">
+                  <thead className="bg-gray-100 text-left text-gray-800">
+                    <tr>
+                      <th className="py-3 px-4">Booking ID</th>
+                      <th className="py-3 px-4">Name</th>
+                      <th className="py-3 px-4">Phone Number</th>
+                      <th className="py-3 px-4">Persons</th>
+                      <th className="py-3 px-4">Type</th>
+                      <th className="py-3 px-4">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loading ? (
+                      <tr>
+                        <td
+                          colSpan={6}
+                          className="py-8 text-center text-gray-500"
+                        >
+                          Loading bookings...
+                        </td>
+                      </tr>
+                    ) : bookings.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={6}
+                          className="py-8 text-center text-gray-500"
+                        >
+                          No bookings found for this worker
+                        </td>
+                      </tr>
+                    ) : (
+                      bookings.map((b, i) => (
+                        <tr
+                          key={i}
+                          className="border-t hover:bg-gray-50 transition-colors"
+                        >
+                          <td className="py-3 px-4">{b.booking_id || b.id}</td>
+                          <td className="py-3 px-4">
+                            {b.guest_name || b.name}
+                          </td>
+                          <td className="py-3 px-4">
+                            {b.phone_number || b.phone}
+                          </td>
+                          <td className="py-3 px-4">
+                            {b.number_of_persons || b.persons}
+                          </td>
+                          <td className="py-3 px-4">
+                            {b.booking_type || b.type}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span
+                              className={`font-medium ${
+                                b.booking_status === "completed" ||
+                                b.status === "Completed"
+                                  ? "text-green-600"
+                                  : "text-orange-500"
+                              }`}
+                            >
+                              {b.booking_status
+                                ? b.booking_status.charAt(0).toUpperCase() +
+                                  b.booking_status.slice(1)
+                                : b.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
-//             {/* Worker Details */}
-//             <div className="bg-white border border-gray-200 rounded-xl p-6">
-//               <h2 className="text-lg font-semibold text-gray-800 mb-6">
-//                 Worker Details
-//               </h2>
-//               {loading ? (
-//                 <div className="text-center text-gray-500 py-8">Loading...</div>
-//               ) : (
-//                 <div className="space-y-4 text-sm">
-//                   <div>
-//                     <p className="text-gray-500">Login ID</p>
-//                     <p className="text-gray-900 font-medium">
-//                       {worker.worker_id || worker.loginId || worker.id}
-//                     </p>
-//                   </div>
-//                   <div>
-//                     <p className="text-gray-500">Name</p>
-//                     <p className="text-gray-900 font-medium">
-//                       {worker.full_name || worker.name}
-//                     </p>
-//                   </div>
-//                   <div>
-//                     <p className="text-gray-500">Gender</p>
-//                     <p className="text-gray-900 font-medium">
-//                       {worker.gender || "N/A"}
-//                     </p>
-//                   </div>
-//                   <div>
-//                     <p className="text-gray-500">Phone No.</p>
-//                     <p className="text-gray-900 font-medium">
-//                       {worker.mobile_number || worker.phone}
-//                     </p>
-//                   </div>
-//                   <div>
-//                     <p className="text-gray-500">Joining Date</p>
-//                     <p className="text-gray-900 font-medium">
-//                       {worker.created_at
-//                         ? new Date(worker.created_at).toLocaleDateString(
-//                             "en-IN",
-//                             {
-//                               day: "2-digit",
-//                               month: "short",
-//                               year: "numeric",
-//                             }
-//                           )
-//                         : worker.joiningDate || "N/A"}
-//                     </p>
-//                   </div>
-//                   <div>
-//                     <p className="text-gray-500">Status</p>
-//                     <p
-//                       className={`font-medium ${
-//                         (worker.status || "active").toString().toLowerCase() ===
-//                         "active"
-//                           ? "text-green-600"
-//                           : "text-amber-500"
-//                       }`}
-//                     >
-//                       {(
-//                         ((worker.status || "active") as string)
-//                           .charAt(0)
-//                           .toUpperCase() +
-//                         ((worker.status || "active") as string).slice(1)
-//                       )}
-//                     </p>
-//                   </div>
-//                   <div>
-//                     <p className="text-gray-500">Total Bookings</p>
-//                     <p className="text-gray-900 font-medium">
-//                       {stats.totalBookings}
-//                     </p>
-//                   </div>
-//                   <div>
-//                     <p className="text-gray-500">Total Revenue</p>
-//                     <p className="text-gray-900 font-medium">
-//                       ₹{stats.totalRevenue.toLocaleString("en-IN")}
-//                     </p>
-//                   </div>
-//                 </div>
-//               )}
-//             </div>
-//           </div>
-//         </div>
-//       </main>
-//     </div>
-//   );
-// };
+            {/* Worker Details */}
+            <div className="bg-white border border-gray-200 rounded-xl p-6">
+              <h2 className="text-lg font-semibold text-gray-800 mb-6">
+                Worker Details
+              </h2>
+              {loading ? (
+                <div className="text-center text-gray-500 py-8">Loading...</div>
+              ) : (
+                <div className="space-y-4 text-sm">
+                  <div>
+                    <p className="text-gray-500">Login ID</p>
+                    <p className="text-gray-900 font-medium">
+                      {worker.worker_id || worker.loginId || worker.id}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Name</p>
+                    <p className="text-gray-900 font-medium">
+                      {worker.full_name || worker.name}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Gender</p>
+                    <p className="text-gray-900 font-medium">
+                      {worker.gender || "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Phone No.</p>
+                    <p className="text-gray-900 font-medium">
+                      {worker.mobile_number || worker.phone}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Joining Date</p>
+                    <p className="text-gray-900 font-medium">
+                      {worker.created_at
+                        ? new Date(worker.created_at).toLocaleDateString(
+                            "en-IN",
+                            {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            }
+                          )
+                        : worker.joiningDate || "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Status</p>
+                    <p
+                      className={`font-medium ${
+                        (worker.status || "active").toString().toLowerCase() ===
+                        "active"
+                          ? "text-green-600"
+                          : "text-amber-500"
+                      }`}
+                    >
+                      {(
+                        ((worker.status || "active") as string)
+                          .charAt(0)
+                          .toUpperCase() +
+                        ((worker.status || "active") as string).slice(1)
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Total Bookings</p>
+                    <p className="text-gray-900 font-medium">
+                      {stats.totalBookings}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Total Revenue</p>
+                    <p className="text-gray-900 font-medium">
+                      ₹{stats.totalRevenue.toLocaleString("en-IN")}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+};
 
-// export default WorkerDetails;
+export default WorkerDetails;
