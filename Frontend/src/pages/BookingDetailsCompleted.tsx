@@ -24,10 +24,6 @@ interface BookingDetailsData {
   balance_amount: number;
   payment_method: string;
   booking_status: string;
-  worker_name?: string;
-  admin_name?: string;
-  created_at?: string;
-  updated_at?: string;
 }
 
 const BookingDetails = () => {
@@ -38,18 +34,15 @@ const BookingDetails = () => {
 
   useEffect(() => {
     if (!id) return;
-
     const fetchBooking = async () => {
       try {
         setLoading(true);
         const response = await bookingAPI.getBookingById(id);
         const bookingData = response.data?.booking;
-
         if (!bookingData) {
           toast.error("Booking not found");
           return;
         }
-
         setBooking(bookingData);
       } catch (error: any) {
         console.error("Error fetching booking", error);
@@ -60,7 +53,6 @@ const BookingDetails = () => {
         setLoading(false);
       }
     };
-
     fetchBooking();
   }, [id]);
 
@@ -75,51 +67,24 @@ const BookingDetails = () => {
     return value.slice(0, 5);
   };
 
-  const formatDateTime = (value?: string) => {
-    if (!value) return "-";
-    const dateObj = new Date(value);
-    if (Number.isNaN(dateObj.getTime())) {
-      return value;
-    }
-    return dateObj.toLocaleString();
-  };
-
-  const handleBack = () => {
-    navigate(-1);
-  };
-
   const balanceAmount = useMemo(() => {
     if (!booking) return 0;
     const balance = (booking.total_amount || 0) - (booking.paid_amount || 0);
     return Math.max(balance, 0);
   }, [booking]);
 
+  const handleBack = () => navigate(-1);
+
   return (
     <div className="min-h-screen bg-muted">
       <Navigation />
-
       <main className="p-6">
-        <div className="bg-black text-white rounded-lg p-6 mb-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold">Completed Booking</h1>
-              <p className="text-gray-300">
-                {loading
-                  ? "Fetching booking details..."
-                  : booking
-                  ? "Final summary of the booking"
-                  : "Booking details unavailable"}
-              </p>
-            </div>
-            {booking?.booking_status && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/10 text-sm uppercase tracking-wide">
-                Status: {booking.booking_status}
-              </span>
-            )}
-          </div>
+        <div className="bg-black text-white rounded-t-lg p-6 mb-0">
+          <h1 className="text-2xl font-bold">Booking Details</h1>
+          <p className="text-gray-300">Information of the booking</p>
         </div>
 
-        <div className="max-w-5xl mx-auto bg-white rounded-lg shadow-sm p-8">
+        <div className="max-w-9xl mx-auto bg-white border border-green-500 rounded-b-lg shadow-sm p-8">
           {loading && (
             <p className="text-center text-muted-foreground">
               Loading booking details...
@@ -139,15 +104,16 @@ const BookingDetails = () => {
 
           {!loading && booking && (
             <div className="space-y-8">
+              {/* Booking Info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium mb-2">
                     Booking ID
                   </label>
                   <Input
-                    value={booking.booking_id}
+                    placeholder="e.g. #1225"
+                    value={booking.booking_id || ""}
                     readOnly
-                    className="bg-muted/40"
                   />
                 </div>
                 <div>
@@ -155,9 +121,9 @@ const BookingDetails = () => {
                     Guest Name
                   </label>
                   <Input
-                    value={booking.guest_name || "-"}
+                    placeholder="Enter full name"
+                    value={booking.guest_name || ""}
                     readOnly
-                    className="bg-muted/40"
                   />
                 </div>
               </div>
@@ -168,139 +134,110 @@ const BookingDetails = () => {
                     Phone Number
                   </label>
                   <Input
-                    value={booking.phone_number || "-"}
+                    placeholder="+91 902 543 3001"
+                    value={booking.phone_number || ""}
                     readOnly
-                    className="bg-muted/40"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Assigned Worker
-                  </label>
-                  <Input
-                    value={booking.worker_name || "-"}
-                    readOnly
-                    className="bg-muted/40"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <label className="block text-sm font-medium mb-2">
                     Number of Persons
                   </label>
                   <Input
-                    value={booking.number_of_persons?.toString() || "-"}
+                    placeholder="Enter number"
+                    value={booking.number_of_persons?.toString() || ""}
                     readOnly
-                    className="bg-muted/40"
                   />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium mb-2">
                     Booking Type
                   </label>
                   <Input
-                    value={booking.booking_type || "-"}
+                    placeholder="Sleeper"
+                    value={booking.booking_type || ""}
                     readOnly
-                    className="bg-muted/40"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Handled By
+                    Total Hours
                   </label>
                   <Input
-                    value={booking.admin_name || "-"}
+                    placeholder="00"
+                    value={booking.total_hours?.toString() || ""}
                     readOnly
-                    className="bg-muted/40"
                   />
                 </div>
               </div>
 
+              {/* Booking Date & Time */}
               <div>
-                <h3 className="text-lg font-medium mb-4">Timeline</h3>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <h3 className="text-lg font-medium mb-4">
+                  Booking Date & Time
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      Booking Date
+                      Date
                     </label>
                     <Input
                       value={formatDate(booking.booking_date)}
                       readOnly
-                      className="bg-muted/40"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      Check-in Time
+                      In Time
                     </label>
-                    <Input
-                      value={formatTime(booking.in_time)}
-                      readOnly
-                      className="bg-muted/40"
-                    />
+                    <Input value={formatTime(booking.in_time)} readOnly />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      Checkout Time
+                      Out Time
                     </label>
-                    <Input
-                      value={formatTime(booking.out_time)}
-                      readOnly
-                      className="bg-muted/40"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Total Hours
-                    </label>
-                    <Input
-                      value={booking.total_hours?.toString() || "0"}
-                      readOnly
-                      className="bg-muted/40"
-                    />
+                    <Input value={formatTime(booking.out_time)} readOnly />
                   </div>
                 </div>
               </div>
 
+              {/* Proof Information */}
               <div>
-                <h3 className="text-lg font-medium mb-4">Guest Proof</h3>
+                <h3 className="text-lg font-medium mb-4">Proof Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      Proof Type
+                      {booking.proof_type || "Proof Type"}
                     </label>
                     <Input
-                      value={booking.proof_type || "-"}
+                      value={booking.proof_type || ""}
                       readOnly
-                      className="bg-muted/40"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      Proof ID
+                      {booking.proof_id || "Proof ID"}
                     </label>
                     <Input
-                      value={booking.proof_id || "-"}
+                      value={booking.proof_id || ""}
                       readOnly
-                      className="bg-muted/40"
                     />
                   </div>
                 </div>
               </div>
 
+              {/* Pricing Information */}
               <div>
-                <h3 className="text-lg font-medium mb-4">Payment Summary</h3>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <h3 className="text-lg font-medium mb-4">Pricing Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Price per Person (₹)
-                    </label>
+                    <label className="block text-sm font-medium mb-2">Rate</label>
                     <Input
-                      value={booking.price_per_person?.toString() || "0"}
+                      value={`₹ ${booking.price_per_person || 0}`}
                       readOnly
-                      className="bg-muted/40"
                     />
                   </div>
                   <div>
@@ -308,66 +245,23 @@ const BookingDetails = () => {
                       Total Amount (₹)
                     </label>
                     <Input
-                      value={booking.total_amount?.toString() || "0"}
+                      value={`₹${booking.total_amount || 0}`}
                       readOnly
-                      className="bg-muted/40"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Paid Amount (₹)
-                    </label>
-                    <Input
-                      value={booking.paid_amount?.toString() || "0"}
-                      readOnly
-                      className="bg-muted/40"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Balance Amount (₹)
-                    </label>
-                    <Input
-                      value={balanceAmount.toString()}
-                      readOnly
-                      className="bg-muted/40"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">
                       Payment Method
                     </label>
                     <Input
-                      value={booking.payment_method || "-"}
+                      value={booking.payment_method || ""}
                       readOnly
-                      className="bg-muted/40"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Created At
-                    </label>
-                    <Input
-                      value={formatDateTime(booking.created_at)}
-                      readOnly
-                      className="bg-muted/40"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Updated At
-                    </label>
-                    <Input
-                      value={formatDateTime(booking.updated_at)}
-                      readOnly
-                      className="bg-muted/40"
                     />
                   </div>
                 </div>
               </div>
 
+              {/* Buttons */}
               <div className="flex justify-end">
                 <Button variant="outline" onClick={handleBack}>
                   Back

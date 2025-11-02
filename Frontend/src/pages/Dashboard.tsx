@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calendar, Plus, Search, ArrowRight } from "lucide-react";
+import { Calendar, Plus, Search, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -30,6 +30,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
+  const [chartLoading, setChartLoading] = useState(false);
   const [dashboardStats, setDashboardStats] = useState<any>(null);
   const [recentBookings, setRecentBookings] = useState<any[]>([]);
   const [monthlyRevenue, setMonthlyRevenue] = useState<any[]>([]);
@@ -48,31 +49,54 @@ const Dashboard = () => {
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
 
-  // Fetch dashboard data on component mount
+  // Fetch main dashboard data on component mount
   useEffect(() => {
     fetchDashboardData();
+  }, []);
+
+  // Fetch chart data separately when year changes
+  useEffect(() => {
+    fetchChartData();
   }, [selectedYear]);
 
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
       
-      // Fetch all dashboard data in parallel - Get 12 months data for full year
-      const [statsRes, revenueRes, bookingsRes] = await Promise.all([
+      // Fetch all dashboard data except monthly revenue
+      const [statsRes, bookingsRes] = await Promise.all([
         analyticsAPI.getDashboardStats(),
-        analyticsAPI.getMonthlyRevenue({ year: parseInt(selectedYear), months: 12 }), // Changed to 12 months
         analyticsAPI.getRecentBookings({ limit: 10 }),
       ]);
 
       setDashboardStats(statsRes.data.data);
-      setMonthlyRevenue(revenueRes.data.data || []);
       setRecentBookings(bookingsRes.data.data);
+      
+      // Fetch initial chart data
+      await fetchChartData();
       
     } catch (error: any) {
       console.error("Error fetching dashboard data:", error);
       toast.error(error.response?.data?.error || "Failed to load dashboard data");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchChartData = async () => {
+    try {
+      setChartLoading(true);
+      const revenueRes = await analyticsAPI.getMonthlyRevenue({ 
+        year: parseInt(selectedYear), 
+        months: 12 
+      });
+      setMonthlyRevenue(revenueRes.data.data || []);
+    } catch (error: any) {
+      console.error("Error fetching chart data:", error);
+      toast.error(error.response?.data?.error || "Failed to load chart data");
+      setMonthlyRevenue([]);
+    } finally {
+      setChartLoading(false);
     }
   };
 
@@ -153,6 +177,16 @@ const Dashboard = () => {
 
   // Year selection options
   const years = ["2025", "2024", "2023", "2022"];
+
+  // Calendar-style year navigation
+  const handleYearChange = (direction: 'prev' | 'next') => {
+    const currentIndex = years.indexOf(selectedYear);
+    if (direction === 'prev' && currentIndex < years.length - 1) {
+      setSelectedYear(years[currentIndex + 1]);
+    } else if (direction === 'next' && currentIndex > 0) {
+      setSelectedYear(years[currentIndex - 1]);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -298,15 +332,15 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Booking List and Chart */}
+        {/* Booking List and Chart - Equal height panels */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-          <div className="lg:col-span-2 bg-white border rounded-lg shadow-sm">
+          {/* Booking List - Set to same height as chart */}
+          <div className="lg:col-span-2 bg-white border rounded-lg shadow-sm flex flex-col h-[420px]">
             <div className="p-4 md:p-6 border-b">
               <div className="flex items-center justify-between mb-3 md:mb-4">
                 <h2 className="text-base md:text-lg font-semibold text-gray-800">
                   Booking list
                 </h2>
-                
               </div>
 
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 md:gap-3">
@@ -337,9 +371,10 @@ const Dashboard = () => {
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* Booking List Table - Takes remaining space */}
+            <div className="flex-1 overflow-auto">
               <table className="w-full">
-                <thead className="bg-black">
+                <thead className="bg-black sticky top-0 z-10">
                   <tr>
                     <th className="text-left p-3 md:p-4 font-medium text-white text-xs uppercase">
                       Booking ID
@@ -418,8 +453,8 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Chart */}
-          <div className="bg-white border rounded-lg p-4 md:p-6 shadow-sm">
+          {/* Chart - Calendar-style year selection */}
+          <div className="bg-white border rounded-lg p-4 md:p-6 shadow-sm h-[420px] flex flex-col">
             <div className="flex items-center justify-between mb-3 md:mb-4">
               <div>
                 <h3 className="font-semibold text-gray-800 text-sm md:text-base">
@@ -437,71 +472,86 @@ const Dashboard = () => {
               </div>
             </div>
 
-            <div className="text-center mb-3 md:mb-4">
-              {/* Year Selection Dropdown */}
-              <Select value={selectedYear} onValueChange={setSelectedYear}>
-                <SelectTrigger className="w-24 mx-auto text-sm font-bold">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {years.map((year) => (
-                    <SelectItem key={year} value={year}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Calendar-style Year Selection */}
+            <div className="flex items-center justify-center mb-3 md:mb-4">
+              <button 
+                onClick={() => handleYearChange('prev')}
+                className="p-1 hover:bg-gray-100 rounded-full disabled:opacity-30 disabled:cursor-not-allowed"
+                disabled={years.indexOf(selectedYear) >= years.length - 1}
+              >
+                <ChevronLeft className="w-4 h-4 text-gray-600" />
+              </button>
+              
+              <div className="mx-4 flex items-center space-x-2">
+                <Calendar className="w-4 h-4 text-gray-600" />
+                <span className="text-lg font-bold text-gray-800">{selectedYear}</span>
+              </div>
+              
+              <button 
+                onClick={() => handleYearChange('next')}
+                className="p-1 hover:bg-gray-100 rounded-full disabled:opacity-30 disabled:cursor-not-allowed"
+                disabled={years.indexOf(selectedYear) <= 0}
+              >
+                <ChevronRight className="w-4 h-4 text-gray-600" />
+              </button>
             </div>
 
             {/* Scrollable Chart Container for Mobile */}
             <div 
-              className="w-full scrollable-chart"
+              className="w-full scrollable-chart flex-1"
               style={{ 
                 height: isMobile ? '280px' : '320px',
                 overflowX: isMobile ? 'auto' : 'hidden',
                 overflowY: 'hidden'
               }}
             >
-              <div style={{ width: chartWidth, height: '100%' }}>
-                <ResponsiveContainer width="100%" height="100%" minWidth={isMobile ? 800 : 400}>
-                  <BarChart 
-                    data={bookingData} 
-                    barSize={isMobile ? 20 : 24}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EEE" />
-                    <XAxis 
-                      dataKey="month" 
-                      stroke="#888" 
-                      fontSize={isMobile ? 10 : 11}
-                      interval={0}
-                    />
-                    <YAxis 
-                      stroke="#888" 
-                      fontSize={isMobile ? 10 : 11}
-                    />
-                    <Tooltip />
-                    <Bar 
-                      dataKey="Sitting" 
-                      fill="#F59E0B" 
-                      radius={[4, 4, 0, 0]}
-                      name="Sitting Bookings"
-                    />
-                    <Bar 
-                      dataKey="Sleeper" 
-                      fill="#3B82F6" 
-                      radius={[4, 4, 0, 0]}
-                      name="Sleeper Bookings"
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              {chartLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-sm text-gray-500">Loading chart data...</div>
+                </div>
+              ) : (
+                <div style={{ width: chartWidth, height: '100%' }}>
+                  <ResponsiveContainer width="100%" height="100%" minWidth={isMobile ? 800 : 400}>
+                    <BarChart 
+                      data={bookingData} 
+                      barSize={isMobile ? 20 : 24}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EEE" />
+                      <XAxis 
+                        dataKey="month" 
+                        stroke="#888" 
+                        fontSize={isMobile ? 10 : 11}
+                        interval={0}
+                      />
+                      <YAxis 
+                        stroke="#888" 
+                        fontSize={isMobile ? 10 : 11}
+                      />
+                      <Tooltip />
+                      <Bar 
+                        dataKey="Sitting" 
+                        fill="#F59E0B" 
+                        radius={[4, 4, 0, 0]}
+                        name="Sitting Bookings"
+                      />
+                      <Bar 
+                        dataKey="Sleeper" 
+                        fill="#3B82F6" 
+                        radius={[4, 4, 0, 0]}
+                        name="Sleeper Bookings"
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </div>
 
-            <div className="mt-3 md:mt-4 text-center">
-              <button className="text-xs text-gray-500 flex items-center justify-center w-full">
-                January - December <ArrowRight className="w-3 h-3 ml-1" />
-              </button>
+            {/* Months label at the bottom */}
+            <div className="text-center mt-2">
+              <div className="text-xs text-gray-500">
+                Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec
+              </div>
             </div>
           </div>
         </div>

@@ -92,27 +92,16 @@ const BookingDetails = () => {
       <Navigation />
 
       <main className="p-6">
+        {/* Header */}
         <div className="bg-black text-white rounded-lg p-6 mb-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold">Active Booking Details</h1>
-              <p className="text-gray-300">
-                {loading
-                  ? "Loading booking information..."
-                  : booking
-                  ? "Review the booking before submission"
-                  : "Booking details unavailable"}
-              </p>
-            </div>
-            {booking?.booking_status && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/10 text-sm uppercase tracking-wide">
-                Status: {booking.booking_status}
-              </span>
-            )}
-          </div>
+          <h1 className="text-2xl font-bold">Submit Booking</h1>
+          <p className="text-gray-300">
+            Complete the requirements to end booking
+          </p>
         </div>
 
-        <div className="max-w-5xl mx-auto bg-white rounded-lg shadow-sm p-8">
+        {/* Booking Form */}
+        <div className="max-w-9xl mx-auto bg-white rounded-lg shadow-sm p-8">
           {loading && (
             <p className="text-center text-muted-foreground">
               Loading booking details...
@@ -131,16 +120,17 @@ const BookingDetails = () => {
           )}
 
           {!loading && booking && (
-            <div className="space-y-8">
+            <form className="space-y-8">
+              {/* Booking Info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium mb-2">
                     Booking ID
                   </label>
                   <Input
-                    value={booking.booking_id}
+                    value={booking.booking_id || ""}
+                    placeholder="e.g. #1225"
                     readOnly
-                    className="bg-muted/40"
                   />
                 </div>
                 <div>
@@ -148,9 +138,9 @@ const BookingDetails = () => {
                     Guest Name
                   </label>
                   <Input
-                    value={booking.guest_name || "-"}
+                    value={booking.guest_name || ""}
+                    placeholder="Enter full name"
                     readOnly
-                    className="bg-muted/40"
                   />
                 </div>
               </div>
@@ -161,19 +151,19 @@ const BookingDetails = () => {
                     Phone Number
                   </label>
                   <Input
-                    value={booking.phone_number || "-"}
+                    value={booking.phone_number || ""}
+                    placeholder="+91 902 543 3001"
                     readOnly
-                    className="bg-muted/40"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Assigned Worker
+                    Number of Persons
                   </label>
                   <Input
-                    value={booking.worker_name || "-"}
+                    value={booking.number_of_persons?.toString() || ""}
+                    placeholder="Enter number"
                     readOnly
-                    className="bg-muted/40"
                   />
                 </div>
               </div>
@@ -181,28 +171,31 @@ const BookingDetails = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Number of Persons
+                    Booking Type
                   </label>
                   <Input
-                    value={booking.number_of_persons?.toString() || "-"}
+                    value={booking.booking_type || ""}
+                    placeholder="Sleeper"
                     readOnly
-                    className="bg-muted/40"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Booking Type
+                    Total Hours
                   </label>
                   <Input
-                    value={booking.booking_type || "-"}
+                    value={booking.total_hours?.toString() || ""}
+                    placeholder="00"
                     readOnly
-                    className="bg-muted/40"
                   />
                 </div>
               </div>
 
+              {/* Booking Date & Time */}
               <div>
-                <h3 className="text-lg font-medium mb-4">Booking Schedule</h3>
+                <h3 className="text-lg font-semibold mb-3">
+                  Booking Date & Time
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <label className="block text-sm font-medium mb-2">
@@ -210,44 +203,47 @@ const BookingDetails = () => {
                     </label>
                     <Input
                       value={formatDate(booking.booking_date)}
+                      type="date"
                       readOnly
-                      className="bg-muted/40"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      Check-in Time
+                      In Time
                     </label>
                     <Input
                       value={formatTime(booking.in_time)}
+                      type="time"
                       readOnly
-                      className="bg-muted/40"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      Planned Checkout
+                      Out Time
                     </label>
                     <Input
                       value={formatTime(booking.out_time)}
+                      type="time"
                       readOnly
-                      className="bg-muted/40"
                     />
                   </div>
                 </div>
               </div>
 
+              {/* Proof Information */}
               <div>
-                <h3 className="text-lg font-medium mb-4">Guest Proof</h3>
+                <h3 className="text-lg font-semibold mb-3">
+                  Proof Information
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium mb-2">
                       Proof Type
                     </label>
                     <Input
-                      value={booking.proof_type || "-"}
+                      value={booking.proof_type || ""}
+                      placeholder="Aadhar"
                       readOnly
-                      className="bg-muted/40"
                     />
                   </div>
                   <div>
@@ -255,35 +251,28 @@ const BookingDetails = () => {
                       Proof ID
                     </label>
                     <Input
-                      value={booking.proof_id || "-"}
+                      value={booking.proof_id || ""}
+                      placeholder="12345678900"
                       readOnly
-                      className="bg-muted/40"
                     />
                   </div>
                 </div>
               </div>
 
+              {/* Pricing Information */}
               <div>
-                <h3 className="text-lg font-medium mb-4">Payment Summary</h3>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <h3 className="text-lg font-semibold mb-3">
+                  Pricing Information
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <label className="block text-sm font-medium mb-2">
                       Price per Person (₹)
                     </label>
                     <Input
                       value={booking.price_per_person?.toString() || "0"}
+                      placeholder="0"
                       readOnly
-                      className="bg-muted/40"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Total Hours
-                    </label>
-                    <Input
-                      value={booking.total_hours?.toString() || "0"}
-                      readOnly
-                      className="bg-muted/40"
                     />
                   </div>
                   <div>
@@ -292,8 +281,8 @@ const BookingDetails = () => {
                     </label>
                     <Input
                       value={booking.total_amount?.toString() || "0"}
+                      placeholder="0"
                       readOnly
-                      className="bg-muted/40"
                     />
                   </div>
                   <div>
@@ -302,61 +291,34 @@ const BookingDetails = () => {
                     </label>
                     <Input
                       value={booking.paid_amount?.toString() || "0"}
+                      placeholder="₹0"
                       readOnly
-                      className="bg-muted/40"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Balance Amount (₹)
-                    </label>
-                    <Input
-                      value={balanceAmount.toString()}
-                      readOnly
-                      className="bg-muted/40"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Payment Method
-                    </label>
-                    <Input
-                      value={booking.payment_method || "-"}
-                      readOnly
-                      className="bg-muted/40"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Handled By
-                    </label>
-                    <Input
-                      value={booking.admin_name || "-"}
-                      readOnly
-                      className="bg-muted/40"
                     />
                   </div>
                 </div>
               </div>
 
-              <div className="flex flex-col md:flex-row gap-4">
-                <Button
-                  className="bg-blue-600 hover:bg-blue-700 md:w-1/2"
-                  onClick={handleSubmitRedirect}
-                >
-                  Submit / Complete Booking
-                </Button>
-                <Button
-                  variant="outline"
-                  className="md:w-1/2"
-                  onClick={handleBack}
-                >
-                  Back
-                </Button>
-              </div>
-            </div>
+             {/* Action Buttons */}
+<div className="flex flex-col gap-3 items-center mt-6">
+  <Button
+    type="button"
+    className="w-1/2 bg-blue-600 hover:bg-blue-700 text-white text-base font-medium py-2.5 rounded-md transition-all"
+    onClick={handleSubmitRedirect}
+  >
+    Submit
+  </Button>
+
+  <Button
+    type="button"
+    variant="outline"
+    className="w-1/2 border border-gray-300 text-gray-700 hover:bg-gray-100 text-base font-medium py-2.5 rounded-md transition-all"
+    onClick={handleBack}
+  >
+    Cancel
+  </Button>
+</div>
+
+            </form>
           )}
         </div>
       </main>
