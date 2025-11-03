@@ -123,7 +123,7 @@ const WorkerList = () => {
                       <td className="px-4 py-3">{worker.mobile_number}</td>
                       <td className="px-4 py-3 capitalize">{worker.gender || "N/A"}</td>
                       <td className="px-4 py-3">{formatDate(worker.joining_date)}</td>
-                      <td className="px-4 py-3">-</td>
+                      <td className="px-4 py-3 text-center">{worker.total_bookings || 0}</td>
                       <td className="px-4 py-3">
                         <span
                           className={`font-medium ${
