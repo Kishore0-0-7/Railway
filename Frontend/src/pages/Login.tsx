@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { adminAPI } from "@/services/api";
 import { toast } from "sonner";
+import { Eye, EyeOff } from "lucide-react"; // 👈 import icons
+
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -11,6 +13,7 @@ const Login = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false); // 👈 toggle state
 
   const passwordRef = useRef<HTMLInputElement>(null); // 👈 reference for password field
 
@@ -71,8 +74,9 @@ const Login = () => {
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
       {/* Left Side - Welcome Section */}
+      {/* Left Side - Welcome Section (Hidden on Mobile) */}
       <div
-        className="flex-1 flex items-center justify-center p-8 md:p-0 order-1 md:order-1"
+        className="hidden md:flex flex-1 items-center justify-center p-8 md:p-0 order-1 md:order-1"
         style={{ backgroundColor: "#EEF1FF" }}
       >
         <div className="text-center">
@@ -86,8 +90,8 @@ const Login = () => {
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="flex-1 bg-white flex items-center justify-center p-8 order-2 md:order-2">
-        <div className="w-full max-w-md">
+      <div className="flex-1 flex items-center bg-[#0001] justify-center p-6 md:p-8 order-2 md:order-2">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl bg-white border border-gray-200 p-8 animate-fadeIn">
           {/* Header */}
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-gray-900 mb-2">Login</h2>
@@ -118,32 +122,38 @@ const Login = () => {
             </div>
 
             {/* Password */}
-            <div>
+            <div className="relative">
               <label className="block text-sm font-semibold text-gray-900 mb-2">
                 Password
               </label>
               <Input
                 ref={passwordRef}
-                type="password"
+                type={showPassword ? "text" : "password"}
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
-                    handleLogin(); // 👈 press Enter to log in
+                    handleLogin();
                   }
                 }}
-                className="w-full border-gray-300"
+                className="w-full border-gray-300 pr-10"
                 required
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-10 flex items-center text-gray-500 hover:text-gray-800"
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+
             </div>
 
             {/* Error Message */}
             {error && (
-              <p className="text-red-600 text-sm font-medium text-center">
-                {error}
-              </p>
+              <p className="text-red-600 text-sm font-medium text-center">{error}</p>
             )}
 
             {/* Login Button */}
@@ -156,6 +166,19 @@ const Login = () => {
             </Button>
           </div>
         </div>
+
+        {/* Fade Animation */}
+        <style>{`
+    @keyframes fadeIn {
+      0% { opacity: 0; transform: translateY(15px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fadeIn {
+      animation: fadeIn 0.5s ease-out;
+    }
+  `}</style>
+
+
       </div>
     </div>
   );
