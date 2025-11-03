@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { workerAPI } from "@/services/api";
 import { toast } from "sonner";
+import { Eye, EyeOff } from "lucide-react";
 
 const ManageLogin = () => {
   const location = useLocation();
@@ -46,6 +47,8 @@ const ManageLogin = () => {
   const [showResetPassword, setShowResetPassword] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
 
   // Fetch workers on component mount
   useEffect(() => {
@@ -107,6 +110,30 @@ const ManageLogin = () => {
     });
   };
 
+  // Handle Enter key press to jump to next input
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, nextField: string) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const form = e.currentTarget.form;
+      if (form) {
+        const inputs = Array.from(form.querySelectorAll('input, select, button'));
+        const currentIndex = inputs.indexOf(e.currentTarget);
+        const nextInput = inputs[currentIndex + 1] as HTMLElement;
+        if (nextInput) {
+          nextInput.focus();
+        }
+      }
+    }
+  };
+
+  // Handle mobile number input - allow only numbers and limit to 10 digits
+  const handleMobileNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, ''); // Remove non-digit characters
+    if (value.length <= 10) {
+      setFormData({ ...formData, mobileNumber: value });
+    }
+  };
+
   const handleCreateAccount = async () => {
     // Validation
     if (!formData.name.trim()) {
@@ -115,6 +142,10 @@ const ManageLogin = () => {
     }
     if (!formData.mobileNumber.trim()) {
       toast.error("Mobile number is required");
+      return;
+    }
+    if (formData.mobileNumber.length !== 10) {
+      toast.error("Mobile number must be 10 digits");
       return;
     }
     if (!formData.joiningDate) {
@@ -177,6 +208,8 @@ const ManageLogin = () => {
     setEditingAccount(null);
     setEditingWorkerId("");
     setShowResetPassword(false);
+    setShowPassword(false);
+    setShowNewPassword(false);
   };
 
   const handleRowClick = (account: Worker) => {
@@ -193,6 +226,8 @@ const ManageLogin = () => {
       role: "worker",
       currentPassword: "",
     });
+    setShowResetPassword(false);
+    setShowNewPassword(false);
   };
 
   const handleUpdateAccount = async () => {
@@ -203,6 +238,10 @@ const ManageLogin = () => {
     }
     if (!formData.mobileNumber.trim()) {
       toast.error("Mobile number is required");
+      return;
+    }
+    if (formData.mobileNumber.length !== 10) {
+      toast.error("Mobile number must be 10 digits");
       return;
     }
     if (!formData.joiningDate) {
@@ -270,7 +309,7 @@ const ManageLogin = () => {
               {editingAccount ? "Update Account" : "Create New Account"}
             </h2>
           </div>
-          <div className="bg-card border rounded-lg p-8">
+          <form className="bg-card border rounded-lg p-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Name */}
               <div>
@@ -279,6 +318,7 @@ const ManageLogin = () => {
                   placeholder="Enter your first name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onKeyDown={(e) => handleKeyDown(e, "mobileNumber")}
                 />
               </div>
               {/* Mobile Number */}
@@ -287,7 +327,9 @@ const ManageLogin = () => {
                 <Input
                   placeholder="Enter your Mobile Number"
                   value={formData.mobileNumber}
-                  onChange={(e) => setFormData({ ...formData, mobileNumber: e.target.value })}
+                  onChange={handleMobileNumberChange}
+                  onKeyDown={(e) => handleKeyDown(e, "joiningDate")}
+                  maxLength={10}
                 />
               </div>
               {/* Joining Date */}
@@ -297,6 +339,7 @@ const ManageLogin = () => {
                   type="date"
                   value={formData.joiningDate}
                   onChange={(e) => setFormData({ ...formData, joiningDate: e.target.value })}
+                  onKeyDown={(e) => handleKeyDown(e, "gender")}
                 />
               </div>
               {/* Gender */}
@@ -325,6 +368,7 @@ const ManageLogin = () => {
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                   disabled={!!editingAccount}
                   className={editingAccount ? "bg-muted/50 cursor-not-allowed" : ""}
+                  onKeyDown={(e) => handleKeyDown(e, "password")}
                 />
                 {editingAccount && (
                   <p className="text-xs text-muted-foreground mt-1">Username cannot be changed</p>
@@ -335,17 +379,28 @@ const ManageLogin = () => {
               {!editingAccount ? (
                 <div>
                   <label className="block text-sm font-medium mb-2">Password</label>
-                  <Input
-                    type="password"
-                    placeholder="Enter your password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  />
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter your password"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      onKeyDown={(e) => handleKeyDown(e, "buttons")}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="flex flex-col items-start justify-center">
                   {!showResetPassword ? (
                     <Button
+                      type="button"
                       onClick={() => setShowResetPassword(true)}
                       className="bg-red-500 hover:bg-red-600 text-white mt-6"
                     >
@@ -354,12 +409,22 @@ const ManageLogin = () => {
                   ) : (
                     <div className="w-full">
                       <label className="block text-sm font-medium mb-2">New Password</label>
-                      <Input
-                        type="password"
-                        placeholder="Enter new password"
-                        value={formData.password}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      />
+                      <div className="relative">
+                        <Input
+                          type={showNewPassword ? "text" : "password"}
+                          placeholder="Enter new password"
+                          value={formData.password}
+                          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                          onKeyDown={(e) => handleKeyDown(e, "buttons")}
+                        />
+                        <button
+                          type="button"
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                        >
+                          {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -367,6 +432,7 @@ const ManageLogin = () => {
               {/* Buttons */}
               <div className="md:col-span-2 flex flex-col sm:flex-row justify-center sm:space-x-4 space-y-3 sm:space-y-0 mt-6">
                 <Button
+                  type="button"
                   variant="outline"
                   onClick={handleCancel}
                   disabled={submitting}
@@ -375,9 +441,9 @@ const ManageLogin = () => {
                   Cancel
                 </Button>
 
-
                 {editingAccount ? (
                   <Button
+                    type="button"
                     onClick={handleUpdateAccount}
                     disabled={submitting}
                     className="w-full  lg:w-[300px] sm:w-auto px-12 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-md disabled:opacity-50"
@@ -386,6 +452,7 @@ const ManageLogin = () => {
                   </Button>
                 ) : (
                   <Button
+                    type="button"
                     onClick={handleCreateAccount}
                     disabled={submitting}
                     className="w-full  lg:w-[300px] sm:w-auto px-12 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-md disabled:opacity-50"
@@ -395,7 +462,7 @@ const ManageLogin = () => {
                 )}
               </div>
             </div>
-          </div>
+          </form>
         </div>
 
         {/* Table Section */}
