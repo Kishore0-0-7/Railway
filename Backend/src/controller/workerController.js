@@ -350,15 +350,15 @@ const updateWorker = async (req, res) => {
 // Update Worker Password
 const updateWorkerPassword = async (req, res) => {
   const { id } = req.params;
-  const { current_password, new_password } = req.body;
+  const { current_password, new_password, admin_reset } = req.body;
 
   if (!id || id.trim() === "") {
     return res.status(400).json({ message: "Worker ID is required" });
   }
 
-  if (!current_password || !new_password) {
+  if (!new_password) {
     return res.status(400).json({
-      message: "Current password and new password are required",
+      message: "New password is required",
     });
   }
 
@@ -377,15 +377,17 @@ const updateWorkerPassword = async (req, res) => {
       return res.status(404).json({ message: "Worker not found" });
     }
 
-    // Verify current password
-    const isPasswordValid = await bcrypt.compare(
-      current_password,
-      rows[0].password_hash
-    );
+    // If not admin reset, verify current password
+    if (!admin_reset && current_password) {
+      const isPasswordValid = await bcrypt.compare(
+        current_password,
+        rows[0].password_hash
+      );
 
-    if (!isPasswordValid) {
-      await client.query("ROLLBACK");
-      return res.status(401).json({ message: "Current password is incorrect" });
+      if (!isPasswordValid) {
+        await client.query("ROLLBACK");
+        return res.status(401).json({ message: "Current password is incorrect" });
+      }
     }
 
     // Hash new password

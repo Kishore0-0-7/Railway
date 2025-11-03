@@ -17,7 +17,7 @@ import { Eye, EyeOff } from "lucide-react";
 
 const ManageLogin = () => {
   const location = useLocation();
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState({
     name: "",
     mobileNumber: "",
     joiningDate: "",
@@ -39,19 +39,6 @@ const ManageLogin = () => {
     created_at: string;
     status: string;
     admin_name?: string;
-    total_bookings?: number;
-  }
-
-  interface FormData {
-    name: string;
-    mobileNumber: string;
-    joiningDate: string;
-    gender: string;
-    username: string;
-    password: string;
-    confirmPassword: string;
-    role: 'worker';
-    currentPassword: string;
   }
 
   const [accounts, setAccounts] = useState<Worker[]>([]);
@@ -62,7 +49,6 @@ const ManageLogin = () => {
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   // Fetch workers on component mount
   useEffect(() => {
@@ -94,15 +80,13 @@ const ManageLogin = () => {
     try {
       setLoading(true);
       const response = await workerAPI.getAllWorkers();
-
+      
       if (response.data && response.data.workers) {
         setAccounts(response.data.workers);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching workers:", error);
-      const errorMessage = error instanceof Error ? error.message : "Failed to load workers";
-      toast.error(errorMessage);
-      setError(errorMessage);
+      toast.error(error.response?.data?.error || "Failed to load workers");
     } finally {
       setLoading(false);
     }
@@ -150,38 +134,39 @@ const ManageLogin = () => {
     }
   };
 
-  // Validate form fields and return error message if invalid
-  const validateForm = (data: FormData, isCreating: boolean = false): string | null => {
-    if (!data.name.trim()) return "Name is required";
-    if (!data.mobileNumber.trim()) return "Mobile number is required";
-    if (data.mobileNumber.length !== 10) return "Mobile number must be 10 digits";
-    if (!data.joiningDate) return "Joining date is required";
-    if (isCreating) {
-      if (!data.username.trim()) return "Username is required";
-      if (!data.password.trim()) return "Password is required";
-      if (data.password.length < 6) return "Password must be at least 6 characters";
-    }
-    if (showResetPassword && !data.password.trim()) {
-      return "New password is required";
-    }
-    return null;
-  };
-
   const handleCreateAccount = async () => {
-    setError(null);
-    const validationError = validateForm(formData, true);
-    if (validationError) {
-      toast.error(validationError);
-      setError(validationError);
+    // Validation
+    if (!formData.name.trim()) {
+      toast.error("Name is required");
+      return;
+    }
+    if (!formData.mobileNumber.trim()) {
+      toast.error("Mobile number is required");
+      return;
+    }
+    if (formData.mobileNumber.length !== 10) {
+      toast.error("Mobile number must be 10 digits");
+      return;
+    }
+    if (!formData.joiningDate) {
+      toast.error("Joining date is required");
+      return;
+    }
+    if (!formData.username.trim()) {
+      toast.error("Username is required");
+      return;
+    }
+    if (!formData.password.trim()) {
+      toast.error("Password is required");
       return;
     }
 
     try {
       setSubmitting(true);
-
+      
       // Get admin ID from localStorage
       const adminId = localStorage.getItem("adminId") || "ADM001";
-
+      
       const workerData = {
         admin_id: adminId,
         full_name: formData.name,
@@ -193,17 +178,16 @@ const ManageLogin = () => {
       };
 
       const response = await workerAPI.createWorker(workerData);
-
+      
       if (response.data) {
         toast.success("Worker account created successfully!");
         await fetchWorkers(); // Refresh the list
         handleCancel();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating worker:", error);
-      const errorMessage = error instanceof Error ? error.message : "Failed to create worker account";
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || "Failed to create worker account";
       toast.error(errorMessage);
-      setError(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -247,25 +231,36 @@ const ManageLogin = () => {
   };
 
   const handleUpdateAccount = async () => {
-    setError(null);
-
+    // Validation
+    if (!formData.name.trim()) {
+      toast.error("Name is required");
+      return;
+    }
+    if (!formData.mobileNumber.trim()) {
+      toast.error("Mobile number is required");
+      return;
+    }
+    if (formData.mobileNumber.length !== 10) {
+      toast.error("Mobile number must be 10 digits");
+      return;
+    }
+    if (!formData.joiningDate) {
+      toast.error("Joining date is required");
+      return;
+    }
     if (!editingWorkerId) {
-      const errorMsg = "No worker selected for update";
-      toast.error(errorMsg);
-      setError(errorMsg);
+      toast.error("No worker selected for update");
       return;
     }
 
-    const validationError = validateForm(formData);
-    if (validationError) {
-      toast.error(validationError);
-      setError(validationError);
+    if (showResetPassword && formData.password.trim() === "") {
+      toast.error("Please enter new password before saving.");
       return;
     }
 
     try {
       setSubmitting(true);
-
+      
       const workerData = {
         full_name: formData.name,
         mobile_number: formData.mobileNumber,
@@ -274,25 +269,24 @@ const ManageLogin = () => {
       };
 
       await workerAPI.updateWorker(editingWorkerId, workerData);
-
+      
       // Handle password reset if requested
       if (showResetPassword && formData.password.trim()) {
-        // Note: Password update might need current password verification
-        // Adjust based on your API requirements
         await workerAPI.updateWorkerPassword(editingWorkerId, {
-          current_password: formData.currentPassword || "temp",
           new_password: formData.password,
+          admin_reset: true, // Indicate this is an admin-initiated reset
         });
+        toast.success("Worker account and password updated successfully!");
+      } else {
+        toast.success("Worker account updated successfully!");
       }
-
-      toast.success("Worker account updated successfully!");
+      
       await fetchWorkers(); // Refresh the list
       handleCancel();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating worker:", error);
-      const errorMessage = error instanceof Error ? error.message : "Failed to update worker account";
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || "Failed to update worker account";
       toast.error(errorMessage);
-      setError(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -315,11 +309,6 @@ const ManageLogin = () => {
               {editingAccount ? "Update Account" : "Create New Account"}
             </h2>
           </div>
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-              <p className="text-sm">{error}</p>
-            </div>
-          )}
           <form className="bg-card border rounded-lg p-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Name */}
@@ -526,7 +515,7 @@ const ManageLogin = () => {
                             className={
                               account.status === "active"
                                 ? "bg-green-500 text-white"
-                                : "bg-red-400 text-white"
+                                : "bg-gray-400 text-white"
                             }
                           >
                             {account.status}
