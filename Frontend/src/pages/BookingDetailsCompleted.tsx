@@ -23,7 +23,7 @@ interface BookingDetailsData {
   paid_amount: number;
   balance_amount: number;
   payment_method: string;
-  booking_status: string;
+  status: string;
 }
 
 const BookingDetails = () => {
@@ -184,10 +184,7 @@ const BookingDetails = () => {
                     <label className="block text-sm font-medium mb-2">
                       Date
                     </label>
-                    <Input
-                      value={formatDate(booking.booking_date)}
-                      readOnly
-                    />
+                    <Input value={formatDate(booking.booking_date)} readOnly />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
@@ -212,29 +209,27 @@ const BookingDetails = () => {
                     <label className="block text-sm font-medium mb-2">
                       {booking.proof_type || "Proof Type"}
                     </label>
-                    <Input
-                      value={booking.proof_type || ""}
-                      readOnly
-                    />
+                    <Input value={booking.proof_type || ""} readOnly />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
                       {booking.proof_id || "Proof ID"}
                     </label>
-                    <Input
-                      value={booking.proof_id || ""}
-                      readOnly
-                    />
+                    <Input value={booking.proof_id || ""} readOnly />
                   </div>
                 </div>
               </div>
 
               {/* Pricing Information */}
               <div>
-                <h3 className="text-lg font-medium mb-4">Pricing Information</h3>
+                <h3 className="text-lg font-medium mb-4">
+                  Pricing Information
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
-                    <label className="block text-sm font-medium mb-2">Rate</label>
+                    <label className="block text-sm font-medium mb-2">
+                      Rate
+                    </label>
                     <Input
                       value={`₹ ${booking.price_per_person || 0}`}
                       readOnly
@@ -244,19 +239,13 @@ const BookingDetails = () => {
                     <label className="block text-sm font-medium mb-2">
                       Total Amount (₹)
                     </label>
-                    <Input
-                      value={`₹${booking.total_amount || 0}`}
-                      readOnly
-                    />
+                    <Input value={`₹${booking.total_amount || 0}`} readOnly />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
                       Payment Method
                     </label>
-                    <Input
-                      value={booking.payment_method || ""}
-                      readOnly
-                    />
+                    <Input value={booking.payment_method || ""} readOnly />
                   </div>
                 </div>
               </div>

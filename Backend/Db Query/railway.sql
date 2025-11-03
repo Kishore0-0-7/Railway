@@ -68,11 +68,11 @@ CREATE TABLE public.bookings (
     paid_amount numeric(12,2) DEFAULT 0,
     balance_amount numeric(12,2) GENERATED ALWAYS AS ((total_amount - paid_amount)) STORED,
     payment_method character varying(50) DEFAULT 'cash'::character varying,
-    booking_status character varying(20) DEFAULT 'active'::character varying,
+    status character varying(20) DEFAULT 'active'::character varying,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT bookings_booking_date_check CHECK ((booking_date <= (CURRENT_DATE + '1 year'::interval))),
-    CONSTRAINT bookings_booking_status_check CHECK (((booking_status)::text = ANY ((ARRAY['active'::character varying, 'completed'::character varying])::text[]))),
+    CONSTRAINT bookings_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'completed'::character varying])::text[]))),
     CONSTRAINT bookings_booking_type_check CHECK (((booking_type)::text = ANY ((ARRAY['sleeper'::character varying, 'sitting'::character varying])::text[]))),
     CONSTRAINT bookings_check CHECK (((paid_amount >= (0)::numeric) AND (paid_amount <= total_amount))),
     CONSTRAINT bookings_number_of_persons_check CHECK (((number_of_persons >= 1) AND (number_of_persons <= 50))),
@@ -130,7 +130,7 @@ ADM002	admin	admin@gmail.com	9876543210	$2b$10$.n6YCVZ.MHyfwtYFtmvpD.TrjpK5A2RgC
 -- Data for Name: bookings; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.bookings (booking_id, admin_id, worker_id, guest_name, phone_number, number_of_persons, booking_type, total_hours, booking_date, in_time, out_time, proof_type, proof_id, price_per_person, total_amount, paid_amount, payment_method, booking_status, created_at, updated_at) FROM stdin;
+COPY public.bookings (booking_id, admin_id, worker_id, guest_name, phone_number, number_of_persons, booking_type, total_hours, booking_date, in_time, out_time, proof_type, proof_id, price_per_person, total_amount, paid_amount, payment_method, status, created_at, updated_at) FROM stdin;
 BKG001	ADM002	WOR001	Arjun Kumar	9876512345	3	sleeper	6	2025-11-02	10:00:00	16:00:00	aadhar	123456789012	250.00	750.00	750.00	cash	completed	2025-11-02 09:34:16.873022+00	2025-11-02 09:34:16.873022+00
 BKG002	ADM002	WOR001	Priya Sharma	9123456780	2	sitting	4	2025-11-02	08:00:00	12:00:00	pan id	BNZPS1234K	200.00	400.00	200.00	upi	active	2025-11-02 09:34:16.873022+00	2025-11-02 09:34:16.873022+00
 BKG003	ADM002	WOR001	Rahul Mehta	9812345678	5	sleeper	8	2025-11-03	18:00:00	02:00:00	aadhar	765432109876	300.00	1500.00	1500.00	card	active	2025-11-02 09:34:16.873022+00	2025-11-02 09:34:16.873022+00

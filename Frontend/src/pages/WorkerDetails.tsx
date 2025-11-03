@@ -60,14 +60,16 @@ const WorkerDetails = () => {
             const wk = wResp.data.worker;
             setWorker({
               ...wk,
-              status: wk.status || wk.worker_status || wk.workerStatus || "active",
+              status:
+                wk.status || wk.worker_status || wk.workerStatus || "active",
             });
           } else if (wResp?.data) {
             // some APIs return the object at data directly
             const wk = wResp.data;
             setWorker({
               ...wk,
-              status: wk.status || wk.worker_status || wk.workerStatus || "active",
+              status:
+                wk.status || wk.worker_status || wk.workerStatus || "active",
             });
           }
 
@@ -93,12 +95,12 @@ const WorkerDetails = () => {
           }, 0);
 
           const completedBookings = fetchedBookings.filter(
-            (b) => b.booking_status === "completed" || b.status === "Completed"
+            (b) => b.status === "completed" || b.status === "Completed"
           ).length;
 
           const activeBookings = fetchedBookings.filter(
             (b) =>
-              b.booking_status === "active" ||
+              b.status === "active" ||
               b.status === "Active" ||
               b.status === "Booked"
           ).length;
@@ -106,7 +108,7 @@ const WorkerDetails = () => {
           const sittingBooked = fetchedBookings.filter(
             (b) =>
               (b.booking_type === "Sitting" || b.type === "Sitting") &&
-              (b.booking_status === "active" ||
+              (b.status === "active" ||
                 b.status === "Active" ||
                 b.status === "Booked")
           ).length;
@@ -114,7 +116,7 @@ const WorkerDetails = () => {
           const sleeperBooked = fetchedBookings.filter(
             (b) =>
               (b.booking_type === "Sleeper" || b.type === "Sleeper") &&
-              (b.booking_status === "active" ||
+              (b.status === "active" ||
                 b.status === "Active" ||
                 b.status === "Booked")
           ).length;
@@ -378,15 +380,16 @@ const WorkerDetails = () => {
                           </td>
                           <td className="py-3 px-4">
                             <span
-                              className={`font-medium ${b.booking_status === "completed" ||
-                                  b.status === "Completed"
+                              className={`font-medium ${
+                                b.status === "completed" ||
+                                b.status === "Completed"
                                   ? "text-green-600"
                                   : "text-orange-500"
                                 }`}
                             >
-                              {b.booking_status
-                                ? b.booking_status.charAt(0).toUpperCase() +
-                                b.booking_status.slice(1)
+                              {b.status
+                                ? b.status.charAt(0).toUpperCase() +
+                                  b.status.slice(1)
                                 : b.status}
                             </span>
                           </td>
@@ -455,12 +458,10 @@ const WorkerDetails = () => {
                           : "text-amber-500"
                         }`}
                     >
-                      {(
-                        ((worker.status || "active") as string)
-                          .charAt(0)
-                          .toUpperCase() +
-                        ((worker.status || "active") as string).slice(1)
-                      )}
+                      {((worker.status || "active") as string)
+                        .charAt(0)
+                        .toUpperCase() +
+                        ((worker.status || "active") as string).slice(1)}
                     </p>
                   </div>
                   <div>

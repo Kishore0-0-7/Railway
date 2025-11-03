@@ -88,18 +88,20 @@ const createBooking = async (req, res) => {
     const inTimeParts = in_time.split(":");
     const inHours = parseInt(inTimeParts[0]);
     const inMinutes = parseInt(inTimeParts[1] || 0);
-    
+
     // Add total_hours to in_time
     let outHours = inHours + parseInt(total_hours);
     let outMinutes = inMinutes;
-    
+
     // Handle overflow (more than 24 hours)
     if (outHours >= 24) {
       outHours = outHours % 24;
     }
-    
+
     // Format out_time as HH:MM
-    const out_time = `${String(outHours).padStart(2, '0')}:${String(outMinutes).padStart(2, '0')}`;
+    const out_time = `${String(outHours).padStart(2, "0")}:${String(
+      outMinutes
+    ).padStart(2, "0")}`;
 
     // Calculate total amount (price_per_person * number_of_persons * total_hours)
     const total_amount = price_per_person * number_of_persons * total_hours;
@@ -110,14 +112,14 @@ const createBooking = async (req, res) => {
         booking_id, admin_id, worker_id, guest_name, phone_number, 
         number_of_persons, booking_type, total_hours, booking_date, 
         in_time, out_time, proof_type, proof_id, price_per_person, 
-        total_amount, paid_amount, payment_method, booking_status
+        total_amount, paid_amount, payment_method, status
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
       RETURNING 
         booking_id, admin_id, worker_id, guest_name, phone_number, 
         number_of_persons, booking_type, total_hours, booking_date, 
         in_time, out_time, proof_type, proof_id, price_per_person, 
         total_amount, paid_amount, balance_amount, payment_method, 
-        booking_status, created_at, updated_at;
+        status, created_at, updated_at;
     `;
 
     const values = [
@@ -188,7 +190,7 @@ const getBookingById = async (req, res) => {
         b.paid_amount,
         b.balance_amount,
         b.payment_method,
-        b.booking_status,
+        b.status,
         b.created_at,
         b.updated_at,
         a.full_name as admin_name,
@@ -243,7 +245,7 @@ const getAllBookings = async (req, res) => {
         b.paid_amount,
         b.balance_amount,
         b.payment_method,
-        b.booking_status,
+        b.status,
         b.created_at,
         b.updated_at,
         a.full_name as admin_name,
@@ -259,7 +261,7 @@ const getAllBookings = async (req, res) => {
 
     // Add filters dynamically
     if (status) {
-      query += ` AND b.booking_status = $${paramCount}`;
+      query += ` AND b.status = $${paramCount}`;
       params.push(status);
       paramCount++;
     }
@@ -355,7 +357,7 @@ const submitBooking = async (req, res) => {
     }
 
     // Check if already completed
-    if (existingBooking[0].booking_status === "completed") {
+    if (existingBooking[0].status === "completed") {
       await client.query("ROLLBACK");
       return res.status(400).json({ message: "Booking is already completed" });
     }
@@ -363,22 +365,24 @@ const submitBooking = async (req, res) => {
     // Calculate actual total hours based on in_time and out_time
     const inTimeParts = in_time.split(":");
     const outTimeParts = out_time.split(":");
-    
+
     const inMinutes = parseInt(inTimeParts[0]) * 60 + parseInt(inTimeParts[1]);
-    const outMinutes = parseInt(outTimeParts[0]) * 60 + parseInt(outTimeParts[1]);
-    
+    const outMinutes =
+      parseInt(outTimeParts[0]) * 60 + parseInt(outTimeParts[1]);
+
     let totalMinutes = outMinutes - inMinutes;
-    
+
     // Handle case where checkout is next day
     if (totalMinutes < 0) {
       totalMinutes += 24 * 60; // Add 24 hours
     }
-    
+
     // Convert to hours (round up for any partial hour)
     const actual_total_hours = Math.ceil(totalMinutes / 60);
 
     // Calculate total amount based on actual hours
-    const total_amount = price_per_person * number_of_persons * actual_total_hours;
+    const total_amount =
+      price_per_person * number_of_persons * actual_total_hours;
 
     // Validate paid amount doesn't exceed total amount
     if (paid_amount > total_amount) {
@@ -405,7 +409,7 @@ const submitBooking = async (req, res) => {
           total_amount = $12,
           paid_amount = $13,
           payment_method = $14,
-          booking_status = 'completed',
+          status = 'completed',
           updated_at = CURRENT_TIMESTAMP
       WHERE booking_id = $15
       RETURNING 
@@ -413,7 +417,7 @@ const submitBooking = async (req, res) => {
         number_of_persons, booking_type, total_hours, booking_date, 
         in_time, out_time, proof_type, proof_id, price_per_person, 
         total_amount, paid_amount, balance_amount, payment_method, 
-        booking_status, created_at, updated_at;
+        status, created_at, updated_at;
     `;
 
     const values = [
@@ -501,7 +505,7 @@ const updateBookingPayment = async (req, res) => {
         number_of_persons, booking_type, total_hours, booking_date, 
         in_time, out_time, proof_type, proof_id, price_per_person, 
         total_amount, paid_amount, balance_amount, payment_method, 
-        booking_status, created_at, updated_at;
+        status, created_at, updated_at;
     `;
 
     const values = [paid_amount, payment_method, id];
@@ -539,7 +543,7 @@ const deleteBooking = async (req, res) => {
     const deleteQuery = `
       DELETE FROM bookings 
       WHERE booking_id = $1
-      RETURNING booking_id, guest_name, booking_status;
+      RETURNING booking_id, guest_name, status;
     `;
     const { rows: deletedBooking } = await client.query(deleteQuery, [id]);
 
