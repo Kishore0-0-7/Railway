@@ -55,7 +55,6 @@ const ManageLogin = () => {
   }
 
   const [accounts, setAccounts] = useState<Worker[]>([]);
-  
   const [editingAccount, setEditingAccount] = useState<Worker | null>(null);
   const [editingWorkerId, setEditingWorkerId] = useState<string>("");
   const [showResetPassword, setShowResetPassword] = useState(false);
