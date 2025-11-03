@@ -526,7 +526,7 @@ const ManageLogin = () => {
                             className={
                               account.status === "active"
                                 ? "bg-green-500 text-white"
-                                : "bg-gray-400 text-white"
+                                : "bg-red-400 text-white"
                             }
                           >
                             {account.status}
