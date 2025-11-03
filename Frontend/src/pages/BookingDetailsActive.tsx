@@ -23,7 +23,7 @@ interface BookingDetailsData {
   paid_amount: number;
   balance_amount: number;
   payment_method: string;
-  booking_status: string;
+  status: string;
   worker_name?: string;
   admin_name?: string;
 }
@@ -298,26 +298,25 @@ const BookingDetails = () => {
                 </div>
               </div>
 
-             {/* Action Buttons */}
-<div className="flex flex-col gap-3 items-center mt-6">
-  <Button
-    type="button"
-    className="w-1/2 bg-blue-600 hover:bg-blue-700 text-white text-base font-medium py-2.5 rounded-md transition-all"
-    onClick={handleSubmitRedirect}
-  >
-    Submit
-  </Button>
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-3 items-center mt-6">
+                <Button
+                  type="button"
+                  className="w-1/2 bg-blue-600 hover:bg-blue-700 text-white text-base font-medium py-2.5 rounded-md transition-all"
+                  onClick={handleSubmitRedirect}
+                >
+                  Submit
+                </Button>
 
-  <Button
-    type="button"
-    variant="outline"
-    className="w-1/2 border border-gray-300 text-gray-700 hover:bg-gray-100 text-base font-medium py-2.5 rounded-md transition-all"
-    onClick={handleBack}
-  >
-    Cancel
-  </Button>
-</div>
-
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-1/2 border border-gray-300 text-gray-700 hover:bg-gray-100 text-base font-medium py-2.5 rounded-md transition-all"
+                  onClick={handleBack}
+                >
+                  Cancel
+                </Button>
+              </div>
             </form>
           )}
         </div>

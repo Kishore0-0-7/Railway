@@ -40,12 +40,15 @@ const getDashboardStats = async (req, res) => {
     ]);
 
     // Calculate revenue percentage change
-    const currentMonthRevenue = parseFloat(revenueData[0].current_month_revenue);
+    const currentMonthRevenue = parseFloat(
+      revenueData[0].current_month_revenue
+    );
     const lastMonthRevenue = parseFloat(revenueData[0].last_month_revenue);
     let revenuePercentageChange = 0;
-    
+
     if (lastMonthRevenue > 0) {
-      revenuePercentageChange = ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100;
+      revenuePercentageChange =
+        ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100;
     } else if (currentMonthRevenue > 0) {
       revenuePercentageChange = 100;
     }
@@ -105,7 +108,7 @@ const getDashboardStats = async (req, res) => {
           THEN 1 
         END) as last_month_completed
       FROM bookings
-      WHERE booking_status = 'completed';
+      WHERE status = 'completed';
     `;
     const { rows: completedData } = await client.query(completedQuery, [
       currentMonth,
@@ -115,12 +118,16 @@ const getDashboardStats = async (req, res) => {
     ]);
 
     // Calculate completed percentage change
-    const currentMonthCompleted = parseInt(completedData[0].current_month_completed);
+    const currentMonthCompleted = parseInt(
+      completedData[0].current_month_completed
+    );
     const lastMonthCompleted = parseInt(completedData[0].last_month_completed);
     let completedPercentageChange = 0;
-    
+
     if (lastMonthCompleted > 0) {
-      completedPercentageChange = ((currentMonthCompleted - lastMonthCompleted) / lastMonthCompleted) * 100;
+      completedPercentageChange =
+        ((currentMonthCompleted - lastMonthCompleted) / lastMonthCompleted) *
+        100;
     } else if (currentMonthCompleted > 0) {
       completedPercentageChange = 100;
     }
@@ -147,18 +154,25 @@ const getDashboardStats = async (req, res) => {
     };
 
     categoryData.forEach((cat) => {
-      if (cat.booking_type === 'sitting') {
+      if (cat.booking_type === "sitting") {
         categories.sitting.count = parseInt(cat.count);
         categories.sitting.revenue = parseFloat(cat.revenue);
-      } else if (cat.booking_type === 'sleeper') {
+      } else if (cat.booking_type === "sleeper") {
         categories.sleeper.count = parseInt(cat.count);
         categories.sleeper.revenue = parseFloat(cat.revenue);
       }
     });
 
-    const totalCategoryCount = categories.sitting.count + categories.sleeper.count;
-    const sittingPercentage = totalCategoryCount > 0 ? (categories.sitting.count / totalCategoryCount) * 100 : 0;
-    const sleeperPercentage = totalCategoryCount > 0 ? (categories.sleeper.count / totalCategoryCount) * 100 : 0;
+    const totalCategoryCount =
+      categories.sitting.count + categories.sleeper.count;
+    const sittingPercentage =
+      totalCategoryCount > 0
+        ? (categories.sitting.count / totalCategoryCount) * 100
+        : 0;
+    const sleeperPercentage =
+      totalCategoryCount > 0
+        ? (categories.sleeper.count / totalCategoryCount) * 100
+        : 0;
 
     // 5. Active Bookings by Type (for capacity tracking)
     const activeBookingsQuery = `
@@ -167,7 +181,7 @@ const getDashboardStats = async (req, res) => {
         COUNT(*) as active_count,
         COALESCE(SUM(number_of_persons), 0) as total_persons
       FROM bookings
-      WHERE booking_status = 'active'
+      WHERE status = 'active'
       GROUP BY booking_type;
     `;
     const { rows: activeData } = await client.query(activeBookingsQuery);
@@ -178,10 +192,10 @@ const getDashboardStats = async (req, res) => {
     };
 
     activeData.forEach((type) => {
-      if (type.booking_type === 'sitting') {
+      if (type.booking_type === "sitting") {
         activeBookings.sitting.count = parseInt(type.active_count);
         activeBookings.sitting.persons = parseInt(type.total_persons);
-      } else if (type.booking_type === 'sleeper') {
+      } else if (type.booking_type === "sleeper") {
         activeBookings.sleeper.count = parseInt(type.active_count);
         activeBookings.sleeper.persons = parseInt(type.total_persons);
       }
@@ -250,7 +264,7 @@ const getDashboardStats = async (req, res) => {
 // Get Monthly Revenue Chart Data (for the last 6 months or custom range)
 const getMonthlyRevenue = async (req, res) => {
   const { year, months } = req.query; // Optional: specify year and number of months
-  
+
   const client = await db.connect();
   try {
     const currentYear = year ? parseInt(year) : new Date().getFullYear();
@@ -275,12 +289,22 @@ const getMonthlyRevenue = async (req, res) => {
 
     // Organize data by month
     const monthNames = [
-      "January", "February", "March", "April", "May", "June",
-      "July", "August", "September", "October", "November", "December"
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
     ];
 
     const monthlyData = {};
-    
+
     // Initialize all months
     for (let i = 1; i <= 12; i++) {
       monthlyData[i] = {
@@ -308,10 +332,10 @@ const getMonthlyRevenue = async (req, res) => {
       monthlyData[monthNum].total_bookings += bookingCount;
       monthlyData[monthNum].paid_amount += paidRevenue;
 
-      if (row.booking_type === 'sitting') {
+      if (row.booking_type === "sitting") {
         monthlyData[monthNum].sitting_revenue = revenue;
         monthlyData[monthNum].sitting_bookings = bookingCount;
-      } else if (row.booking_type === 'sleeper') {
+      } else if (row.booking_type === "sleeper") {
         monthlyData[monthNum].sleeper_revenue = revenue;
         monthlyData[monthNum].sleeper_bookings = bookingCount;
       }
@@ -336,7 +360,7 @@ const getMonthlyRevenue = async (req, res) => {
 // Get Daily Revenue for Current Month
 const getDailyRevenue = async (req, res) => {
   const { month, year } = req.query;
-  
+
   const client = await db.connect();
   try {
     const currentDate = new Date();
@@ -356,17 +380,22 @@ const getDailyRevenue = async (req, res) => {
       ORDER BY day;
     `;
 
-    const { rows } = await client.query(dailyRevenueQuery, [targetMonth, targetYear]);
+    const { rows } = await client.query(dailyRevenueQuery, [
+      targetMonth,
+      targetYear,
+    ]);
 
     // Get number of days in the month
     const daysInMonth = new Date(targetYear, targetMonth, 0).getDate();
-    
+
     // Initialize daily data
     const dailyData = [];
     for (let day = 1; day <= daysInMonth; day++) {
       dailyData.push({
         day: day,
-        date: `${targetYear}-${String(targetMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+        date: `${targetYear}-${String(targetMonth).padStart(2, "0")}-${String(
+          day
+        ).padStart(2, "0")}`,
         total_revenue: 0,
         sitting_revenue: 0,
         sleeper_revenue: 0,
@@ -383,9 +412,9 @@ const getDailyRevenue = async (req, res) => {
       dailyData[dayIndex].total_revenue += revenue;
       dailyData[dayIndex].total_bookings += bookingCount;
 
-      if (row.booking_type === 'sitting') {
+      if (row.booking_type === "sitting") {
         dailyData[dayIndex].sitting_revenue = revenue;
-      } else if (row.booking_type === 'sleeper') {
+      } else if (row.booking_type === "sleeper") {
         dailyData[dayIndex].sleeper_revenue = revenue;
       }
     });
@@ -407,7 +436,7 @@ const getDailyRevenue = async (req, res) => {
 // Get Top Performing Workers (based on bookings handled)
 const getTopWorkers = async (req, res) => {
   const { limit = 10, month, year } = req.query;
-  
+
   const client = await db.connect();
   try {
     let query = `
@@ -417,8 +446,8 @@ const getTopWorkers = async (req, res) => {
         w.mobile_number,
         COUNT(b.booking_id) as total_bookings,
         COALESCE(SUM(b.total_amount), 0) as total_revenue,
-        COUNT(CASE WHEN b.booking_status = 'completed' THEN 1 END) as completed_bookings,
-        COUNT(CASE WHEN b.booking_status = 'active' THEN 1 END) as active_bookings
+        COUNT(CASE WHEN b.status = 'completed' THEN 1 END) as completed_bookings,
+        COUNT(CASE WHEN b.status = 'active' THEN 1 END) as active_bookings
       FROM worker_accounts w
       LEFT JOIN bookings b ON w.worker_id = b.worker_id
     `;
@@ -428,7 +457,9 @@ const getTopWorkers = async (req, res) => {
 
     // Add date filters if provided
     if (month && year) {
-      query += ` WHERE EXTRACT(MONTH FROM b.created_at) = $${paramCount} AND EXTRACT(YEAR FROM b.created_at) = $${paramCount + 1}`;
+      query += ` WHERE EXTRACT(MONTH FROM b.created_at) = $${paramCount} AND EXTRACT(YEAR FROM b.created_at) = $${
+        paramCount + 1
+      }`;
       params.push(parseInt(month), parseInt(year));
       paramCount += 2;
     }
@@ -445,7 +476,7 @@ const getTopWorkers = async (req, res) => {
     res.status(200).json({
       message: "Top workers retrieved successfully",
       count: rows.length,
-      data: rows.map(worker => ({
+      data: rows.map((worker) => ({
         worker_id: worker.worker_id,
         full_name: worker.full_name,
         mobile_number: worker.mobile_number,
@@ -466,7 +497,7 @@ const getTopWorkers = async (req, res) => {
 // Get Recent Bookings (for dashboard display)
 const getRecentBookings = async (req, res) => {
   const { limit = 10, status } = req.query;
-  
+
   const client = await db.connect();
   try {
     let query = `
@@ -482,7 +513,7 @@ const getRecentBookings = async (req, res) => {
         b.total_amount,
         b.paid_amount,
         b.balance_amount,
-        b.booking_status,
+        b.status,
         b.created_at,
         w.full_name as worker_name,
         a.full_name as admin_name
@@ -495,7 +526,7 @@ const getRecentBookings = async (req, res) => {
     let paramCount = 1;
 
     if (status) {
-      query += ` WHERE b.booking_status = $${paramCount}`;
+      query += ` WHERE b.status = $${paramCount}`;
       params.push(status);
       paramCount++;
     }
@@ -524,7 +555,7 @@ const getRecentBookings = async (req, res) => {
 // Get Payment Analytics
 const getPaymentAnalytics = async (req, res) => {
   const { month, year } = req.query;
-  
+
   const client = await db.connect();
   try {
     const currentDate = new Date();
@@ -544,7 +575,10 @@ const getPaymentAnalytics = async (req, res) => {
       GROUP BY payment_method;
     `;
 
-    const { rows } = await client.query(paymentQuery, [targetMonth, targetYear]);
+    const { rows } = await client.query(paymentQuery, [
+      targetMonth,
+      targetYear,
+    ]);
 
     // Calculate totals
     let totalTransactions = 0;
@@ -596,7 +630,10 @@ const getPaymentAnalytics = async (req, res) => {
         total_paid: totalPaid,
         total_amount: totalAmount,
         total_balance: totalBalance,
-        collection_rate: totalAmount > 0 ? parseFloat(((totalPaid / totalAmount) * 100).toFixed(2)) : 0,
+        collection_rate:
+          totalAmount > 0
+            ? parseFloat(((totalPaid / totalAmount) * 100).toFixed(2))
+            : 0,
       },
       payment_methods: paymentMethods,
     });

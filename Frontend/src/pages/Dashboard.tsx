@@ -3,7 +3,14 @@ import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calendar, Plus, Search, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Calendar,
+  Plus,
+  Search,
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -55,10 +62,10 @@ const Dashboard = () => {
     checkScrollNeeded();
 
     // Listen for resize events
-    window.addEventListener('resize', handleResize);
-    
+    window.addEventListener("resize", handleResize);
+
     return () => {
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener("resize", handleResize);
     };
   }, []);
 
@@ -75,7 +82,7 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      
+
       const [statsRes, bookingsRes] = await Promise.all([
         analyticsAPI.getDashboardStats(),
         analyticsAPI.getRecentBookings({ limit: 10 }),
@@ -83,12 +90,13 @@ const Dashboard = () => {
 
       setDashboardStats(statsRes.data.data);
       setRecentBookings(bookingsRes.data.data);
-      
+
       await fetchChartData();
-      
     } catch (error: any) {
       console.error("Error fetching dashboard data:", error);
-      toast.error(error.response?.data?.error || "Failed to load dashboard data");
+      toast.error(
+        error.response?.data?.error || "Failed to load dashboard data"
+      );
     } finally {
       setLoading(false);
     }
@@ -97,9 +105,9 @@ const Dashboard = () => {
   const fetchChartData = async () => {
     try {
       setChartLoading(true);
-      const revenueRes = await analyticsAPI.getMonthlyRevenue({ 
-        year: parseInt(selectedYear), 
-        months: 12 
+      const revenueRes = await analyticsAPI.getMonthlyRevenue({
+        year: parseInt(selectedYear),
+        months: 12,
       });
       setMonthlyRevenue(revenueRes.data.data || []);
     } catch (error: any) {
@@ -121,40 +129,49 @@ const Dashboard = () => {
   });
 
   // Transform monthly revenue data for bar chart
-  const bookingData = monthlyRevenue.length > 0 
-    ? monthlyRevenue.map((item) => ({
-        month: item.month?.substring(0, 3) || "N/A",
-        Sitting: item.sitting_bookings || 0,
-        Sleeper: item.sleeper_bookings || 0,
-      }))
-    : [
-        { month: "Jan", Sitting: 0, Sleeper: 0 },
-        { month: "Feb", Sitting: 0, Sleeper: 0 },
-        { month: "Mar", Sitting: 0, Sleeper: 0 },
-        { month: "Apr", Sitting: 0, Sleeper: 0 },
-        { month: "May", Sitting: 0, Sleeper: 0 },
-        { month: "Jun", Sitting: 0, Sleeper: 0 },
-        { month: "Jul", Sitting: 0, Sleeper: 0 },
-        { month: "Aug", Sitting: 0, Sleeper: 0 },
-        { month: "Sep", Sitting: 0, Sleeper: 0 },
-        { month: "Oct", Sitting: 0, Sleeper: 0 },
-        { month: "Nov", Sitting: 0, Sleeper: 0 },
-        { month: "Dec", Sitting: 0, Sleeper: 0 },
-      ];
+  const bookingData =
+    monthlyRevenue.length > 0
+      ? monthlyRevenue.map((item) => ({
+          month: item.month?.substring(0, 3) || "N/A",
+          Sitting: item.sitting_bookings || 0,
+          Sleeper: item.sleeper_bookings || 0,
+        }))
+      : [
+          { month: "Jan", Sitting: 0, Sleeper: 0 },
+          { month: "Feb", Sitting: 0, Sleeper: 0 },
+          { month: "Mar", Sitting: 0, Sleeper: 0 },
+          { month: "Apr", Sitting: 0, Sleeper: 0 },
+          { month: "May", Sitting: 0, Sleeper: 0 },
+          { month: "Jun", Sitting: 0, Sleeper: 0 },
+          { month: "Jul", Sitting: 0, Sleeper: 0 },
+          { month: "Aug", Sitting: 0, Sleeper: 0 },
+          { month: "Sep", Sitting: 0, Sleeper: 0 },
+          { month: "Oct", Sitting: 0, Sleeper: 0 },
+          { month: "Nov", Sitting: 0, Sleeper: 0 },
+          { month: "Dec", Sitting: 0, Sleeper: 0 },
+        ];
 
   // Donut chart data from stats
-  const topCategoryData = dashboardStats ? [
-    { name: "Sitting", value: dashboardStats.top_category?.sitting?.percentage || 0 },
-    { name: "Sleeper", value: dashboardStats.top_category?.sleeper?.percentage || 0 },
-  ] : [
-    { name: "Sitting", value: 50 },
-    { name: "Sleeper", value: 50 },
-  ];
+  const topCategoryData = dashboardStats
+    ? [
+        {
+          name: "Sitting",
+          value: dashboardStats.top_category?.sitting?.percentage || 0,
+        },
+        {
+          name: "Sleeper",
+          value: dashboardStats.top_category?.sleeper?.percentage || 0,
+        },
+      ]
+    : [
+        { name: "Sitting", value: 50 },
+        { name: "Sleeper", value: 50 },
+      ];
 
   const COLORS = ["#F59E0B", "#3B82F6"];
 
   const handleBookingClick = (booking: any) => {
-    if (booking.booking_status === "active") {
+    if (booking.status === "active") {
       navigate(`/booking-details-active/${booking.booking_id}`);
     } else {
       navigate(`/booking-details-completed/${booking.booking_id}`);
@@ -162,7 +179,17 @@ const Dashboard = () => {
   };
 
   // Progress bar component
-  const ProgressBar = ({ value, max, color, label }: { value: number; max: number; color: string; label: string }) => {
+  const ProgressBar = ({
+    value,
+    max,
+    color,
+    label,
+  }: {
+    value: number;
+    max: number;
+    color: string;
+    label: string;
+  }) => {
     const percentage = (value / max) * 100;
     return (
       <div className="mb-3">
@@ -186,11 +213,11 @@ const Dashboard = () => {
   const years = ["2025", "2024", "2023", "2022"];
 
   // Calendar-style year navigation
-  const handleYearChange = (direction: 'prev' | 'next') => {
+  const handleYearChange = (direction: "prev" | "next") => {
     const currentIndex = years.indexOf(selectedYear);
-    if (direction === 'prev' && currentIndex < years.length - 1) {
+    if (direction === "prev" && currentIndex < years.length - 1) {
       setSelectedYear(years[currentIndex + 1]);
-    } else if (direction === 'next' && currentIndex > 0) {
+    } else if (direction === "next" && currentIndex > 0) {
       setSelectedYear(years[currentIndex - 1]);
     }
   };
@@ -247,8 +274,16 @@ const Dashboard = () => {
                   <p className="text-xl md:text-2xl font-bold">
                     ₹ {dashboardStats?.revenue?.total?.toLocaleString() || "0"}
                   </p>
-                  <p className={`text-xs mt-1 md:mt-2 ${dashboardStats?.revenue?.trend === 'up' ? 'text-green-300' : 'text-red-300'}`}>
-                    {dashboardStats?.revenue?.trend === 'up' ? '+' : ''}{dashboardStats?.revenue?.percentage_change || 0}% From last month
+                  <p
+                    className={`text-xs mt-1 md:mt-2 ${
+                      dashboardStats?.revenue?.trend === "up"
+                        ? "text-green-300"
+                        : "text-red-300"
+                    }`}
+                  >
+                    {dashboardStats?.revenue?.trend === "up" ? "+" : ""}
+                    {dashboardStats?.revenue?.percentage_change || 0}% From last
+                    month
                   </p>
                 </div>
               </div>
@@ -298,8 +333,15 @@ const Dashboard = () => {
                   <p className="text-xl md:text-2xl font-bold text-gray-800">
                     {dashboardStats?.bookings?.total || 0}
                   </p>
-                  <p className={`text-xs mt-1 md:mt-2 ${dashboardStats?.bookings?.trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
-                    {dashboardStats?.bookings?.change >= 0 ? '+' : ''}{dashboardStats?.bookings?.change || 0} From last day
+                  <p
+                    className={`text-xs mt-1 md:mt-2 ${
+                      dashboardStats?.bookings?.trend === "up"
+                        ? "text-green-500"
+                        : "text-red-500"
+                    }`}
+                  >
+                    {dashboardStats?.bookings?.change >= 0 ? "+" : ""}
+                    {dashboardStats?.bookings?.change || 0} From last day
                   </p>
                 </div>
               </div>
@@ -312,8 +354,16 @@ const Dashboard = () => {
                   <p className="text-xl md:text-2xl font-bold text-gray-800">
                     {dashboardStats?.completed?.total || 0}
                   </p>
-                  <p className={`text-xs mt-1 md:mt-2 ${dashboardStats?.completed?.trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
-                    {dashboardStats?.completed?.trend === 'up' ? '+' : ''}{dashboardStats?.completed?.percentage_change || 0}% From last month
+                  <p
+                    className={`text-xs mt-1 md:mt-2 ${
+                      dashboardStats?.completed?.trend === "up"
+                        ? "text-green-500"
+                        : "text-red-500"
+                    }`}
+                  >
+                    {dashboardStats?.completed?.trend === "up" ? "+" : ""}
+                    {dashboardStats?.completed?.percentage_change || 0}% From
+                    last month
                   </p>
                 </div>
               </div>
@@ -323,17 +373,21 @@ const Dashboard = () => {
                   Booked
                 </h3>
                 <div className="space-y-2 md:space-y-3">
-                  <ProgressBar 
-                    value={dashboardStats?.active_bookings?.sitting?.count || 0} 
-                    max={dashboardStats?.active_bookings?.sitting?.capacity || 50} 
-                    color="#F59E0B" 
-                    label="Sitting" 
+                  <ProgressBar
+                    value={dashboardStats?.active_bookings?.sitting?.count || 0}
+                    max={
+                      dashboardStats?.active_bookings?.sitting?.capacity || 50
+                    }
+                    color="#F59E0B"
+                    label="Sitting"
                   />
-                  <ProgressBar 
-                    value={dashboardStats?.active_bookings?.sleeper?.count || 0} 
-                    max={dashboardStats?.active_bookings?.sleeper?.capacity || 50} 
-                    color="#3B82F6" 
-                    label="Sleeper" 
+                  <ProgressBar
+                    value={dashboardStats?.active_bookings?.sleeper?.count || 0}
+                    max={
+                      dashboardStats?.active_bookings?.sleeper?.capacity || 50
+                    }
+                    color="#3B82F6"
+                    label="Sleeper"
                   />
                 </div>
               </div>
@@ -408,47 +462,51 @@ const Dashboard = () => {
                       <tbody>
                         {filteredBookings.length > 0 ? (
                           filteredBookings.map((booking, index) => (
-                          <tr
-                            key={index}
-                            className="border-b hover:bg-gray-50 cursor-pointer transition-colors"
-                            onClick={() => handleBookingClick(booking)}
-                          >
-                            <td className="p-3 md:p-4 text-xs md:text-sm font-medium text-blue-600 min-w-[120px]">
-                              {booking.booking_id}
-                            </td>
-                            <td className="p-3 md:p-4 text-xs md:text-sm text-gray-800 min-w-[120px]">
-                              {booking.worker_name || "N/A"}
-                            </td>
-                            <td className="p-3 md:p-4 text-xs md:text-sm text-gray-800 min-w-[120px]">
-                              {booking.guest_name}
-                            </td>
-                            <td className="p-3 md:p-4 text-xs md:text-sm text-gray-600 min-w-[120px]">
-                              {booking.phone_number}
-                            </td>
-                            <td className="p-3 md:p-4 text-xs md:text-sm text-gray-800 capitalize min-w-[100px]">
-                              {booking.booking_type}
-                            </td>
-                            <td className="p-3 md:p-4 text-xs md:text-sm text-gray-800 min-w-[100px]">
-                              {booking.in_time}
-                            </td>
-                            <td className="p-3 md:p-4 min-w-[100px]">
-                              <span
-                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${booking.booking_status === "completed"
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-amber-100 text-amber-800"
+                            <tr
+                              key={index}
+                              className="border-b hover:bg-gray-50 cursor-pointer transition-colors"
+                              onClick={() => handleBookingClick(booking)}
+                            >
+                              <td className="p-3 md:p-4 text-xs md:text-sm font-medium text-blue-600 min-w-[120px]">
+                                {booking.booking_id}
+                              </td>
+                              <td className="p-3 md:p-4 text-xs md:text-sm text-gray-800 min-w-[120px]">
+                                {booking.worker_name || "N/A"}
+                              </td>
+                              <td className="p-3 md:p-4 text-xs md:text-sm text-gray-800 min-w-[120px]">
+                                {booking.guest_name}
+                              </td>
+                              <td className="p-3 md:p-4 text-xs md:text-sm text-gray-600 min-w-[120px]">
+                                {booking.phone_number}
+                              </td>
+                              <td className="p-3 md:p-4 text-xs md:text-sm text-gray-800 capitalize min-w-[100px]">
+                                {booking.booking_type}
+                              </td>
+                              <td className="p-3 md:p-4 text-xs md:text-sm text-gray-800 min-w-[100px]">
+                                {booking.in_time}
+                              </td>
+                              <td className="p-3 md:p-4 min-w-[100px]">
+                                <span
+                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${
+                                    booking.status === "completed"
+                                      ? "bg-green-100 text-green-800"
+                                      : "bg-amber-100 text-amber-800"
                                   }`}
-                              >
-                                {booking.booking_status}
-                              </span>
-                            </td>
-                            <td className="p-3 md:p-4 min-w-[40px]">
-                              <ArrowRight className="w-4 h-4 text-gray-400" />
-                            </td>
-                          </tr>
-                        ))
+                                >
+                                  {booking.status}
+                                </span>
+                              </td>
+                              <td className="p-3 md:p-4 min-w-[40px]">
+                                <ArrowRight className="w-4 h-4 text-gray-400" />
+                              </td>
+                            </tr>
+                          ))
                         ) : (
                           <tr>
-                            <td colSpan={8} className="p-6 md:p-8 text-center text-gray-500 text-sm">
+                            <td
+                              colSpan={8}
+                              className="p-6 md:p-8 text-center text-gray-500 text-sm"
+                            >
                               No bookings found
                             </td>
                           </tr>
@@ -480,21 +538,23 @@ const Dashboard = () => {
 
                 {/* Calendar-style Year Selection */}
                 <div className="flex items-center justify-center mb-3 md:mb-4">
-                  <button 
-                    onClick={() => handleYearChange('prev')}
+                  <button
+                    onClick={() => handleYearChange("prev")}
                     className="p-1 hover:bg-gray-100 rounded-full disabled:opacity-30 disabled:cursor-not-allowed"
                     disabled={years.indexOf(selectedYear) >= years.length - 1}
                   >
                     <ChevronLeft className="w-4 h-4 text-gray-600" />
                   </button>
-                  
+
                   <div className="mx-4 flex items-center space-x-2">
                     <Calendar className="w-4 h-4 text-gray-600" />
-                    <span className="text-lg font-bold text-gray-800">{selectedYear}</span>
+                    <span className="text-lg font-bold text-gray-800">
+                      {selectedYear}
+                    </span>
                   </div>
-                  
-                  <button 
-                    onClick={() => handleYearChange('next')}
+
+                  <button
+                    onClick={() => handleYearChange("next")}
                     className="p-1 hover:bg-gray-100 rounded-full disabled:opacity-30 disabled:cursor-not-allowed"
                     disabled={years.indexOf(selectedYear) <= 0}
                   >
@@ -503,46 +563,56 @@ const Dashboard = () => {
                 </div>
 
                 {/* Scrollable Chart Container */}
-                <div 
+                <div
                   ref={chartContainerRef}
-                  className={`flex-1 relative ${needsScroll ? 'overflow-x-auto overflow-y-hidden scrollable-chart' : 'overflow-hidden'}`}
+                  className={`flex-1 relative ${
+                    needsScroll
+                      ? "overflow-x-auto overflow-y-hidden scrollable-chart"
+                      : "overflow-hidden"
+                  }`}
                 >
                   {chartLoading ? (
                     <div className="flex items-center justify-center h-full">
-                      <div className="text-sm text-gray-500">Loading chart data...</div>
+                      <div className="text-sm text-gray-500">
+                        Loading chart data...
+                      </div>
                     </div>
                   ) : (
-                    <div 
+                    <div
                       className="h-full"
-                      style={{ minWidth: needsScroll ? '600px' : 'auto' }}
+                      style={{ minWidth: needsScroll ? "600px" : "auto" }}
                     >
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart 
-                          data={bookingData} 
+                        <BarChart
+                          data={bookingData}
                           barSize={needsScroll ? 20 : 24}
                           margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                         >
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EEE" />
-                          <XAxis 
-                            dataKey="month" 
-                            stroke="#888" 
+                          <CartesianGrid
+                            strokeDasharray="3 3"
+                            vertical={false}
+                            stroke="#EEE"
+                          />
+                          <XAxis
+                            dataKey="month"
+                            stroke="#888"
                             fontSize={needsScroll ? 10 : 11}
                             interval={0}
                           />
-                          <YAxis 
-                            stroke="#888" 
+                          <YAxis
+                            stroke="#888"
                             fontSize={needsScroll ? 10 : 11}
                           />
                           <Tooltip />
-                          <Bar 
-                            dataKey="Sitting" 
-                            fill="#F59E0B" 
+                          <Bar
+                            dataKey="Sitting"
+                            fill="#F59E0B"
                             radius={[4, 4, 0, 0]}
                             name="Sitting Bookings"
                           />
-                          <Bar 
-                            dataKey="Sleeper" 
-                            fill="#3B82F6" 
+                          <Bar
+                            dataKey="Sleeper"
+                            fill="#3B82F6"
                             radius={[4, 4, 0, 0]}
                             name="Sleeper Bookings"
                           />
@@ -551,8 +621,6 @@ const Dashboard = () => {
                     </div>
                   )}
                 </div>
-
-              
               </div>
             </div>
           </>
