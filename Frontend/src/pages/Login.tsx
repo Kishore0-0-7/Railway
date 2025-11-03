@@ -90,7 +90,7 @@ const Login = () => {
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="flex-1 flex items-center bg-[#0001] justify-center p-6 md:p-8 order-2 md:order-2">
+      <div className="flex-1 flex items-center bg-white justify-center p-6 md:p-8 order-2 md:order-2">
         <div className="w-full max-w-md bg-white rounded-2xl shadow-xl bg-white border border-gray-200 p-8 animate-fadeIn">
           {/* Header */}
           <div className="text-center mb-8">
