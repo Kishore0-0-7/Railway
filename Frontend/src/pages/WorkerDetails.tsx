@@ -169,8 +169,8 @@ const WorkerDetails = () => {
       console.error("Error updating worker status:", err);
       setError(
         (err as any)?.response?.data?.message ||
-          (err as any)?.message ||
-          "Failed to update status"
+        (err as any)?.message ||
+        "Failed to update status"
       );
     }
   };
@@ -180,13 +180,15 @@ const WorkerDetails = () => {
     navigate("/manage-login", {
       state: {
         editingWorker: {
-          name: worker.name,
-          mobile: worker.phone,
-          loginId: worker.loginId,
-          joiningDate: worker.joiningDate,
+          worker_id: worker.worker_id || worker.id || worker.loginId,
+          full_name: worker.full_name || worker.name,
+          mobile_number: worker.mobile_number || worker.phone,
+          joining_date: worker.created_at || worker.joiningDate,
           gender: worker.gender,
-          totalBookings: worker.totalBookings || 0,
-          status: worker.status,
+          user_name: worker.user_name || worker.loginId,
+          created_at: worker.created_at,
+          status: worker.status || "active",
+          total_bookings: stats.totalBookings,
         },
       },
     });
@@ -214,16 +216,15 @@ const WorkerDetails = () => {
             <div className="flex gap-3 mt-4 md:mt-0">
               <Button
                 variant="destructive"
-                className={`${
-                  (worker.status || "active").toString().toLowerCase() ===
-                  "active"
+                className={`${(worker.status || "active").toString().toLowerCase() ===
+                    "active"
                     ? "bg-red-600 hover:bg-red-700"
                     : "bg-green-600 hover:bg-green-700"
-                } text-white`}
+                  } text-white`}
                 onClick={handleStatusToggle}
               >
                 {(worker.status || "active").toString().toLowerCase() ===
-                "active"
+                  "active"
                   ? "Remove Worker"
                   : "Re-Join"}
               </Button>
@@ -263,9 +264,9 @@ const WorkerDetails = () => {
               <p className="text-green-500 text-sm mt-1">
                 {stats.totalBookings > 0
                   ? `${(
-                      (stats.completedBookings / stats.totalBookings) *
-                      100
-                    ).toFixed(1)}% completion rate`
+                    (stats.completedBookings / stats.totalBookings) *
+                    100
+                  ).toFixed(1)}% completion rate`
                   : "No bookings yet"}
               </p>
             </div>
@@ -377,16 +378,15 @@ const WorkerDetails = () => {
                           </td>
                           <td className="py-3 px-4">
                             <span
-                              className={`font-medium ${
-                                b.booking_status === "completed" ||
-                                b.status === "Completed"
+                              className={`font-medium ${b.booking_status === "completed" ||
+                                  b.status === "Completed"
                                   ? "text-green-600"
                                   : "text-orange-500"
-                              }`}
+                                }`}
                             >
                               {b.booking_status
                                 ? b.booking_status.charAt(0).toUpperCase() +
-                                  b.booking_status.slice(1)
+                                b.booking_status.slice(1)
                                 : b.status}
                             </span>
                           </td>
@@ -436,25 +436,24 @@ const WorkerDetails = () => {
                     <p className="text-gray-900 font-medium">
                       {worker.created_at
                         ? new Date(worker.created_at).toLocaleDateString(
-                            "en-IN",
-                            {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                            }
-                          )
+                          "en-IN",
+                          {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          }
+                        )
                         : worker.joiningDate || "N/A"}
                     </p>
                   </div>
                   <div>
                     <p className="text-gray-500">Status</p>
                     <p
-                      className={`font-medium ${
-                        (worker.status || "active").toString().toLowerCase() ===
-                        "active"
+                      className={`font-medium ${(worker.status || "active").toString().toLowerCase() ===
+                          "active"
                           ? "text-green-600"
                           : "text-amber-500"
-                      }`}
+                        }`}
                     >
                       {(
                         ((worker.status || "active") as string)

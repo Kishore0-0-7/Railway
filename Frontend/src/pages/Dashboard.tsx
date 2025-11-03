@@ -253,30 +253,28 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-gray-900 to-black text-white rounded-lg p-4 md:p-5 shadow-sm h-32 md:h-40 flex flex-col justify-between">
-                <p className="text-xs md:text-sm font-semibold mb-2 md:mb-4">
-                  Top category
-                </p>
-                <div className="flex items-center justify-between">
-                  <div className="w-16 h-16 md:w-20 md:h-20">
-                    <ResponsiveContainer>
-                      <PieChart>
-                        <Pie
-                          data={topCategoryData}
-                          innerRadius={20}
-                          outerRadius={40}
-                          paddingAngle={5}
-                          cornerRadius={8}
-                          dataKey="value"
-                          stroke="none"
-                        >
-                          {topCategoryData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index]} />
-                          ))}
-                        </Pie>
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
+                <div className="bg-gradient-to-br from-gray-900 to-black text-white rounded-lg p-5 shadow-sm h-40 flex flex-col justify-between">
+            <p className="text-sm font-semibold mb-4">Top category</p>
+            <div className="flex items-center justify-between">
+              <div className="w-20 h-20">
+                <ResponsiveContainer>
+                  <PieChart>
+                    <Pie
+                      data={topCategoryData}
+                      innerRadius={30}
+                      outerRadius={40}
+                      paddingAngle={5}
+                      cornerRadius={8}
+                      dataKey="value"
+                      stroke="none"
+                    >
+                      {topCategoryData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index]} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
                   <div className="space-y-1">
                     <div className="flex items-center space-x-1">
                       <span className="w-2 h-2 bg-yellow-400 rounded-full"></span>
@@ -433,12 +431,12 @@ const Dashboard = () => {
                             </td>
                             <td className="p-3 md:p-4 min-w-[100px]">
                               <span
-                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${booking.booking_status === "completed"
+                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${booking.status === "completed"
                                     ? "bg-green-100 text-green-800"
                                     : "bg-amber-100 text-amber-800"
                                   }`}
                               >
-                                {booking.booking_status}
+                                {booking.status}
                               </span>
                             </td>
                             <td className="p-3 md:p-4 min-w-[40px]">

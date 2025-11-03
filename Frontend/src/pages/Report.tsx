@@ -36,6 +36,21 @@ const Report = () => {
   const graphContainerRef = useRef<HTMLDivElement>(null);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
 
+  // Available years & months
+  const years = ["2025", "2024", "2023", "2022"];
+  const months = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+  ];
+
+  // Set current month as default when component mounts
+  useEffect(() => {
+    const currentDate = new Date();
+    const currentMonthIndex = currentDate.getMonth();
+    setSelectedMonth(months[currentMonthIndex]);
+    setCurrentIndex(currentMonthIndex);
+  }, []);
+
   // Fetch data from backend
   useEffect(() => {
     fetchReportData();
@@ -125,13 +140,6 @@ const Report = () => {
   const handleNext = () => {
     setCurrentIndex((prev) => (prev < data.length - 1 ? prev + 1 : 0));
   };
-
-  // Available years & months (moved up to be used earlier)
-  const years = ["2025", "2024", "2023", "2022"];
-  const months = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
-  ];
 
   // Graph data points from backend
   // Filter data based on timePeriod (year vs month)
