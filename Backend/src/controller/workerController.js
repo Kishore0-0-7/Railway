@@ -255,15 +255,30 @@ const getWorkersByAdminId = async (req, res) => {
 // Update Worker Details
 const updateWorker = async (req, res) => {
   const { id } = req.params;
-  const { full_name, mobile_number, joining_date, gender, user_name, status, worker_status } =
-    req.body;
+  const {
+    full_name,
+    mobile_number,
+    joining_date,
+    gender,
+    user_name,
+    status,
+    worker_status,
+  } = req.body;
 
   if (!id || id.trim() === "") {
     return res.status(400).json({ message: "Worker ID is required" });
   }
 
   // Check if at least one field is provided for update
-  if (!full_name && !mobile_number && !joining_date && !gender && !user_name && !status && !worker_status) {
+  if (
+    !full_name &&
+    !mobile_number &&
+    !joining_date &&
+    !gender &&
+    !user_name &&
+    !status &&
+    !worker_status
+  ) {
     return res.status(400).json({
       message: "At least one field must be provided for update",
     });
@@ -297,8 +312,7 @@ const updateWorker = async (req, res) => {
       if (duplicates.length > 0) {
         await client.query("ROLLBACK");
         return res.status(409).json({
-          message:
-            "Mobile number or username already in use by another worker",
+          message: "Mobile number or username already in use by another worker",
         });
       }
     }
@@ -306,7 +320,7 @@ const updateWorker = async (req, res) => {
     // Update worker
     // Prefer worker_status if provided, otherwise use status
     const statusValue = worker_status || status;
-    
+
     const updateQuery = `
       UPDATE worker_accounts
       SET full_name = COALESCE($1, full_name),
@@ -386,7 +400,9 @@ const updateWorkerPassword = async (req, res) => {
 
       if (!isPasswordValid) {
         await client.query("ROLLBACK");
-        return res.status(401).json({ message: "Current password is incorrect" });
+        return res
+          .status(401)
+          .json({ message: "Current password is incorrect" });
       }
     }
 

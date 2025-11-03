@@ -64,9 +64,14 @@ const ManageLogin = () => {
       setFormData({
         name: incomingWorker.full_name || incomingWorker.name,
         mobileNumber: incomingWorker.mobile_number || incomingWorker.mobile,
-        joiningDate: formatDateForInput(incomingWorker.joining_date || incomingWorker.joiningDate),
+        joiningDate: formatDateForInput(
+          incomingWorker.joining_date || incomingWorker.joiningDate
+        ),
         gender: incomingWorker.gender || "",
-        username: incomingWorker.user_name || incomingWorker.username || incomingWorker.loginId,
+        username:
+          incomingWorker.user_name ||
+          incomingWorker.username ||
+          incomingWorker.loginId,
         password: "",
         confirmPassword: "",
         role: "worker",
@@ -80,7 +85,7 @@ const ManageLogin = () => {
     try {
       setLoading(true);
       const response = await workerAPI.getAllWorkers();
-      
+
       if (response.data && response.data.workers) {
         setAccounts(response.data.workers);
       }
@@ -96,7 +101,7 @@ const ManageLogin = () => {
   const formatDateForInput = (dateString: string) => {
     if (!dateString) return "";
     const date = new Date(dateString);
-    return date.toISOString().split('T')[0];
+    return date.toISOString().split("T")[0];
   };
 
   // Format date for display (DD Mon YYYY)
@@ -111,12 +116,17 @@ const ManageLogin = () => {
   };
 
   // Handle Enter key press to jump to next input
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, nextField: string) => {
-    if (e.key === 'Enter') {
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    nextField: string
+  ) => {
+    if (e.key === "Enter") {
       e.preventDefault();
       const form = e.currentTarget.form;
       if (form) {
-        const inputs = Array.from(form.querySelectorAll('input, select, button'));
+        const inputs = Array.from(
+          form.querySelectorAll("input, select, button")
+        );
         const currentIndex = inputs.indexOf(e.currentTarget);
         const nextInput = inputs[currentIndex + 1] as HTMLElement;
         if (nextInput) {
@@ -128,7 +138,7 @@ const ManageLogin = () => {
 
   // Handle mobile number input - allow only numbers and limit to 10 digits
   const handleMobileNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, ''); // Remove non-digit characters
+    const value = e.target.value.replace(/\D/g, ""); // Remove non-digit characters
     if (value.length <= 10) {
       setFormData({ ...formData, mobileNumber: value });
     }
@@ -163,10 +173,10 @@ const ManageLogin = () => {
 
     try {
       setSubmitting(true);
-      
+
       // Get admin ID from localStorage
       const adminId = localStorage.getItem("adminId") || "ADM001";
-      
+
       const workerData = {
         admin_id: adminId,
         full_name: formData.name,
@@ -178,7 +188,7 @@ const ManageLogin = () => {
       };
 
       const response = await workerAPI.createWorker(workerData);
-      
+
       if (response.data) {
         toast.success("Worker account created successfully!");
         await fetchWorkers(); // Refresh the list
@@ -186,7 +196,10 @@ const ManageLogin = () => {
       }
     } catch (error: any) {
       console.error("Error creating worker:", error);
-      const errorMessage = error.response?.data?.message || error.response?.data?.error || "Failed to create worker account";
+      const errorMessage =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        "Failed to create worker account";
       toast.error(errorMessage);
     } finally {
       setSubmitting(false);
@@ -260,7 +273,7 @@ const ManageLogin = () => {
 
     try {
       setSubmitting(true);
-      
+
       const workerData = {
         full_name: formData.name,
         mobile_number: formData.mobileNumber,
@@ -269,7 +282,7 @@ const ManageLogin = () => {
       };
 
       await workerAPI.updateWorker(editingWorkerId, workerData);
-      
+
       // Handle password reset if requested
       if (showResetPassword && formData.password.trim()) {
         await workerAPI.updateWorkerPassword(editingWorkerId, {
@@ -280,12 +293,15 @@ const ManageLogin = () => {
       } else {
         toast.success("Worker account updated successfully!");
       }
-      
+
       await fetchWorkers(); // Refresh the list
       handleCancel();
     } catch (error: any) {
       console.error("Error updating worker:", error);
-      const errorMessage = error.response?.data?.message || error.response?.data?.error || "Failed to update worker account";
+      const errorMessage =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        "Failed to update worker account";
       toast.error(errorMessage);
     } finally {
       setSubmitting(false);
@@ -298,7 +314,9 @@ const ManageLogin = () => {
       <main className="p-6">
         {/* Header */}
         <div className="bg-nav rounded-lg p-6 mb-6">
-          <h1 className="text-2xl font-bold text-nav-foreground">Manage Account!</h1>
+          <h1 className="text-2xl font-bold text-nav-foreground">
+            Manage Account!
+          </h1>
           <p className="text-nav-foreground/80">Update or Add a New Login</p>
         </div>
 
@@ -317,13 +335,17 @@ const ManageLogin = () => {
                 <Input
                   placeholder="Enter your first name"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   onKeyDown={(e) => handleKeyDown(e, "mobileNumber")}
                 />
               </div>
               {/* Mobile Number */}
               <div>
-                <label className="block text-sm font-medium mb-2">Mobile Number</label>
+                <label className="block text-sm font-medium mb-2">
+                  Mobile Number
+                </label>
                 <Input
                   placeholder="Enter your Mobile Number"
                   value={formData.mobileNumber}
@@ -334,11 +356,15 @@ const ManageLogin = () => {
               </div>
               {/* Joining Date */}
               <div>
-                <label className="block text-sm font-medium mb-2">Joining Date</label>
+                <label className="block text-sm font-medium mb-2">
+                  Joining Date
+                </label>
                 <Input
                   type="date"
                   value={formData.joiningDate}
-                  onChange={(e) => setFormData({ ...formData, joiningDate: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, joiningDate: e.target.value })
+                  }
                   onKeyDown={(e) => handleKeyDown(e, "gender")}
                 />
               </div>
@@ -347,7 +373,9 @@ const ManageLogin = () => {
                 <label className="block text-sm font-medium mb-2">Gender</label>
                 <Select
                   value={formData.gender}
-                  onValueChange={(value) => setFormData({ ...formData, gender: value })}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, gender: value })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select Gender" />
@@ -361,30 +389,42 @@ const ManageLogin = () => {
               </div>
               {/* Username */}
               <div>
-                <label className="block text-sm font-medium mb-2">Username</label>
+                <label className="block text-sm font-medium mb-2">
+                  Username
+                </label>
                 <Input
                   placeholder="Enter your Username"
                   value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, username: e.target.value })
+                  }
                   disabled={!!editingAccount}
-                  className={editingAccount ? "bg-muted/50 cursor-not-allowed" : ""}
+                  className={
+                    editingAccount ? "bg-muted/50 cursor-not-allowed" : ""
+                  }
                   onKeyDown={(e) => handleKeyDown(e, "password")}
                 />
                 {editingAccount && (
-                  <p className="text-xs text-muted-foreground mt-1">Username cannot be changed</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Username cannot be changed
+                  </p>
                 )}
               </div>
 
               {/* Password Section */}
               {!editingAccount ? (
                 <div>
-                  <label className="block text-sm font-medium mb-2">Password</label>
+                  <label className="block text-sm font-medium mb-2">
+                    Password
+                  </label>
                   <div className="relative">
                     <Input
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter your password"
                       value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, password: e.target.value })
+                      }
                       onKeyDown={(e) => handleKeyDown(e, "buttons")}
                     />
                     <button
@@ -408,13 +448,20 @@ const ManageLogin = () => {
                     </Button>
                   ) : (
                     <div className="w-full">
-                      <label className="block text-sm font-medium mb-2">New Password</label>
+                      <label className="block text-sm font-medium mb-2">
+                        New Password
+                      </label>
                       <div className="relative">
                         <Input
                           type={showNewPassword ? "text" : "password"}
                           placeholder="Enter new password"
                           value={formData.password}
-                          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              password: e.target.value,
+                            })
+                          }
                           onKeyDown={(e) => handleKeyDown(e, "buttons")}
                         />
                         <button
@@ -422,7 +469,11 @@ const ManageLogin = () => {
                           className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
                           onClick={() => setShowNewPassword(!showNewPassword)}
                         >
-                          {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                          {showNewPassword ? (
+                            <EyeOff size={18} />
+                          ) : (
+                            <Eye size={18} />
+                          )}
                         </button>
                       </div>
                     </div>
@@ -478,20 +529,28 @@ const ManageLogin = () => {
                     <th className="text-left p-4 font-medium">Phone No.</th>
                     <th className="text-left p-4 font-medium">Gender</th>
                     <th className="text-left p-4 font-medium">Joining Date</th>
-                    <th className="text-left p-4 font-medium">Total Bookings</th>
+                    <th className="text-left p-4 font-medium">
+                      Total Bookings
+                    </th>
                     <th className="text-left p-4 font-medium">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={8} className="p-4 text-center text-muted-foreground">
+                      <td
+                        colSpan={8}
+                        className="p-4 text-center text-muted-foreground"
+                      >
                         Loading workers...
                       </td>
                     </tr>
                   ) : accounts.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="p-4 text-center text-muted-foreground">
+                      <td
+                        colSpan={8}
+                        className="p-4 text-center text-muted-foreground"
+                      >
                         No workers found. Create one using the form above.
                       </td>
                     </tr>
@@ -507,11 +566,17 @@ const ManageLogin = () => {
                         <td className="p-4">{account.worker_id}</td>
                         <td className="p-4">{account.mobile_number}</td>
                         <td className="p-4">{account.gender || "N/A"}</td>
-                        <td className="p-4">{formatDateForDisplay(account.joining_date)}</td>
+                        <td className="p-4">
+                          {formatDateForDisplay(account.joining_date)}
+                        </td>
                         <td className="p-4">-</td>
                         <td className="p-4">
                           <Badge
-                            variant={account.status === "active" ? "default" : "secondary"}
+                            variant={
+                              account.status === "active"
+                                ? "default"
+                                : "secondary"
+                            }
                             className={
                               account.status === "active"
                                 ? "bg-green-500 text-white"
