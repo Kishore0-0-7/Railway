@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Search, Calendar } from "lucide-react";
@@ -15,6 +15,8 @@ import { workerAPI, bookingAPI } from "@/services/api";
 const WorkerDetails = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const mainContainerRef = useRef<HTMLDivElement>(null);
+  
   // navigation may pass worker object in state; start with that as a seed while we fetch fresh data
   const seedWorker = location.state?.worker || {
     id: 1,
@@ -49,6 +51,9 @@ const WorkerDetails = () => {
     seedWorker.loginId;
 
   useEffect(() => {
+    // Scroll to top when component mounts
+    window.scrollTo(0, 0);
+    
     const fetchData = async () => {
       setLoading(true);
       setError(null);
@@ -199,8 +204,8 @@ const WorkerDetails = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
-      <main className="p-6">
-        <div className="max-w-7xl mx-auto space-y-6">
+      <main className="p-4 sm:p-6" ref={mainContainerRef}>
+        <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
           {/* Error Message */}
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
@@ -208,31 +213,31 @@ const WorkerDetails = () => {
               <p className="text-sm">{error}</p>
             </div>
           )}
+          
           {/* Header */}
-          <div className="bg-black text-white rounded-xl p-6 flex flex-col md:flex-row items-center justify-between">
+          <div className="bg-black text-white rounded-xl p-4 sm:p-6 flex flex-col md:flex-row items-center justify-between">
             <div className="flex items-center">
-              <h1 className="text-2xl font-semibold">
+              <h1 className="text-xl sm:text-2xl font-semibold">
                 {worker.full_name || worker.name}
               </h1>
             </div>
-            <div className="flex gap-3 mt-4 md:mt-0">
+            <div className="flex gap-2 sm:gap-3 mt-4 md:mt-0">
               <Button
                 variant="destructive"
-                className={`${(worker.status || "active").toString().toLowerCase() ===
-                    "active"
+                className={`text-sm sm:text-base ${
+                  (worker.status || "active").toString().toLowerCase() === "active"
                     ? "bg-red-600 hover:bg-red-700"
                     : "bg-green-600 hover:bg-green-700"
-                  } text-white`}
+                } text-white`}
                 onClick={handleStatusToggle}
               >
-                {(worker.status || "active").toString().toLowerCase() ===
-                  "active"
+                {(worker.status || "active").toString().toLowerCase() === "active"
                   ? "Remove Worker"
                   : "Re-Join"}
               </Button>
               <Button
                 variant="outline"
-                className="bg-white text-black hover:bg-gray-100"
+                className="bg-white text-black hover:bg-gray-100 text-sm sm:text-base"
                 onClick={handleEditDetails}
               >
                 Edit Details
@@ -241,29 +246,29 @@ const WorkerDetails = () => {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-black text-white p-5 rounded-xl">
-              <p className="text-sm text-gray-300">Total Revenue</p>
-              <h2 className="text-3xl font-semibold mt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="bg-black text-white p-4 sm:p-5 rounded-xl">
+              <p className="text-xs sm:text-sm text-gray-300">Total Revenue</p>
+              <h2 className="text-2xl sm:text-3xl font-semibold mt-1 sm:mt-2">
                 ₹{loading ? "..." : stats.totalRevenue.toLocaleString("en-IN")}
               </h2>
-              <p className="text-gray-400 text-sm mt-1">From all bookings</p>
+              <p className="text-gray-400 text-xs sm:text-sm mt-1">From all bookings</p>
             </div>
 
-            <div className="bg-white border border-gray-200 p-5 rounded-xl">
-              <p className="text-gray-600 text-sm">Total Bookings</p>
-              <h2 className="text-3xl font-semibold mt-2">
+            <div className="bg-white border border-gray-200 p-4 sm:p-5 rounded-xl">
+              <p className="text-gray-600 text-xs sm:text-sm">Total Bookings</p>
+              <h2 className="text-2xl sm:text-3xl font-semibold mt-1 sm:mt-2">
                 {loading ? "..." : stats.totalBookings}
               </h2>
-              <p className="text-gray-500 text-sm mt-1">All time bookings</p>
+              <p className="text-gray-500 text-xs sm:text-sm mt-1">All time bookings</p>
             </div>
 
-            <div className="bg-white border border-gray-200 p-5 rounded-xl">
-              <p className="text-gray-600 text-sm">Completed</p>
-              <h2 className="text-3xl font-semibold mt-2">
+            <div className="bg-white border border-gray-200 p-4 sm:p-5 rounded-xl">
+              <p className="text-gray-600 text-xs sm:text-sm">Completed</p>
+              <h2 className="text-2xl sm:text-3xl font-semibold mt-1 sm:mt-2">
                 {loading ? "..." : stats.completedBookings}
               </h2>
-              <p className="text-green-500 text-sm mt-1">
+              <p className="text-green-500 text-xs sm:text-sm mt-1">
                 {stats.totalBookings > 0
                   ? `${(
                     (stats.completedBookings / stats.totalBookings) *
@@ -273,17 +278,17 @@ const WorkerDetails = () => {
               </p>
             </div>
 
-            <div className="bg-white border border-gray-200 p-5 rounded-xl">
-              <p className="text-gray-600 text-sm">Active Bookings</p>
-              <div className="flex justify-between mt-2">
+            <div className="bg-white border border-gray-200 p-4 sm:p-5 rounded-xl">
+              <p className="text-gray-600 text-xs sm:text-sm">Active Bookings</p>
+              <div className="flex justify-between mt-1 sm:mt-2">
                 <div>
-                  <h2 className="text-xl font-semibold">
+                  <h2 className="text-lg sm:text-xl font-semibold">
                     {loading ? "..." : stats.sittingBooked}
                   </h2>
                   <p className="text-xs text-gray-500">Sitting</p>
                 </div>
                 <div>
-                  <h2 className="text-xl font-semibold">
+                  <h2 className="text-lg sm:text-xl font-semibold">
                     {loading ? "..." : stats.sleeperBooked}
                   </h2>
                   <p className="text-xs text-gray-500">Sleeper</p>
@@ -291,10 +296,11 @@ const WorkerDetails = () => {
               </div>
             </div>
           </div>
+          
           {/* Bookings and Worker Details */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Bookings Table */}
-            <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl p-4 sm:p-5 shadow-sm">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+            {/* Bookings Table - Made scrollable for both mobile and desktop */}
+            <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl p-3 sm:p-4 sm:p-5 shadow-sm flex flex-col h-[500px] sm:h-[600px]">
               {/* Header Section */}
               <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-4">
                 <h2 className="text-base sm:text-lg font-semibold text-gray-800">
@@ -302,7 +308,7 @@ const WorkerDetails = () => {
                 </h2>
 
                 {/* Search & Filter */}
-                <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-center">
                   <div className="relative w-full sm:w-auto">
                     <Search className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
                     <input
@@ -327,17 +333,17 @@ const WorkerDetails = () => {
                 </div>
               </div>
 
-              {/* Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-gray-700 min-w-[600px]">
-                  <thead className="bg-gray-100 text-left text-gray-800">
+              {/* Table Container with Scroll - Fixed height for consistent scrolling */}
+              <div className="overflow-x-auto overflow-y-auto flex-1">
+                <table className="w-full text-sm text-gray-700 min-w-[300px]">
+                  <thead className="bg-gray-100 text-left text-gray-800 sticky top-0 z-10">
                     <tr>
-                      <th className="py-3 px-4">Booking ID</th>
-                      <th className="py-3 px-4">Name</th>
-                      <th className="py-3 px-4">Phone Number</th>
-                      <th className="py-3 px-4">Persons</th>
-                      <th className="py-3 px-4">Type</th>
-                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-2 sm:px-4 text-xs sm:text-sm">Booking ID</th>
+                      <th className="py-3 px-2 sm:px-4 text-xs sm:text-sm">Name</th>
+                      <th className="py-3 px-2 sm:px-4 text-xs sm:text-sm">Phone Number</th>
+                      <th className="py-3 px-2 sm:px-4 text-xs sm:text-sm">Persons</th>
+                      <th className="py-3 px-2 sm:px-4 text-xs sm:text-sm">Type</th>
+                      <th className="py-3 px-2 sm:px-4 text-xs sm:text-sm">Status</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -365,20 +371,20 @@ const WorkerDetails = () => {
                           key={i}
                           className="border-t hover:bg-gray-50 transition-colors"
                         >
-                          <td className="py-3 px-4">{b.booking_id || b.id}</td>
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">{b.booking_id || b.id}</td>
+                          <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
                             {b.guest_name || b.name}
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
                             {b.phone_number || b.phone}
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
                             {b.number_of_persons || b.persons}
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
                             {b.booking_type || b.type}
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
                             <span
                               className={`font-medium ${
                                 b.status === "completed" ||
@@ -401,42 +407,42 @@ const WorkerDetails = () => {
               </div>
             </div>
 
-            {/* Worker Details */}
-            <div className="bg-white border border-gray-200 rounded-xl p-6">
-              <h2 className="text-lg font-semibold text-gray-800 mb-6">
+            {/* Worker Details - Ends at Total Revenue */}
+            <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 h-fit">
+              <h2 className="text-lg font-semibold text-gray-800 mb-4 sm:mb-6">
                 Worker Details
               </h2>
               {loading ? (
                 <div className="text-center text-gray-500 py-8">Loading...</div>
               ) : (
-                <div className="space-y-4 text-sm">
+                <div className="space-y-3 sm:space-y-4 text-sm">
                   <div>
-                    <p className="text-gray-500">Login ID</p>
-                    <p className="text-gray-900 font-medium">
+                    <p className="text-gray-500 text-xs sm:text-sm">Login ID</p>
+                    <p className="text-gray-900 font-medium text-sm sm:text-base">
                       {worker.worker_id || worker.loginId || worker.id}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-500">Name</p>
-                    <p className="text-gray-900 font-medium">
+                    <p className="text-gray-500 text-xs sm:text-sm">Name</p>
+                    <p className="text-gray-900 font-medium text-sm sm:text-base">
                       {worker.full_name || worker.name}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-500">Gender</p>
-                    <p className="text-gray-900 font-medium">
+                    <p className="text-gray-500 text-xs sm:text-sm">Gender</p>
+                    <p className="text-gray-900 font-medium text-sm sm:text-base">
                       {worker.gender || "N/A"}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-500">Phone No.</p>
-                    <p className="text-gray-900 font-medium">
+                    <p className="text-gray-500 text-xs sm:text-sm">Phone No.</p>
+                    <p className="text-gray-900 font-medium text-sm sm:text-base">
                       {worker.mobile_number || worker.phone}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-500">Joining Date</p>
-                    <p className="text-gray-900 font-medium">
+                    <p className="text-gray-500 text-xs sm:text-sm">Joining Date</p>
+                    <p className="text-gray-900 font-medium text-sm sm:text-base">
                       {worker.created_at
                         ? new Date(worker.created_at).toLocaleDateString(
                           "en-IN",
@@ -450,10 +456,10 @@ const WorkerDetails = () => {
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-500">Status</p>
+                    <p className="text-gray-500 text-xs sm:text-sm">Status</p>
                     <p
-                      className={`font-medium ${(worker.status || "active").toString().toLowerCase() ===
-                          "active"
+                      className={`font-medium text-sm sm:text-base ${
+                        (worker.status || "active").toString().toLowerCase() === "active"
                           ? "text-green-600"
                           : "text-amber-500"
                         }`}
@@ -465,14 +471,14 @@ const WorkerDetails = () => {
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-500">Total Bookings</p>
-                    <p className="text-gray-900 font-medium">
+                    <p className="text-gray-500 text-xs sm:text-sm">Total Bookings</p>
+                    <p className="text-gray-900 font-medium text-sm sm:text-base">
                       {stats.totalBookings}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-500">Total Revenue</p>
-                    <p className="text-gray-900 font-medium">
+                    <p className="text-gray-500 text-xs sm:text-sm">Total Revenue</p>
+                    <p className="text-gray-900 font-medium text-sm sm:text-base">
                       ₹{stats.totalRevenue.toLocaleString("en-IN")}
                     </p>
                   </div>
