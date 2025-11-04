@@ -300,7 +300,7 @@ const WorkerDetails = () => {
           {/* Bookings and Worker Details */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             {/* Bookings Table - Made scrollable for both mobile and desktop */}
-            <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl p-3 sm:p-4 sm:p-5 shadow-sm flex flex-col h-[500px] sm:h-[600px]">
+            <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl p-3 sm:p-4 sm:p-5 shadow-sm flex flex-col h-[400px] sm:h-[580px]">
               {/* Header Section */}
               <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-4">
                 <h2 className="text-base sm:text-lg font-semibold text-gray-800">
@@ -408,7 +408,7 @@ const WorkerDetails = () => {
             </div>
 
             {/* Worker Details - Ends at Total Revenue */}
-            <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 h-fit">
+            <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-6 ">
               <h2 className="text-lg font-semibold text-gray-800 mb-4 sm:mb-6">
                 Worker Details
               </h2>
