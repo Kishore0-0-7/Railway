@@ -207,13 +207,13 @@ const BookingDetails = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      {booking.proof_type || "Proof Type"}
+                      Type
                     </label>
                     <Input value={booking.proof_type || ""} readOnly />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      {booking.proof_id || "Proof ID"}
+                      <Proof></Proof>
                     </label>
                     <Input value={booking.proof_id || ""} readOnly />
                   </div>
