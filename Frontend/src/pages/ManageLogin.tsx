@@ -280,15 +280,15 @@ const ManageLogin = () => {
       
       // Handle password reset if requested
       if (showResetPassword && formData.password.trim()) {
-        // Note: Password update might need current password verification
-        // Adjust based on your API requirements
         await workerAPI.updateWorkerPassword(editingWorkerId, {
-          current_password: formData.currentPassword || "temp",
           new_password: formData.password,
+          admin_reset: true, // Indicate this is an admin-initiated reset
         });
+        toast.success("Worker account and password updated successfully!");
+      } else {
+        toast.success("Worker account updated successfully!");
       }
       
-      toast.success("Worker account updated successfully!");
       await fetchWorkers(); // Refresh the list
       handleCancel();
     } catch (error: any) {
