@@ -103,8 +103,9 @@ const BookingDetails = () => {
             ? bookingData.booking_date.split("T")[0]
             : "",
           inTime: bookingData.in_time?.slice(0, 5) || "",
-          outTime: bookingData.out_time?.slice(0, 5) || "",
-          proofType: bookingData.proof_type || "aadhaar",
+          // keep Out Time empty initially per request; user can pick — we'll seed current time on focus
+          outTime: "",
+          proofType: normalizeProofType(bookingData.proof_type),
           proofId: bookingData.proof_id || "",
           pricePerPerson: bookingData.price_per_person?.toString() || "",
           paidAmount: bookingData.paid_amount?.toString() || "",
@@ -134,6 +135,16 @@ const BookingDetails = () => {
   const formatTime = (value?: string) => {
     if (!value) return "";
     return value.slice(0, 5);
+  };
+
+  // normalize backend proof_type to the select values used in the form
+  const normalizeProofType = (value?: string) => {
+    if (!value) return "aadhaar";
+    const v = value.toLowerCase().trim();
+    if (v.includes("pan")) return "pan id";
+    if (v.includes("pnr")) return "pnr number";
+    if (v.includes("aadhar") || v.includes("aadhaar")) return "aadhaar";
+    return v;
   };
 
   // calculated hours based on in/out times (copied behavior from SubmitBooking)
@@ -407,9 +418,20 @@ const BookingDetails = () => {
                     <Input
                       value={formData.outTime}
                       type="time"
-                      onChange={(e) =>
-                        setFormData({ ...formData, outTime: e.target.value })
-                      }
+                      onFocus={(e) => {
+                        // if empty, seed with current time so the browser time picker shows now
+                        if (!formData.outTime) {
+                          const now = new Date();
+                          const hh = String(now.getHours()).padStart(2, "0");
+                          const mm = String(now.getMinutes()).padStart(2, "0");
+                          setFormData((s) => ({ ...s, outTime: `${hh}:${mm}` }));
+                        }
+                      }}
+                      onChange={(e) => {
+                        setFormData({ ...formData, outTime: e.target.value });
+                        // blur to close native time picker immediately after selection
+                        (e.currentTarget as HTMLInputElement).blur();
+                      }}
                       disabled={loading}
                     />
                   </div>
@@ -569,4 +591,4 @@ const BookingDetails = () => {
   );
 };
 
-export default BookingDetails;  
+export default BookingDetails;
