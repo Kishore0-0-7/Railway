@@ -1,6 +1,9 @@
 // Update this page (the content is just a fallback if you fail to update the page)
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 
 const Index = () => {
+  // Scroll to top on route change
+  useScrollToTop();
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="text-center">

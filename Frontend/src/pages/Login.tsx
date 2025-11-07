@@ -5,8 +5,11 @@ import { Input } from "@/components/ui/input";
 import { adminAPI } from "@/services/api";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react"; // 👈 import icons
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 
 const Login = () => {
+  // Scroll to top on route change
+  useScrollToTop();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");

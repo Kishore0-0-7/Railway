@@ -19,10 +19,14 @@ import {
   isAdvancePaymentEnabled,
   getAdvancePaymentPercentage,
 } from "@/lib/settingsUtils";
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 
 const SubmitBooking = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+
+  // Scroll to top on route change
+  useScrollToTop();
 
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);

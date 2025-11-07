@@ -33,8 +33,12 @@ import {
   saveRailwaySettings,
   type RailwaySettings,
 } from "@/lib/settingsUtils";
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 
 const Settings = () => {
+  // Scroll to top on route change
+  useScrollToTop();
+
   // Settings state using utility functions
   const [settings, setSettings] = useState<RailwaySettings>(() =>
     getRailwaySettings()

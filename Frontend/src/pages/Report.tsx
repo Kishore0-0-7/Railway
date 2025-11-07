@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import Navigation from "@/components/Navigation";
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 import {
   Select,
   SelectContent,
@@ -18,6 +19,9 @@ import {
 const Report = () => {
   const [timePeriod, setTimePeriod] = useState("year");
   const [selectedYear, setSelectedYear] = useState("2025");
+
+  // Scroll to top on route change
+  useScrollToTop();
   const [selectedMonth, setSelectedMonth] = useState("January");
   const [showRevenue, setShowRevenue] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);

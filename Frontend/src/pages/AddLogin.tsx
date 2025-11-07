@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { bookingAPI, workerAPI } from "@/services/api";
 import { toast } from "sonner";
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 
 interface WorkerOption {
   worker_id: string;
@@ -18,6 +19,9 @@ interface WorkerOption {
 }
 
 const AddLogin = () => {
+  // Scroll to top on route change
+  useScrollToTop();
+
   const [workers, setWorkers] = useState<WorkerOption[]>([]);
   const [loadingWorkers, setLoadingWorkers] = useState(false);
   const [submitting, setSubmitting] = useState(false);

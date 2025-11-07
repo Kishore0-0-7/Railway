@@ -17,6 +17,7 @@ import {
   mapLegacyBookingType,
   getSeatingTypePrice,
 } from "@/lib/settingsUtils";
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 
 const WorkerDetails = () => {
   const location = useLocation();
@@ -58,10 +59,10 @@ const WorkerDetails = () => {
     seedWorker.id ||
     seedWorker.loginId;
 
-  useEffect(() => {
-    // Scroll to top when component mounts
-    window.scrollTo(0, 0);
+  // Scroll to top on route change
+  useScrollToTop();
 
+  useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       setError(null);

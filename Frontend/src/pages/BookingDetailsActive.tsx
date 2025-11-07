@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { bookingAPI } from "@/services/api";
 import { toast } from "sonner";
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 
 interface BookingDetailsData {
   booking_id: string;
@@ -54,6 +55,9 @@ interface FormDataType {
 const BookingDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+
+  // Scroll to top on route change
+  useScrollToTop();
   const [booking, setBooking] = useState<BookingDetailsData | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -372,7 +376,11 @@ const BookingDetails = () => {
                     Total Hours
                   </label>
                   <Input
-                    value={calculatedHours ? calculatedHours.toString() : (booking.total_hours?.toString() || "0")}
+                    value={
+                      calculatedHours
+                        ? calculatedHours.toString()
+                        : booking.total_hours?.toString() || "0"
+                    }
                     placeholder="00"
                     readOnly
                   />
@@ -393,7 +401,10 @@ const BookingDetails = () => {
                       type="date"
                       value={formData.bookingDate}
                       onChange={(e) =>
-                        setFormData({ ...formData, bookingDate: e.target.value })
+                        setFormData({
+                          ...formData,
+                          bookingDate: e.target.value,
+                        })
                       }
                       disabled={loading}
                     />
@@ -424,7 +435,10 @@ const BookingDetails = () => {
                           const now = new Date();
                           const hh = String(now.getHours()).padStart(2, "0");
                           const mm = String(now.getMinutes()).padStart(2, "0");
-                          setFormData((s) => ({ ...s, outTime: `${hh}:${mm}` }));
+                          setFormData((s) => ({
+                            ...s,
+                            outTime: `${hh}:${mm}`,
+                          }));
                         }
                       }}
                       onChange={(e) => {
@@ -497,7 +511,10 @@ const BookingDetails = () => {
                       onChange={(e) =>
                         setFormData({
                           ...formData,
-                          pricePerPerson: e.target.value.replace(/[^0-9.]/g, ""),
+                          pricePerPerson: e.target.value.replace(
+                            /[^0-9.]/g,
+                            ""
+                          ),
                         })
                       }
                       disabled={loading}
@@ -536,7 +553,11 @@ const BookingDetails = () => {
                       Balance Amount (₹)
                     </label>
                     <Input
-                      value={balanceAmountComputed ? balanceAmountComputed.toString() : "0"}
+                      value={
+                        balanceAmountComputed
+                          ? balanceAmountComputed.toString()
+                          : "0"
+                      }
                       readOnly
                     />
                   </div>

@@ -30,9 +30,13 @@ import {
   CheckCircle,
   Crown,
 } from "lucide-react";
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 
 const Profile = () => {
   const navigate = useNavigate();
+
+  // Scroll to top on route change
+  useScrollToTop();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);

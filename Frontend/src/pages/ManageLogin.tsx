@@ -14,9 +14,13 @@ import {
 import { workerAPI } from "@/services/api";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 
 const ManageLogin = () => {
   const location = useLocation();
+
+  // Scroll to top on route change
+  useScrollToTop();
   const [formData, setFormData] = useState({
     name: "",
     mobileNumber: "",
