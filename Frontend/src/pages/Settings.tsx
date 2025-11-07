@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
 import { settingsAPI } from "@/services/api";
+import { clearSettingsCache } from "@/lib/settingsUtils";
 
 interface SeatingType {
   name: string;
@@ -189,6 +190,9 @@ const Settings = () => {
         default_advance_percentage: settings.default_advance_percentage,
       };
       localStorage.setItem("railwaySettings", JSON.stringify(railwaySettings));
+
+      // Clear settings cache to force refresh on next access
+      clearSettingsCache();
 
       toast.success("Settings saved successfully");
 

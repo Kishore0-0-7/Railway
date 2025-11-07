@@ -177,27 +177,29 @@ export const getHallName = async (): Promise<string> => {
 };
 
 /**
- * Check if advance payment is enabled (legacy support - returns true for backward compatibility)
+ * Check if advance payment is enabled
  */
-export const isAdvancePaymentEnabled = (): boolean => {
-  // For backward compatibility, always return true
-  // You can add a field in settings table if you want to make this dynamic
-  return true;
+export const isAdvancePaymentEnabled = async (): Promise<boolean> => {
+  const settings = await fetchDynamicSettings();
+  // Default to true if settings not found for backward compatibility
+  return settings?.advance_payment_enabled ?? true;
 };
 
 /**
- * Get advance payment percentage (legacy support - returns 20% for backward compatibility)
+ * Get advance payment percentage from settings
  */
-export const getAdvancePaymentPercentage = (): number => {
-  // For backward compatibility, return default 20%
-  // You can add a field in settings table if you want to make this dynamic
-  return 20;
+export const getAdvancePaymentPercentage = async (): Promise<number> => {
+  const settings = await fetchDynamicSettings();
+  // Default to 20% if settings not found for backward compatibility
+  return settings?.default_advance_percentage ?? 20;
 };
 
 /**
  * Calculate advance payment amount
  */
-export const calculateAdvancePayment = (totalAmount: number): number => {
-  const percentage = getAdvancePaymentPercentage();
+export const calculateAdvancePayment = async (
+  totalAmount: number
+): Promise<number> => {
+  const percentage = await getAdvancePaymentPercentage();
   return Math.round((totalAmount * percentage) / 100);
 };

@@ -24,9 +24,15 @@ const getSettings = async (req, res) => {
       });
     }
 
+    // Convert advance_payment_enabled from integer (0/1) to boolean
+    const settingsData = {
+      ...rows[0],
+      advance_payment_enabled: rows[0].advance_payment_enabled === 1,
+    };
+
     res.status(200).json({
       message: "Settings retrieved successfully",
-      data: rows[0],
+      data: settingsData,
     });
   } catch (error) {
     console.error("Error fetching settings:", error);
@@ -51,6 +57,8 @@ const upsertSettings = async (req, res) => {
     type3_amount,
     type4,
     type4_amount,
+    advance_payment_enabled,
+    default_advance_percentage,
   } = req.body;
 
   if (!admin_id || !admin_name || !hall_name) {
@@ -95,8 +103,10 @@ const upsertSettings = async (req, res) => {
             type3_amount = $8,
             type4 = $9,
             type4_amount = $10,
+            advance_payment_enabled = $11,
+            default_advance_percentage = $12,
             updated_at = CURRENT_TIMESTAMP
-        WHERE admin_id = $11
+        WHERE admin_id = $13
         RETURNING *;
       `;
       const { rows } = await client.query(updateQuery, [
@@ -110,6 +120,12 @@ const upsertSettings = async (req, res) => {
         type3_amount || null,
         type4 || null,
         type4_amount || null,
+        advance_payment_enabled !== undefined
+          ? advance_payment_enabled
+            ? 1
+            : 0
+          : 1,
+        default_advance_percentage || 20,
         admin_id,
       ]);
       result = rows[0];
@@ -121,9 +137,11 @@ const upsertSettings = async (req, res) => {
           type1, type1_amount, 
           type2, type2_amount,
           type3, type3_amount,
-          type4, type4_amount
+          type4, type4_amount,
+          advance_payment_enabled,
+          default_advance_percentage
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         RETURNING *;
       `;
       const { rows } = await client.query(insertQuery, [
@@ -138,6 +156,12 @@ const upsertSettings = async (req, res) => {
         type3_amount || null,
         type4 || null,
         type4_amount || null,
+        advance_payment_enabled !== undefined
+          ? advance_payment_enabled
+            ? 1
+            : 0
+          : 1,
+        default_advance_percentage || 20,
       ]);
       result = rows[0];
     }
