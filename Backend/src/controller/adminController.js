@@ -436,6 +436,38 @@ const adminLogin = async (req, res) => {
   }
 };
 
+// Get Booking Statistics
+const getBookingStats = async (req, res) => {
+  const client = await db.connect();
+  try {
+    const statsQuery = `
+      SELECT 
+        COUNT(*) as total_bookings,
+        COALESCE(SUM(total_amount), 0) as total_revenue,
+        COALESCE(AVG(total_hours), 0) as avg_booking_hours,
+        COUNT(CASE WHEN DATE(created_at) = CURRENT_DATE THEN 1 END) as today_bookings
+      FROM bookings;
+    `;
+
+    const { rows } = await client.query(statsQuery);
+
+    res.status(200).json({
+      message: "Booking statistics retrieved successfully",
+      stats: {
+        total_revenue: parseFloat(rows[0].total_revenue) || 0,
+        total_bookings: parseInt(rows[0].total_bookings) || 0,
+        avg_booking_hours: Math.round(parseFloat(rows[0].avg_booking_hours)) || 0,
+        today_bookings: parseInt(rows[0].today_bookings) || 0,
+      },
+    });
+  } catch (err) {
+    console.error("Error fetching booking statistics:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = {
   createAdmin,
   getAllAdmins,
@@ -444,4 +476,5 @@ module.exports = {
   updateAdminPassword,
   deleteAdmin,
   adminLogin,
+  getBookingStats,
 };

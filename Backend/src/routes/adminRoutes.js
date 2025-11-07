@@ -10,6 +10,7 @@ const {
   updateAdminPassword,
   deleteAdmin,
   adminLogin,
+  getBookingStats,
 } = require("../controller/adminController");
 
 // Imports from the folder Middleware for the authentication (if you have one)
@@ -33,6 +34,9 @@ router.get("/get-all-admins", getAllAdmins);
 
 // Get Admin by ID
 router.get("/get-admin/:id", getAdminById);
+
+// Get Booking Statistics (Total, Active, Completed)
+router.get("/booking-stats", getBookingStats);
 
 // ==================== PUT Routes ====================
 
