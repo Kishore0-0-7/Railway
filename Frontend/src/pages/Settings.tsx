@@ -40,6 +40,8 @@ interface SettingsData {
   admin_name: string;
   hall_name: string;
   seating_types: SeatingType[];
+  advance_payment_enabled: boolean;
+  default_advance_percentage: string;
 }
 
 const Settings = () => {
@@ -56,6 +58,8 @@ const Settings = () => {
       { name: "", amount: "", enabled: true },
       { name: "", amount: "", enabled: true },
     ],
+    advance_payment_enabled: true,
+    default_advance_percentage: "20",
   });
 
   // Editing state for inline editing
@@ -95,6 +99,9 @@ const Settings = () => {
           admin_name: data.admin_name,
           hall_name: data.hall_name,
           seating_types: seatingTypes,
+          advance_payment_enabled: data.advance_payment_enabled ?? true,
+          default_advance_percentage:
+            data.default_advance_percentage?.toString() || "20",
         });
       }
     } catch (error: any) {
@@ -148,9 +155,41 @@ const Settings = () => {
         type3_amount: null,
         type4: null,
         type4_amount: null,
+        advance_payment_enabled: settings.advance_payment_enabled,
+        default_advance_percentage:
+          parseFloat(settings.default_advance_percentage) || 20,
       };
 
       await settingsAPI.upsertSettings(adminId, apiData);
+
+      // Update localStorage for settings utils
+      const railwaySettings = {
+        admin_name: settings.admin_name,
+        admin_email: localStorage.getItem("email") || "admin@railway.com",
+        admin_contact: localStorage.getItem("adminPhone") || "+91-9876543210",
+        seating_types: {
+          sitting: {
+            amount:
+              settings.seating_types[0].enabled &&
+              settings.seating_types[0].amount
+                ? settings.seating_types[0].amount
+                : "15",
+            enabled: settings.seating_types[0].enabled,
+          },
+          sleeper: {
+            amount:
+              settings.seating_types[1].enabled &&
+              settings.seating_types[1].amount
+                ? settings.seating_types[1].amount
+                : "20",
+            enabled: settings.seating_types[1].enabled,
+          },
+        },
+        advance_payment_enabled: settings.advance_payment_enabled,
+        default_advance_percentage: settings.default_advance_percentage,
+      };
+      localStorage.setItem("railwaySettings", JSON.stringify(railwaySettings));
+
       toast.success("Settings saved successfully");
 
       // Refresh settings from database
@@ -592,6 +631,191 @@ const Settings = () => {
                       </Card>
                     );
                   })}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Advance Payment Settings */}
+            <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
+              <CardHeader className="bg-gradient-to-r from-purple-50 to-indigo-50 border-b p-4 sm:p-6">
+                <CardTitle className="flex items-center text-gray-800 text-lg sm:text-xl">
+                  <Zap className="w-5 h-5 mr-2 text-purple-600" />
+                  Advance Payment Settings
+                </CardTitle>
+                <CardDescription className="text-sm sm:text-base">
+                  Configure advance payment options for bookings
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-4 sm:p-6">
+                <div className="space-y-6">
+                  {/* Enable/Disable Advance Payment */}
+                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
+                    <div className="flex items-center space-x-3">
+                      <Zap className="w-5 h-5 text-purple-600" />
+                      <div>
+                        <Label className="text-sm font-medium text-gray-800">
+                          Enable Advance Payment
+                        </Label>
+                        <p className="text-xs text-gray-600 mt-1">
+                          Allow customers to pay advance amount for bookings
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={settings.advance_payment_enabled}
+                      onCheckedChange={(checked) =>
+                        handleSettingChange("advance_payment_enabled", checked)
+                      }
+                    />
+                  </div>
+
+                  {/* Advance Percentage Options */}
+                  {settings.advance_payment_enabled && (
+                    <div className="space-y-4">
+                      <Label className="text-sm font-medium text-gray-700">
+                        Select Advance Percentage
+                      </Label>
+                      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                        {["10", "20", "25", "30", "40", "50"].map(
+                          (percentage) => (
+                            <div
+                              key={percentage}
+                              className={`p-2 rounded-md border cursor-pointer transition-all text-center ${
+                                settings.default_advance_percentage ===
+                                percentage
+                                  ? "border-purple-500 bg-purple-50"
+                                  : "border-gray-200 hover:border-purple-300"
+                              }`}
+                              onClick={() =>
+                                handleSettingChange(
+                                  "default_advance_percentage",
+                                  percentage
+                                )
+                              }
+                            >
+                              <div className="flex items-center justify-center space-x-1">
+                                <div
+                                  className={`w-3 h-3 rounded-full border ${
+                                    settings.default_advance_percentage ===
+                                    percentage
+                                      ? "border-purple-500 bg-purple-500"
+                                      : "border-gray-300"
+                                  }`}
+                                >
+                                  {settings.default_advance_percentage ===
+                                    percentage && (
+                                    <div className="w-1.5 h-1.5 bg-white rounded-full m-0.5"></div>
+                                  )}
+                                </div>
+                                <p className="text-sm font-medium text-gray-800">
+                                  {percentage}%
+                                </p>
+                              </div>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Custom Percentage Input */}
+                  {settings.advance_payment_enabled && (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-gray-700">
+                        Default Advance Percentage (%)
+                      </Label>
+                      {editing === "advance_percentage" ? (
+                        <div className="flex gap-2">
+                          <div className="relative flex-1">
+                            <Input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              placeholder="e.g. 20"
+                              className="pr-8"
+                            />
+                            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                              %
+                            </span>
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() =>
+                              saveEdit("default_advance_percentage")
+                            }
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={cancelEdit}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="relative">
+                          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                            %
+                          </span>
+                          <Input
+                            value={settings.default_advance_percentage}
+                            placeholder="20"
+                            readOnly
+                            onClick={() =>
+                              startEditing(
+                                "advance_percentage",
+                                settings.default_advance_percentage
+                              )
+                            }
+                            className="cursor-pointer pr-8 hover:bg-gray-50 transition-colors"
+                          />
+                          <Edit className="absolute right-8 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        </div>
+                      )}
+                      <p className="text-xs text-gray-500 mt-1">
+                        Enter any custom percentage between 0-100%
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Advance Payment Preview */}
+                  {settings.advance_payment_enabled && (
+                    <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
+                      <h4 className="text-sm font-medium text-green-800 mb-2">
+                        Preview Example
+                      </h4>
+                      <div className="text-xs text-green-700">
+                        <p>• Total booking amount: ₹100</p>
+                        <p>
+                          • Advance payment (
+                          {settings.default_advance_percentage}%): ₹
+                          {(
+                            (100 *
+                              parseFloat(
+                                settings.default_advance_percentage || "0"
+                              )) /
+                            100
+                          ).toFixed(0)}
+                        </p>
+                        <p>
+                          • Remaining amount: ₹
+                          {(
+                            100 -
+                            (100 *
+                              parseFloat(
+                                settings.default_advance_percentage || "0"
+                              )) /
+                              100
+                          ).toFixed(0)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
