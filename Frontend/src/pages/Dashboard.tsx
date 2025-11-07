@@ -173,7 +173,8 @@ const Dashboard = () => {
       });
     }
 
-    const days = rangeFilter === "week" ? 7 : rangeFilter === "month" ? 30 : 365;
+    const days =
+      rangeFilter === "week" ? 7 : rangeFilter === "month" ? 30 : 365;
     const cutoff = new Date(now.getTime() - days * msInDay);
 
     return recentBookings.filter((b) => {
@@ -469,7 +470,10 @@ const Dashboard = () => {
                       />
                     </div>
 
-                    <Select value={rangeFilter} onValueChange={(v) => setRangeFilter(v)}>
+                    <Select
+                      value={rangeFilter}
+                      onValueChange={(v) => setRangeFilter(v)}
+                    >
                       <SelectTrigger className="w-full sm:w-28 text-sm">
                         <SelectValue />
                       </SelectTrigger>
@@ -537,7 +541,9 @@ const Dashboard = () => {
                                 {booking.booking_type}
                               </td>
                               <td className="p-3 md:p-4 text-xs md:text-sm text-gray-800 min-w-[100px]">
-                                {booking.in_time}
+                                {booking.in_time
+                                  ? booking.in_time.split(" ")[0].split(".")[0]
+                                  : "N/A"}
                               </td>
                               <td className="p-3 md:p-4 min-w-[100px]">
                                 <span
