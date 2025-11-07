@@ -12,6 +12,13 @@ import {
 } from "@/components/ui/select";
 import { bookingAPI } from "@/services/api";
 import { toast } from "sonner";
+import {
+  getEnabledSeatingTypes,
+  getSeatingTypePrice,
+  calculateAdvancePayment,
+  isAdvancePaymentEnabled,
+  getAdvancePaymentPercentage,
+} from "@/lib/settingsUtils";
 
 const SubmitBooking = () => {
   const { id } = useParams();
@@ -21,12 +28,17 @@ const SubmitBooking = () => {
   const [submitting, setSubmitting] = useState(false);
   const [initialHours, setInitialHours] = useState(0);
 
+  // Get available seating types from Settings
+  const enabledSeatingTypes = getEnabledSeatingTypes();
+  const defaultSeatingType =
+    enabledSeatingTypes.length > 0 ? enabledSeatingTypes[0].key : "sleeper";
+
   const [formData, setFormData] = useState({
     bookingId: id || "",
     guestName: "",
     phoneNumber: "",
     numberOfPersons: "",
-    bookingType: "sleeper",
+    bookingType: defaultSeatingType,
     bookingDate: "",
     inTime: "",
     outTime: "",
@@ -83,6 +95,19 @@ const SubmitBooking = () => {
     fetchBooking();
   }, [id]);
 
+  // Auto-fill price when booking type changes
+  useEffect(() => {
+    if (formData.bookingType && !formData.pricePerPerson) {
+      const price = getSeatingTypePrice(formData.bookingType);
+      if (price > 0) {
+        setFormData((prev) => ({
+          ...prev,
+          pricePerPerson: price.toString(),
+        }));
+      }
+    }
+  }, [formData.bookingType]);
+
   const calculatedHours = useMemo(() => {
     if (formData.inTime && formData.outTime) {
       const [inHour, inMinute] = formData.inTime.split(":").map(Number);
@@ -109,6 +134,11 @@ const SubmitBooking = () => {
     const hours = calculatedHours || 0;
     return persons * price * hours;
   }, [formData.numberOfPersons, formData.pricePerPerson, calculatedHours]);
+
+  // Advance payment calculations
+  const suggestedAdvanceAmount = useMemo(() => {
+    return isAdvancePaymentEnabled() ? calculateAdvancePayment(totalAmount) : 0;
+  }, [totalAmount]);
 
   const balanceAmount = useMemo(() => {
     const paid = Number(formData.paidAmount) || 0;
@@ -269,17 +299,26 @@ const SubmitBooking = () => {
                 </label>
                 <Select
                   value={formData.bookingType}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, bookingType: value })
-                  }
+                  onValueChange={(value) => {
+                    const price = getSeatingTypePrice(value);
+                    setFormData({
+                      ...formData,
+                      bookingType: value,
+                      pricePerPerson:
+                        price > 0 ? price.toString() : formData.pricePerPerson,
+                    });
+                  }}
                   disabled={loading}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="sleeper">Sleeper</SelectItem>
-                    <SelectItem value="sitting">Sitting</SelectItem>
+                    {enabledSeatingTypes.map((seatingType) => (
+                      <SelectItem key={seatingType.key} value={seatingType.key}>
+                        {seatingType.label} - ₹{seatingType.amount}/person/hour
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -433,6 +472,40 @@ const SubmitBooking = () => {
               </div>
 
               <div className="md:col-span-2">
+                {/* Advance Payment Info */}
+                {isAdvancePaymentEnabled() && suggestedAdvanceAmount > 0 && (
+                  <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-blue-900">
+                          Advance Payment Suggested
+                        </p>
+                        <p className="text-xs text-blue-700">
+                          {getAdvancePaymentPercentage()}% of total amount (₹
+                          {totalAmount})
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-blue-900">
+                          ₹{suggestedAdvanceAmount.toFixed(2)}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              paidAmount: suggestedAdvanceAmount.toString(),
+                            }))
+                          }
+                          className="text-xs text-blue-600 hover:text-blue-800 underline"
+                        >
+                          Use as paid amount
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs text-muted-foreground mb-1">

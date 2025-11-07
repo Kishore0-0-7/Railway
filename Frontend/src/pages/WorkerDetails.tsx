@@ -11,12 +11,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { workerAPI, bookingAPI } from "@/services/api";
+import {
+  getEnabledSeatingTypes,
+  formatSeatingTypeLabel,
+  mapLegacyBookingType,
+  getSeatingTypePrice,
+} from "@/lib/settingsUtils";
 
 const WorkerDetails = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const mainContainerRef = useRef<HTMLDivElement>(null);
-  
+
   // navigation may pass worker object in state; start with that as a seed while we fetch fresh data
   const seedWorker = location.state?.worker || {
     id: 1,
@@ -33,13 +39,15 @@ const WorkerDetails = () => {
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  // Dynamic stats based on Settings seating types
+  const enabledSeatingTypes = getEnabledSeatingTypes();
   const [stats, setStats] = useState({
     totalRevenue: 0,
     totalBookings: 0,
     completedBookings: 0,
     activeBookings: 0,
-    sittingBooked: 0,
-    sleeperBooked: 0,
+    // Dynamic seating type counters
+    seatingTypeStats: {} as Record<string, number>,
   });
 
   // helper to determine worker id to call backend with. Prefer worker_id from API/other pages.
@@ -53,7 +61,7 @@ const WorkerDetails = () => {
   useEffect(() => {
     // Scroll to top when component mounts
     window.scrollTo(0, 0);
-    
+
     const fetchData = async () => {
       setLoading(true);
       setError(null);
@@ -110,29 +118,28 @@ const WorkerDetails = () => {
               b.status === "Booked"
           ).length;
 
-          const sittingBooked = fetchedBookings.filter(
-            (b) =>
-              (b.booking_type === "Sitting" || b.type === "Sitting") &&
-              (b.status === "active" ||
-                b.status === "Active" ||
-                b.status === "Booked")
-          ).length;
-
-          const sleeperBooked = fetchedBookings.filter(
-            (b) =>
-              (b.booking_type === "Sleeper" || b.type === "Sleeper") &&
-              (b.status === "active" ||
-                b.status === "Active" ||
-                b.status === "Booked")
-          ).length;
+          // Calculate stats for each enabled seating type
+          const seatingTypeStats: Record<string, number> = {};
+          enabledSeatingTypes.forEach((seatingType) => {
+            seatingTypeStats[seatingType.key] = fetchedBookings.filter((b) => {
+              const bookingType = mapLegacyBookingType(
+                b.booking_type || b.type || ""
+              );
+              return (
+                bookingType === seatingType.key &&
+                (b.status === "active" ||
+                  b.status === "Active" ||
+                  b.status === "Booked")
+              );
+            }).length;
+          });
 
           setStats({
             totalRevenue,
             totalBookings: fetchedBookings.length,
             completedBookings,
             activeBookings,
-            sittingBooked,
-            sleeperBooked,
+            seatingTypeStats,
           });
         }
       } catch (err: any) {
@@ -176,8 +183,8 @@ const WorkerDetails = () => {
       console.error("Error updating worker status:", err);
       setError(
         (err as any)?.response?.data?.message ||
-        (err as any)?.message ||
-        "Failed to update status"
+          (err as any)?.message ||
+          "Failed to update status"
       );
     }
   };
@@ -213,7 +220,7 @@ const WorkerDetails = () => {
               <p className="text-sm">{error}</p>
             </div>
           )}
-          
+
           {/* Header */}
           <div className="bg-black text-white rounded-xl p-4 sm:p-6 flex flex-col md:flex-row items-center justify-between">
             <div className="flex items-center">
@@ -225,13 +232,15 @@ const WorkerDetails = () => {
               <Button
                 variant="destructive"
                 className={`text-sm sm:text-base ${
-                  (worker.status || "active").toString().toLowerCase() === "active"
+                  (worker.status || "active").toString().toLowerCase() ===
+                  "active"
                     ? "bg-red-600 hover:bg-red-700"
                     : "bg-green-600 hover:bg-green-700"
                 } text-white`}
                 onClick={handleStatusToggle}
               >
-                {(worker.status || "active").toString().toLowerCase() === "active"
+                {(worker.status || "active").toString().toLowerCase() ===
+                "active"
                   ? "Remove Worker"
                   : "Re-Join"}
               </Button>
@@ -252,7 +261,9 @@ const WorkerDetails = () => {
               <h2 className="text-2xl sm:text-3xl font-semibold mt-1 sm:mt-2">
                 ₹{loading ? "..." : stats.totalRevenue.toLocaleString("en-IN")}
               </h2>
-              <p className="text-gray-400 text-xs sm:text-sm mt-1">From all bookings</p>
+              <p className="text-gray-400 text-xs sm:text-sm mt-1">
+                From all bookings
+              </p>
             </div>
 
             <div className="bg-white border border-gray-200 p-4 sm:p-5 rounded-xl">
@@ -260,7 +271,9 @@ const WorkerDetails = () => {
               <h2 className="text-2xl sm:text-3xl font-semibold mt-1 sm:mt-2">
                 {loading ? "..." : stats.totalBookings}
               </h2>
-              <p className="text-gray-500 text-xs sm:text-sm mt-1">All time bookings</p>
+              <p className="text-gray-500 text-xs sm:text-sm mt-1">
+                All time bookings
+              </p>
             </div>
 
             <div className="bg-white border border-gray-200 p-4 sm:p-5 rounded-xl">
@@ -271,36 +284,39 @@ const WorkerDetails = () => {
               <p className="text-green-500 text-xs sm:text-sm mt-1">
                 {stats.totalBookings > 0
                   ? `${(
-                    (stats.completedBookings / stats.totalBookings) *
-                    100
-                  ).toFixed(1)}% completion rate`
+                      (stats.completedBookings / stats.totalBookings) *
+                      100
+                    ).toFixed(1)}% completion rate`
                   : "No bookings yet"}
               </p>
             </div>
 
             <div className="bg-white border border-gray-200 p-4 sm:p-5 rounded-xl">
-              <p className="text-gray-600 text-xs sm:text-sm">Active Bookings</p>
-              <div className="flex justify-between mt-1 sm:mt-2">
-                <div>
-                  <h2 className="text-lg sm:text-xl font-semibold">
-                    {loading ? "..." : stats.sittingBooked}
-                  </h2>
-                  <p className="text-xs text-gray-500">Sitting</p>
-                </div>
-                <div>
-                  <h2 className="text-lg sm:text-xl font-semibold">
-                    {loading ? "..." : stats.sleeperBooked}
-                  </h2>
-                  <p className="text-xs text-gray-500">Sleeper</p>
-                </div>
+              <p className="text-gray-600 text-xs sm:text-sm">
+                Active Bookings by Type
+              </p>
+              <div className="grid grid-cols-2 gap-4 mt-2">
+                {enabledSeatingTypes.map((seatingType) => (
+                  <div key={seatingType.key} className="text-center">
+                    <h2 className="text-lg sm:text-xl font-semibold">
+                      {loading
+                        ? "..."
+                        : stats.seatingTypeStats[seatingType.key] || 0}
+                    </h2>
+                    <p className="text-xs text-gray-500">{seatingType.label}</p>
+                    <p className="text-xs text-blue-600 font-medium">
+                      ₹{seatingType.amount}/hr
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
-          
+
           {/* Bookings and Worker Details */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             {/* Bookings Table - Made scrollable for both mobile and desktop */}
-            <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl p-3 sm:p-4 sm:p-5 shadow-sm flex flex-col h-[400px] sm:h-[580px]">
+            <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl p-3 sm:p-5 shadow-sm flex flex-col h-[400px] sm:h-[580px]">
               {/* Header Section */}
               <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-4">
                 <h2 className="text-base sm:text-lg font-semibold text-gray-800">
@@ -338,12 +354,24 @@ const WorkerDetails = () => {
                 <table className="w-full text-sm text-gray-700 min-w-[300px]">
                   <thead className="bg-gray-100 text-left text-gray-800 sticky top-0 z-10">
                     <tr>
-                      <th className="py-3 px-2 sm:px-4 text-xs sm:text-sm">Booking ID</th>
-                      <th className="py-3 px-2 sm:px-4 text-xs sm:text-sm">Name</th>
-                      <th className="py-3 px-2 sm:px-4 text-xs sm:text-sm">Phone Number</th>
-                      <th className="py-3 px-2 sm:px-4 text-xs sm:text-sm">Persons</th>
-                      <th className="py-3 px-2 sm:px-4 text-xs sm:text-sm">Type</th>
-                      <th className="py-3 px-2 sm:px-4 text-xs sm:text-sm">Status</th>
+                      <th className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
+                        Booking ID
+                      </th>
+                      <th className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
+                        Name
+                      </th>
+                      <th className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
+                        Phone Number
+                      </th>
+                      <th className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
+                        Persons
+                      </th>
+                      <th className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
+                        Type
+                      </th>
+                      <th className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
+                        Status
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -371,7 +399,9 @@ const WorkerDetails = () => {
                           key={i}
                           className="border-t hover:bg-gray-50 transition-colors"
                         >
-                          <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">{b.booking_id || b.id}</td>
+                          <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
+                            {b.booking_id || b.id}
+                          </td>
                           <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
                             {b.guest_name || b.name}
                           </td>
@@ -391,7 +421,7 @@ const WorkerDetails = () => {
                                 b.status === "Completed"
                                   ? "text-green-600"
                                   : "text-orange-500"
-                                }`}
+                              }`}
                             >
                               {b.status
                                 ? b.status.charAt(0).toUpperCase() +
@@ -435,23 +465,27 @@ const WorkerDetails = () => {
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-500 text-xs sm:text-sm">Phone No.</p>
+                    <p className="text-gray-500 text-xs sm:text-sm">
+                      Phone No.
+                    </p>
                     <p className="text-gray-900 font-medium text-sm sm:text-base">
                       {worker.mobile_number || worker.phone}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-500 text-xs sm:text-sm">Joining Date</p>
+                    <p className="text-gray-500 text-xs sm:text-sm">
+                      Joining Date
+                    </p>
                     <p className="text-gray-900 font-medium text-sm sm:text-base">
                       {worker.created_at
                         ? new Date(worker.created_at).toLocaleDateString(
-                          "en-IN",
-                          {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          }
-                        )
+                            "en-IN",
+                            {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            }
+                          )
                         : worker.joiningDate || "N/A"}
                     </p>
                   </div>
@@ -459,10 +493,11 @@ const WorkerDetails = () => {
                     <p className="text-gray-500 text-xs sm:text-sm">Status</p>
                     <p
                       className={`font-medium text-sm sm:text-base ${
-                        (worker.status || "active").toString().toLowerCase() === "active"
+                        (worker.status || "active").toString().toLowerCase() ===
+                        "active"
                           ? "text-green-600"
                           : "text-amber-500"
-                        }`}
+                      }`}
                     >
                       {((worker.status || "active") as string)
                         .charAt(0)
@@ -471,13 +506,17 @@ const WorkerDetails = () => {
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-500 text-xs sm:text-sm">Total Bookings</p>
+                    <p className="text-gray-500 text-xs sm:text-sm">
+                      Total Bookings
+                    </p>
                     <p className="text-gray-900 font-medium text-sm sm:text-base">
                       {stats.totalBookings}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-500 text-xs sm:text-sm">Total Revenue</p>
+                    <p className="text-gray-500 text-xs sm:text-sm">
+                      Total Revenue
+                    </p>
                     <p className="text-gray-900 font-medium text-sm sm:text-base">
                       ₹{stats.totalRevenue.toLocaleString("en-IN")}
                     </p>
