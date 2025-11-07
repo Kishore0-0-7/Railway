@@ -120,10 +120,9 @@ const upsertSettings = async (req, res) => {
           admin_id, admin_name, hall_name, 
           type1, type1_amount, 
           type2, type2_amount, 
-          type3, type3_amount, 
-          type4, type4_amount
+          
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING *;
       `;
       const { rows } = await client.query(insertQuery, [
@@ -134,10 +133,6 @@ const upsertSettings = async (req, res) => {
         type1_amount || null,
         type2 || null,
         type2_amount || null,
-        type3 || null,
-        type3_amount || null,
-        type4 || null,
-        type4_amount || null,
       ]);
       result = rows[0];
     }

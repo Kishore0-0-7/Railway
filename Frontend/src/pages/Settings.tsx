@@ -80,21 +80,21 @@ const Settings = () => {
         const data = response.data.data;
         // Map database structure to component structure
         const seatingTypes: SeatingType[] = [
-          {
-            name: data.type1 || "",
-            amount: data.type1_amount?.toString() || "",
-            enabled: !!data.type1,
-          },
+          // {
+          //   name: data.type1 || "",
+          //   amount: data.type1_amount?.toString() || "",
+          //   enabled: !!data.type1,
+          // },
           {
             name: data.type2 || "",
             amount: data.type2_amount?.toString() || "",
             enabled: !!data.type2,
           },
-          {
-            name: data.type3 || "",
-            amount: data.type3_amount?.toString() || "",
-            enabled: !!data.type3,
-          },
+          // {
+          //   name: data.type3 || "",
+          //   amount: data.type3_amount?.toString() || "",
+          //   enabled: !!data.type3,
+          // },
           {
             name: data.type4 || "",
             amount: data.type4_amount?.toString() || "",
