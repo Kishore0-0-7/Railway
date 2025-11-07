@@ -470,24 +470,14 @@ const Settings = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-4 sm:p-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Seating Type Cards */}
                   {[
                     { key: "sitting", label: "Sitting", color: "bg-blue-500" },
                     {
-                      key: "sitting_ac",
-                      label: "Sitting AC",
-                      color: "bg-cyan-500",
-                    },
-                    {
                       key: "sleeper",
                       label: "Sleeper",
                       color: "bg-orange-500",
-                    },
-                    {
-                      key: "sleeper_ac",
-                      label: "Sleeper AC",
-                      color: "bg-red-500",
                     },
                   ].map((seatType) => (
                     <Card

@@ -12,9 +12,7 @@ export interface RailwaySettings {
   admin_contact: string;
   seating_types: {
     sitting: SeatingType;
-    sitting_ac: SeatingType;
     sleeper: SeatingType;
-    sleeper_ac: SeatingType;
   };
   advance_payment_enabled: boolean;
   default_advance_percentage: string;
@@ -30,16 +28,8 @@ const DEFAULT_SETTINGS: RailwaySettings = {
       amount: "15",
       enabled: true,
     },
-    sitting_ac: {
-      amount: "25",
-      enabled: true,
-    },
     sleeper: {
       amount: "20",
-      enabled: true,
-    },
-    sleeper_ac: {
-      amount: "30",
       enabled: true,
     },
   },
@@ -84,9 +74,7 @@ export const getEnabledSeatingTypes = () => {
     if (config.enabled) {
       const labels: Record<string, string> = {
         sitting: "Sitting",
-        sitting_ac: "Sitting AC",
         sleeper: "Sleeper",
-        sleeper_ac: "Sleeper AC",
       };
 
       seatingOptions.push({
@@ -157,9 +145,7 @@ export const saveRailwaySettings = (settings: RailwaySettings): void => {
 export const formatSeatingTypeLabel = (key: string): string => {
   const labels: Record<string, string> = {
     sitting: "Sitting",
-    sitting_ac: "Sitting AC",
     sleeper: "Sleeper",
-    sleeper_ac: "Sleeper AC",
   };
 
   return labels[key] || key;

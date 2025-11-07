@@ -779,40 +779,6 @@ const Report = () => {
               })}
             </div>
 
-            {/* Settings-Based Pricing Information */}
-            <div className="bg-card border shadow-sm rounded-lg p-4 md:p-6 mb-6">
-              <h2 className="text-lg font-semibold mb-4 text-gray-800">
-                Current Pricing Configuration
-              </h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {enabledSeatingTypes.map((seatingType) => (
-                  <div
-                    key={seatingType.key}
-                    className="text-center p-3 bg-gray-50 rounded-lg"
-                  >
-                    <h3 className="font-medium text-gray-700 mb-1">
-                      {seatingType.label}
-                    </h3>
-                    <p className="text-2xl font-bold text-blue-600">
-                      ₹{seatingType.amount}
-                    </p>
-                    <p className="text-xs text-gray-500">per person/hour</p>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-blue-900">
-                    Advance Payment:{" "}
-                    {enabledSeatingTypes.length > 0 ? "20%" : "Disabled"}
-                  </span>
-                  <span className="text-xs text-blue-700">
-                    Configured in Settings
-                  </span>
-                </div>
-              </div>
-            </div>
-
             {/* Trends Chart */}
             <div
               ref={containerRef}
