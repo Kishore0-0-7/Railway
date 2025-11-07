@@ -11,12 +11,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { workerAPI, bookingAPI } from "@/services/api";
+import {
+  getEnabledSeatingTypes,
+  formatSeatingTypeLabel,
+  mapLegacyBookingType,
+  getSeatingTypePrice,
+} from "@/lib/settingsUtils";
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 
 const WorkerDetails = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const mainContainerRef = useRef<HTMLDivElement>(null);
-  
+
   // navigation may pass worker object in state; start with that as a seed while we fetch fresh data
   const seedWorker = location.state?.worker || {
     id: 1,
@@ -33,17 +40,19 @@ const WorkerDetails = () => {
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  // Dynamic stats based on Settings seating types
+  const enabledSeatingTypes = getEnabledSeatingTypes();
   const [stats, setStats] = useState({
     totalRevenue: 0,
     totalBookings: 0,
     completedBookings: 0,
     activeBookings: 0,
-    sittingBooked: 0,
-    sleeperBooked: 0,
+    // Dynamic seating type counters
+    seatingTypeStats: {} as Record<string, number>,
   });
   // table filter range: today / week / month / year
   const [rangeFilter, setRangeFilter] = useState<string>("today");
- 
+
   // helper to determine worker id to call backend with. Prefer worker_id from API/other pages.
   const workerId =
     location.state?.worker?.worker_id ||
@@ -52,10 +61,10 @@ const WorkerDetails = () => {
     seedWorker.id ||
     seedWorker.loginId;
 
+  // Scroll to top on route change
+  useScrollToTop();
+
   useEffect(() => {
-    // Scroll to top when component mounts
-    window.scrollTo(0, 0);
-    
     const fetchData = async () => {
       setLoading(true);
       setError(null);
@@ -112,8 +121,25 @@ const WorkerDetails = () => {
               b.status === "Booked"
           ).length;
 
+          // Calculate stats for each enabled seating type
+          const seatingTypeStats: Record<string, number> = {};
+          enabledSeatingTypes.forEach((seatingType) => {
+            seatingTypeStats[seatingType.key] = fetchedBookings.filter((b) => {
+              const bookingType = mapLegacyBookingType(
+                b.booking_type || b.type || ""
+              );
+              return (
+                bookingType === seatingType.key &&
+                (b.status === "active" ||
+                  b.status === "Active" ||
+                  b.status === "Booked")
+              );
+            }).length;
+          });
           const sittingBooked = fetchedBookings.filter((b) => {
-            const type = (b.booking_type || b.type || "").toString().toLowerCase();
+            const type = (b.booking_type || b.type || "")
+              .toString()
+              .toLowerCase();
             const status = (b.status || "").toString().toLowerCase();
             return (
               type.includes("sitting") &&
@@ -122,7 +148,9 @@ const WorkerDetails = () => {
           }).length;
 
           const sleeperBooked = fetchedBookings.filter((b) => {
-            const type = (b.booking_type || b.type || "").toString().toLowerCase();
+            const type = (b.booking_type || b.type || "")
+              .toString()
+              .toLowerCase();
             const status = (b.status || "").toString().toLowerCase();
             return (
               type.includes("sleeper") &&
@@ -135,8 +163,7 @@ const WorkerDetails = () => {
             totalBookings: fetchedBookings.length,
             completedBookings,
             activeBookings,
-            sittingBooked,
-            sleeperBooked,
+            seatingTypeStats,
           });
         }
       } catch (err: any) {
@@ -180,8 +207,8 @@ const WorkerDetails = () => {
       console.error("Error updating worker status:", err);
       setError(
         (err as any)?.response?.data?.message ||
-        (err as any)?.message ||
-        "Failed to update status"
+          (err as any)?.message ||
+          "Failed to update status"
       );
     }
   };
@@ -261,7 +288,7 @@ const WorkerDetails = () => {
               <p className="text-sm">{error}</p>
             </div>
           )}
-          
+
           {/* Header */}
           <div className="bg-black text-white rounded-xl p-4 sm:p-6 flex flex-col md:flex-row items-center justify-between">
             <div className="flex items-center">
@@ -273,13 +300,15 @@ const WorkerDetails = () => {
               <Button
                 variant="destructive"
                 className={`text-sm sm:text-base ${
-                  (worker.status || "active").toString().toLowerCase() === "active"
+                  (worker.status || "active").toString().toLowerCase() ===
+                  "active"
                     ? "bg-red-600 hover:bg-red-700"
                     : "bg-green-600 hover:bg-green-700"
                 } text-white`}
                 onClick={handleStatusToggle}
               >
-                {(worker.status || "active").toString().toLowerCase() === "active"
+                {(worker.status || "active").toString().toLowerCase() ===
+                "active"
                   ? "Remove Worker"
                   : "Re-Join"}
               </Button>
@@ -300,7 +329,9 @@ const WorkerDetails = () => {
               <h2 className="text-2xl sm:text-3xl font-semibold mt-1 sm:mt-2">
                 ₹{loading ? "..." : stats.totalRevenue.toLocaleString("en-IN")}
               </h2>
-              <p className="text-gray-400 text-xs sm:text-sm mt-1">From all bookings</p>
+              <p className="text-gray-400 text-xs sm:text-sm mt-1">
+                From all bookings
+              </p>
             </div>
 
             <div className="bg-white border border-gray-200 p-4 sm:p-5 rounded-xl">
@@ -308,7 +339,9 @@ const WorkerDetails = () => {
               <h2 className="text-2xl sm:text-3xl font-semibold mt-1 sm:mt-2">
                 {loading ? "..." : stats.totalBookings}
               </h2>
-              <p className="text-gray-500 text-xs sm:text-sm mt-1">All time bookings</p>
+              <p className="text-gray-500 text-xs sm:text-sm mt-1">
+                All time bookings
+              </p>
             </div>
 
             <div className="bg-white border border-gray-200 p-4 sm:p-5 rounded-xl">
@@ -319,36 +352,39 @@ const WorkerDetails = () => {
               <p className="text-green-500 text-xs sm:text-sm mt-1">
                 {stats.totalBookings > 0
                   ? `${(
-                    (stats.completedBookings / stats.totalBookings) *
-                    100
-                  ).toFixed(1)}% completion rate`
+                      (stats.completedBookings / stats.totalBookings) *
+                      100
+                    ).toFixed(1)}% completion rate`
                   : "No bookings yet"}
               </p>
             </div>
 
             <div className="bg-white border border-gray-200 p-4 sm:p-5 rounded-xl">
-              <p className="text-gray-600 text-xs sm:text-sm">Active Bookings</p>
-              <div className="flex justify-between mt-1 sm:mt-2">
-                <div>
-                  <h2 className="text-lg sm:text-xl font-semibold">
-                    {loading ? "..." : stats.sittingBooked}
-                  </h2>
-                  <p className="text-xs text-gray-500">Sitting</p>
-                </div>
-                <div>
-                  <h2 className="text-lg sm:text-xl font-semibold">
-                    {loading ? "..." : stats.sleeperBooked}
-                  </h2>
-                  <p className="text-xs text-gray-500">Sleeper</p>
-                </div>
+              <p className="text-gray-600 text-xs sm:text-sm">
+                Active Bookings by Type
+              </p>
+              <div className="grid grid-cols-2 gap-4 mt-2">
+                {enabledSeatingTypes.map((seatingType) => (
+                  <div key={seatingType.key} className="text-center">
+                    <h2 className="text-lg sm:text-xl font-semibold">
+                      {loading
+                        ? "..."
+                        : stats.seatingTypeStats[seatingType.key] || 0}
+                    </h2>
+                    <p className="text-xs text-gray-500">{seatingType.label}</p>
+                    <p className="text-xs text-blue-600 font-medium">
+                      ₹{seatingType.amount}/hr
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
-          
+
           {/* Bookings and Worker Details */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             {/* Bookings Table - Made scrollable for both mobile and desktop */}
-            <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl p-3 sm:p-4 sm:p-5 shadow-sm flex flex-col h-[400px] sm:h-[580px]">
+            <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl p-3 sm:p-5 shadow-sm flex flex-col h-[400px] sm:h-[580px]">
               {/* Header Section */}
               <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-4">
                 <h2 className="text-base sm:text-lg font-semibold text-gray-800">
@@ -366,7 +402,10 @@ const WorkerDetails = () => {
                     />
                   </div>
 
-                  <Select value={rangeFilter} onValueChange={(v) => setRangeFilter(v)}>
+                  <Select
+                    value={rangeFilter}
+                    onValueChange={(v) => setRangeFilter(v)}
+                  >
                     <SelectTrigger className="w-full sm:w-[120px]">
                       <Calendar className="mr-2 w-4 h-4" />
                       <SelectValue />
@@ -386,12 +425,24 @@ const WorkerDetails = () => {
                 <table className="w-full text-sm text-gray-700 min-w-[300px]">
                   <thead className="bg-gray-100 text-left text-gray-800 sticky top-0 z-10">
                     <tr>
-                      <th className="py-3 px-2 sm:px-4 text-xs sm:text-sm">Booking ID</th>
-                      <th className="py-3 px-2 sm:px-4 text-xs sm:text-sm">Name</th>
-                      <th className="py-3 px-2 sm:px-4 text-xs sm:text-sm">Phone Number</th>
-                      <th className="py-3 px-2 sm:px-4 text-xs sm:text-sm">Persons</th>
-                      <th className="py-3 px-2 sm:px-4 text-xs sm:text-sm">Type</th>
-                      <th className="py-3 px-2 sm:px-4 text-xs sm:text-sm">Status</th>
+                      <th className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
+                        Booking ID
+                      </th>
+                      <th className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
+                        Name
+                      </th>
+                      <th className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
+                        Phone Number
+                      </th>
+                      <th className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
+                        Persons
+                      </th>
+                      <th className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
+                        Type
+                      </th>
+                      <th className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
+                        Status
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -415,66 +466,52 @@ const WorkerDetails = () => {
                       </tr>
                     ) : filteredBookings.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-8 text-center text-gray-500">
+                        <td
+                          colSpan={6}
+                          className="py-8 text-center text-gray-500"
+                        >
                           No bookings match the selected range
                         </td>
                       </tr>
                     ) : (
-                      filteredBookings.map((b, i) => {
-                        const status = (b.status || "").toString().toLowerCase();
-                        const bookingId = b.booking_id || b.id;
-                        const handleRowNavigate = () => {
-                          if (status.includes("active") || status.includes("booked")) {
-                            navigate(`/submit-booking/${bookingId}`, { state: { booking: b } });
-                            return;
-                          }
-                          if (status.includes("completed")) {
-                            navigate(`/booking-details-completed/${bookingId}`, { state: { booking: b } });
-                            return;
-                          }
-                          // fallback: open read-only booking details
-                          navigate(`/booking-details/${bookingId}`, { state: { booking: b } });
-                        };
-
-                        return (
-                          <tr
-                            key={i}
-                            className="border-t hover:bg-gray-50 transition-colors cursor-pointer"
-                            onClick={handleRowNavigate}
-                            role="button"
-                            tabIndex={0}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                handleRowNavigate();
-                              }
-                            }}
-                          >
-                            <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">{bookingId}</td>
-                            <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
-                              {b.guest_name || b.name}
-                            </td>
-                            <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
-                              {b.phone_number || b.phone}
-                            </td>
-                            <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
-                              {b.number_of_persons || b.persons}
-                            </td>
-                            <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
-                              {b.booking_type || b.type}
-                            </td>
-                            <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
-                              <span
-                                className={`font-medium ${
-                                  status.includes("completed") ? "text-green-600" : "text-orange-500"
-                                }`}
-                              >
-                                {b.status ? b.status.charAt(0).toUpperCase() + b.status.slice(1) : b.status}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })
-                     )}
+                      bookings.map((b, i) => (
+                        <tr
+                          key={i}
+                          className="border-t hover:bg-gray-50 transition-colors"
+                        >
+                          <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
+                            {b.booking_id || b.id}
+                          </td>
+                          <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
+                            {b.guest_name || b.name}
+                          </td>
+                          <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
+                            {b.phone_number || b.phone}
+                          </td>
+                          <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
+                            {b.number_of_persons || b.persons}
+                          </td>
+                          <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
+                            {b.booking_type || b.type}
+                          </td>
+                          <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
+                            <span
+                              className={`font-medium ${
+                                b.status === "completed" ||
+                                b.status === "Completed"
+                                  ? "text-green-600"
+                                  : "text-orange-500"
+                              }`}
+                            >
+                              {b.status
+                                ? b.status.charAt(0).toUpperCase() +
+                                  b.status.slice(1)
+                                : b.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -508,23 +545,27 @@ const WorkerDetails = () => {
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-500 text-xs sm:text-sm">Phone No.</p>
+                    <p className="text-gray-500 text-xs sm:text-sm">
+                      Phone No.
+                    </p>
                     <p className="text-gray-900 font-medium text-sm sm:text-base">
                       {worker.mobile_number || worker.phone}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-500 text-xs sm:text-sm">Joining Date</p>
+                    <p className="text-gray-500 text-xs sm:text-sm">
+                      Joining Date
+                    </p>
                     <p className="text-gray-900 font-medium text-sm sm:text-base">
                       {worker.created_at
                         ? new Date(worker.created_at).toLocaleDateString(
-                          "en-IN",
-                          {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          }
-                        )
+                            "en-IN",
+                            {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            }
+                          )
                         : worker.joiningDate || "N/A"}
                     </p>
                   </div>
@@ -532,10 +573,11 @@ const WorkerDetails = () => {
                     <p className="text-gray-500 text-xs sm:text-sm">Status</p>
                     <p
                       className={`font-medium text-sm sm:text-base ${
-                        (worker.status || "active").toString().toLowerCase() === "active"
+                        (worker.status || "active").toString().toLowerCase() ===
+                        "active"
                           ? "text-green-600"
                           : "text-amber-500"
-                        }`}
+                      }`}
                     >
                       {((worker.status || "active") as string)
                         .charAt(0)
@@ -544,13 +586,17 @@ const WorkerDetails = () => {
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-500 text-xs sm:text-sm">Total Bookings</p>
+                    <p className="text-gray-500 text-xs sm:text-sm">
+                      Total Bookings
+                    </p>
                     <p className="text-gray-900 font-medium text-sm sm:text-base">
                       {stats.totalBookings}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-500 text-xs sm:text-sm">Total Revenue</p>
+                    <p className="text-gray-500 text-xs sm:text-sm">
+                      Total Revenue
+                    </p>
                     <p className="text-gray-900 font-medium text-sm sm:text-base">
                       ₹{stats.totalRevenue.toLocaleString("en-IN")}
                     </p>

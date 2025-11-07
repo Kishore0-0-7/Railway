@@ -6,9 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { workerAPI } from "@/services/api";
 import { toast } from "sonner";
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 
 const WorkerList = () => {
   const navigate = useNavigate();
+
+  // Scroll to top on route change
+  useScrollToTop();
   const [searchTerm, setSearchTerm] = useState("");
   const [workers, setWorkers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,7 +26,7 @@ const WorkerList = () => {
     try {
       setLoading(true);
       const response = await workerAPI.getAllWorkers();
-      
+
       if (response.data && response.data.workers) {
         // normalize status field (some backends return worker_status)
         const normalized = response.data.workers.map((w: any) => ({
@@ -39,10 +43,11 @@ const WorkerList = () => {
     }
   };
 
-  const filteredWorkers = workers.filter((worker) =>
-    worker.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    worker.worker_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    worker.mobile_number?.includes(searchTerm)
+  const filteredWorkers = workers.filter(
+    (worker) =>
+      worker.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      worker.worker_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      worker.mobile_number?.includes(searchTerm)
   );
 
   const handleRowClick = (worker: any) => {
@@ -96,60 +101,80 @@ const WorkerList = () => {
             </div>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-gray-200">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-100 text-gray-700">
-                <tr>
-                  <th className="px-4 py-3 text-left font-medium">S.No</th>
-                  <th className="px-4 py-3 text-left font-medium">Name</th>
-                  <th className="px-4 py-3 text-left font-medium">Login ID</th>
-                  <th className="px-4 py-3 text-left font-medium">Phone No.</th>
-                  <th className="px-4 py-3 text-left font-medium">Gender</th>
-                  <th className="px-4 py-3 text-left font-medium">Joining Date</th>
-                  <th className="px-4 py-3 text-left font-medium">Total Bookings</th>
-                  <th className="px-4 py-3 text-left font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredWorkers.length > 0 ? (
-                  filteredWorkers.map((worker, index) => (
-                    <tr
-                      key={worker.worker_id || index}
-                      onClick={() => handleRowClick(worker)}
-                      className="hover:bg-gray-50 border-t cursor-pointer transition"
-                    >
-                      <td className="px-4 py-3">{index + 1}</td>
-                      <td className="px-4 py-3">{worker.full_name}</td>
-                      <td className="px-4 py-3 text-blue-600">{worker.worker_id}</td>
-                      <td className="px-4 py-3">{worker.mobile_number}</td>
-                      <td className="px-4 py-3 capitalize">{worker.gender || "N/A"}</td>
-                      <td className="px-4 py-3">{formatDate(worker.joining_date)}</td>
-                      <td className="px-4 py-3 text-center">{worker.total_bookings || 0}</td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`font-medium ${
-                            (worker.status || "active").toLowerCase() === "active"
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }`}
-                        >
-                          {((worker.status || "active") as string)
-                            .charAt(0)
-                            .toUpperCase() +
-                            ((worker.status || "active") as string).slice(1)}
-                        </span>
+              <table className="w-full text-sm">
+                <thead className="bg-gray-100 text-gray-700">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-medium">S.No</th>
+                    <th className="px-4 py-3 text-left font-medium">Name</th>
+                    <th className="px-4 py-3 text-left font-medium">
+                      Login ID
+                    </th>
+                    <th className="px-4 py-3 text-left font-medium">
+                      Phone No.
+                    </th>
+                    <th className="px-4 py-3 text-left font-medium">Gender</th>
+                    <th className="px-4 py-3 text-left font-medium">
+                      Joining Date
+                    </th>
+                    <th className="px-4 py-3 text-left font-medium">
+                      Total Bookings
+                    </th>
+                    <th className="px-4 py-3 text-left font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredWorkers.length > 0 ? (
+                    filteredWorkers.map((worker, index) => (
+                      <tr
+                        key={worker.worker_id || index}
+                        onClick={() => handleRowClick(worker)}
+                        className="hover:bg-gray-50 border-t cursor-pointer transition"
+                      >
+                        <td className="px-4 py-3">{index + 1}</td>
+                        <td className="px-4 py-3">{worker.full_name}</td>
+                        <td className="px-4 py-3 text-blue-600">
+                          {worker.worker_id}
+                        </td>
+                        <td className="px-4 py-3">{worker.mobile_number}</td>
+                        <td className="px-4 py-3 capitalize">
+                          {worker.gender || "N/A"}
+                        </td>
+                        <td className="px-4 py-3">
+                          {formatDate(worker.joining_date)}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {worker.total_bookings || 0}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`font-medium ${
+                              (worker.status || "active").toLowerCase() ===
+                              "active"
+                                ? "text-green-600"
+                                : "text-red-600"
+                            }`}
+                          >
+                            {((worker.status || "active") as string)
+                              .charAt(0)
+                              .toUpperCase() +
+                              ((worker.status || "active") as string).slice(1)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan={8}
+                        className="px-4 py-8 text-center text-gray-500"
+                      >
+                        No workers found
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
-                      No workers found
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                  )}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </main>

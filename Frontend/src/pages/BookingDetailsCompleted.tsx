@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { bookingAPI } from "@/services/api";
 import { toast } from "sonner";
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 
 interface BookingDetailsData {
   booking_id: string;
@@ -29,6 +30,9 @@ interface BookingDetailsData {
 const BookingDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+
+  // Scroll to top on route change
+  useScrollToTop();
   const [booking, setBooking] = useState<BookingDetailsData | null>(null);
   const [loading, setLoading] = useState(false);
 

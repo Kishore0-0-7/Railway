@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
+import { useScrollToTop } from "@/hooks/useScrollToTop";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -36,6 +37,9 @@ import { toast } from "sonner";
 const Dashboard = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Scroll to top on route change
+  useScrollToTop();
   const [loading, setLoading] = useState(true);
   // table date range filter: all / today / week / month / year
   const [rangeFilter, setRangeFilter] = useState<string>("all");
@@ -340,28 +344,28 @@ const Dashboard = () => {
                 </div>
               </div>
 
-                <div className="bg-gradient-to-br from-gray-900 to-black text-white rounded-lg p-5 shadow-sm h-40 flex flex-col justify-between">
-            <p className="text-sm font-semibold mb-4">Top category</p>
-            <div className="flex items-center justify-between">
-              <div className="w-20 h-20">
-                <ResponsiveContainer>
-                  <PieChart>
-                    <Pie
-                      data={topCategoryData}
-                      innerRadius={30}
-                      outerRadius={40}
-                      paddingAngle={5}
-                      cornerRadius={8}
-                      dataKey="value"
-                      stroke="none"
-                    >
-                      {topCategoryData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index]} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
+              <div className="bg-gradient-to-br from-gray-900 to-black text-white rounded-lg p-5 shadow-sm h-40 flex flex-col justify-between">
+                <p className="text-sm font-semibold mb-4">Top category</p>
+                <div className="flex items-center justify-between">
+                  <div className="w-20 h-20">
+                    <ResponsiveContainer>
+                      <PieChart>
+                        <Pie
+                          data={topCategoryData}
+                          innerRadius={30}
+                          outerRadius={40}
+                          paddingAngle={5}
+                          cornerRadius={8}
+                          dataKey="value"
+                          stroke="none"
+                        >
+                          {topCategoryData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index]} />
+                          ))}
+                        </Pie>
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
                   <div className="space-y-1">
                     <div className="flex items-center space-x-1">
                       <span className="w-2 h-2 bg-yellow-400 rounded-full"></span>
@@ -512,44 +516,45 @@ const Dashboard = () => {
                       <tbody>
                         {filteredBookings.length > 0 ? (
                           filteredBookings.map((booking, index) => (
-                          <tr
-                            key={index}
-                            className="border-b hover:bg-gray-50 cursor-pointer transition-colors"
-                            onClick={() => handleBookingClick(booking)}
-                          >
-                            <td className="p-3 md:p-4 text-xs md:text-sm font-medium text-blue-600 min-w-[120px]">
-                              {booking.booking_id}
-                            </td>
-                            <td className="p-3 md:p-4 text-xs md:text-sm text-gray-800 min-w-[120px]">
-                              {booking.worker_name || "N/A"}
-                            </td>
-                            <td className="p-3 md:p-4 text-xs md:text-sm text-gray-800 min-w-[120px]">
-                              {booking.guest_name}
-                            </td>
-                            <td className="p-3 md:p-4 text-xs md:text-sm text-gray-600 min-w-[120px]">
-                              {booking.phone_number}
-                            </td>
-                            <td className="p-3 md:p-4 text-xs md:text-sm text-gray-800 capitalize min-w-[100px]">
-                              {booking.booking_type}
-                            </td>
-                            <td className="p-3 md:p-4 text-xs md:text-sm text-gray-800 min-w-[100px]">
-                              {booking.in_time}
-                            </td>
-                            <td className="p-3 md:p-4 min-w-[100px]">
-                              <span
-                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${booking.status === "completed"
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-amber-100 text-amber-800"
+                            <tr
+                              key={index}
+                              className="border-b hover:bg-gray-50 cursor-pointer transition-colors"
+                              onClick={() => handleBookingClick(booking)}
+                            >
+                              <td className="p-3 md:p-4 text-xs md:text-sm font-medium text-blue-600 min-w-[120px]">
+                                {booking.booking_id}
+                              </td>
+                              <td className="p-3 md:p-4 text-xs md:text-sm text-gray-800 min-w-[120px]">
+                                {booking.worker_name || "N/A"}
+                              </td>
+                              <td className="p-3 md:p-4 text-xs md:text-sm text-gray-800 min-w-[120px]">
+                                {booking.guest_name}
+                              </td>
+                              <td className="p-3 md:p-4 text-xs md:text-sm text-gray-600 min-w-[120px]">
+                                {booking.phone_number}
+                              </td>
+                              <td className="p-3 md:p-4 text-xs md:text-sm text-gray-800 capitalize min-w-[100px]">
+                                {booking.booking_type}
+                              </td>
+                              <td className="p-3 md:p-4 text-xs md:text-sm text-gray-800 min-w-[100px]">
+                                {booking.in_time}
+                              </td>
+                              <td className="p-3 md:p-4 min-w-[100px]">
+                                <span
+                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${
+                                    booking.status === "completed"
+                                      ? "bg-green-100 text-green-800"
+                                      : "bg-amber-100 text-amber-800"
                                   }`}
-                              >
-                                {booking.status}
-                              </span>
-                            </td>
-                            <td className="p-3 md:p-4 min-w-[40px]">
-                              <ArrowRight className="w-4 h-4 text-gray-400" />
-                            </td>
-                          </tr>
-                        ))
+                                >
+                                  {booking.status}
+                                </span>
+                              </td>
+                              <td className="p-3 md:p-4 min-w-[40px]">
+                                <ArrowRight className="w-4 h-4 text-gray-400" />
+                              </td>
+                            </tr>
+                          ))
                         ) : (
                           <tr>
                             <td
