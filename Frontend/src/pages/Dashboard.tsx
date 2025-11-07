@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
@@ -41,6 +41,8 @@ const Dashboard = () => {
   // Scroll to top on route change
   useScrollToTop();
   const [loading, setLoading] = useState(true);
+  // table date range filter: all / today / week / month / year
+  const [rangeFilter, setRangeFilter] = useState<string>("all");
   const [chartLoading, setChartLoading] = useState(false);
   const [dashboardStats, setDashboardStats] = useState<any>(null);
   const [recentBookings, setRecentBookings] = useState<any[]>([]);
@@ -123,14 +125,64 @@ const Dashboard = () => {
     }
   };
 
-  // Filter bookings based on search
-  const filteredBookings = recentBookings.filter((booking) => {
-    return (
-      booking.guest_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      booking.booking_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      booking.worker_name?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  });
+  // Filter bookings based on selected date range + search
+  const filteredBookings = useMemo(() => {
+    if (!recentBookings || recentBookings.length === 0) return [];
+
+    const now = new Date();
+    const msInDay = 24 * 60 * 60 * 1000;
+
+    const parseDate = (b: any): Date | null => {
+      const ds =
+        b.booking_date ||
+        b.created_at ||
+        b.date ||
+        b.bookingDate ||
+        b.in_date ||
+        null;
+      if (!ds) return null;
+      const d = new Date(ds);
+      if (isNaN(d.getTime())) return null;
+      return d;
+    };
+
+    const matchesSearch = (b: any) => {
+      const q = searchTerm.trim().toLowerCase();
+      if (!q) return true;
+      return (
+        (b.guest_name || "").toString().toLowerCase().includes(q) ||
+        (b.booking_id || "").toString().toLowerCase().includes(q) ||
+        (b.worker_name || "").toString().toLowerCase().includes(q)
+      );
+    };
+
+    if (rangeFilter === "all") {
+      return recentBookings.filter((b) => matchesSearch(b));
+    }
+
+    if (rangeFilter === "today") {
+      return recentBookings.filter((b) => {
+        if (!matchesSearch(b)) return false;
+        const d = parseDate(b);
+        if (!d) return false;
+        return (
+          d.getFullYear() === now.getFullYear() &&
+          d.getMonth() === now.getMonth() &&
+          d.getDate() === now.getDate()
+        );
+      });
+    }
+
+    const days = rangeFilter === "week" ? 7 : rangeFilter === "month" ? 30 : 365;
+    const cutoff = new Date(now.getTime() - days * msInDay);
+
+    return recentBookings.filter((b) => {
+      if (!matchesSearch(b)) return false;
+      const d = parseDate(b);
+      if (!d) return false;
+      return d >= cutoff && d <= now;
+    });
+  }, [recentBookings, rangeFilter, searchTerm]);
 
   // Transform monthly revenue data for bar chart
   const bookingData =
@@ -417,7 +469,7 @@ const Dashboard = () => {
                       />
                     </div>
 
-                    <Select defaultValue="all">
+                    <Select value={rangeFilter} onValueChange={(v) => setRangeFilter(v)}>
                       <SelectTrigger className="w-full sm:w-28 text-sm">
                         <SelectValue />
                       </SelectTrigger>

@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Search, Calendar } from "lucide-react";
@@ -50,7 +50,9 @@ const WorkerDetails = () => {
     // Dynamic seating type counters
     seatingTypeStats: {} as Record<string, number>,
   });
-
+  // table filter range: today / week / month / year
+  const [rangeFilter, setRangeFilter] = useState<string>("today");
+ 
   // helper to determine worker id to call backend with. Prefer worker_id from API/other pages.
   const workerId =
     location.state?.worker?.worker_id ||
@@ -134,6 +136,23 @@ const WorkerDetails = () => {
               );
             }).length;
           });
+          const sittingBooked = fetchedBookings.filter((b) => {
+            const type = (b.booking_type || b.type || "").toString().toLowerCase();
+            const status = (b.status || "").toString().toLowerCase();
+            return (
+              type.includes("sitting") &&
+              (status.includes("active") || status.includes("booked"))
+            );
+          }).length;
+
+          const sleeperBooked = fetchedBookings.filter((b) => {
+            const type = (b.booking_type || b.type || "").toString().toLowerCase();
+            const status = (b.status || "").toString().toLowerCase();
+            return (
+              type.includes("sleeper") &&
+              (status.includes("active") || status.includes("booked"))
+            );
+          }).length;
 
           setStats({
             totalRevenue,
@@ -208,6 +227,50 @@ const WorkerDetails = () => {
       },
     });
   };
+
+  // derive bookings to show in table based on selected range
+  const filteredBookings = useMemo(() => {
+    if (!bookings || bookings.length === 0) return [];
+
+    const now = new Date();
+    const msInDay = 24 * 60 * 60 * 1000;
+
+    const parseDate = (b: any): Date | null => {
+      const ds =
+        b.booking_date ||
+        b.created_at ||
+        b.date ||
+        b.bookingDate ||
+        b.in_date ||
+        null;
+      if (!ds) return null;
+      const d = new Date(ds);
+      if (isNaN(d.getTime())) return null;
+      return d;
+    };
+
+    if (rangeFilter === "today") {
+      return bookings.filter((b) => {
+        const d = parseDate(b);
+        if (!d) return false;
+        return (
+          d.getFullYear() === now.getFullYear() &&
+          d.getMonth() === now.getMonth() &&
+          d.getDate() === now.getDate()
+        );
+      });
+    }
+
+    const days =
+      rangeFilter === "week" ? 7 : rangeFilter === "month" ? 30 : 365;
+    const cutoff = new Date(now.getTime() - days * msInDay);
+
+    return bookings.filter((b) => {
+      const d = parseDate(b);
+      if (!d) return false;
+      return d >= cutoff && d <= now;
+    });
+  }, [bookings, rangeFilter]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -335,10 +398,10 @@ const WorkerDetails = () => {
                     />
                   </div>
 
-                  <Select>
+                  <Select value={rangeFilter} onValueChange={(v) => setRangeFilter(v)}>
                     <SelectTrigger className="w-full sm:w-[120px]">
                       <Calendar className="mr-2 w-4 h-4" />
-                      <SelectValue placeholder="Today" />
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="today">Today</SelectItem>
@@ -394,6 +457,12 @@ const WorkerDetails = () => {
                           No bookings found for this worker
                         </td>
                       </tr>
+                    ) : filteredBookings.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-8 text-center text-gray-500">
+                          No bookings match the selected range
+                        </td>
+                      </tr>
                     ) : (
                       bookings.map((b, i) => (
                         <tr
@@ -433,6 +502,61 @@ const WorkerDetails = () => {
                         </tr>
                       ))
                     )}
+                      filteredBookings.map((b, i) => {
+                        const status = (b.status || "").toString().toLowerCase();
+                        const bookingId = b.booking_id || b.id;
+                        const handleRowNavigate = () => {
+                          if (status.includes("active") || status.includes("booked")) {
+                            navigate(`/submit-booking/${bookingId}`, { state: { booking: b } });
+                            return;
+                          }
+                          if (status.includes("completed")) {
+                            navigate(`/booking-details-completed/${bookingId}`, { state: { booking: b } });
+                            return;
+                          }
+                          // fallback: open read-only booking details
+                          navigate(`/booking-details/${bookingId}`, { state: { booking: b } });
+                        };
+
+                        return (
+                          <tr
+                            key={i}
+                            className="border-t hover:bg-gray-50 transition-colors cursor-pointer"
+                            onClick={handleRowNavigate}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                handleRowNavigate();
+                              }
+                            }}
+                          >
+                            <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">{bookingId}</td>
+                            <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
+                              {b.guest_name || b.name}
+                            </td>
+                            <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
+                              {b.phone_number || b.phone}
+                            </td>
+                            <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
+                              {b.number_of_persons || b.persons}
+                            </td>
+                            <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
+                              {b.booking_type || b.type}
+                            </td>
+                            <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
+                              <span
+                                className={`font-medium ${
+                                  status.includes("completed") ? "text-green-600" : "text-orange-500"
+                                }`}
+                              >
+                                {b.status ? b.status.charAt(0).toUpperCase() + b.status.slice(1) : b.status}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })
+                     )}
                   </tbody>
                 </table>
               </div>
