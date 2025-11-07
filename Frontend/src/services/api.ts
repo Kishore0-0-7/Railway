@@ -135,4 +135,17 @@ export const analyticsAPI = {
     apiClient.get("/analytics/dashboard/payment-analytics", { params }),
 };
 
+// ==================== SETTINGS APIs ====================
+
+export const settingsAPI = {
+  getSettings: (adminId: string) =>
+    apiClient.get(`/settings/get-settings/${adminId}`),
+
+  upsertSettings: (adminId: string, data: any) =>
+    apiClient.post(`/settings/upsert-settings/${adminId}`, data),
+
+  deleteSettings: (adminId: string) =>
+    apiClient.delete(`/settings/delete-settings/${adminId}`),
+};
+
 export default apiClient;

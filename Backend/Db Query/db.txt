@@ -32,6 +32,16 @@ CREATE TABLE IF NOT EXISTS worker_accounts (
 
 ------------------------------------------------------------
 
+CREATE TABLE public.super_admin (
+    super_admin_id SERIAL PRIMARY KEY,
+    super_admin_name VARCHAR(100) NOT NULL,
+    phone_number VARCHAR(15) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- 🏨 BOOKINGS TABLE
 CREATE TABLE IF NOT EXISTS bookings (
     booking_id VARCHAR(50) PRIMARY KEY,

@@ -6,12 +6,20 @@ const adminRoutes = require("./routes/adminRoutes.js");
 const workerRoutes = require("./routes/workerRoutes.js");
 const workerBookingsRoutes = require("./routes/workerBookingsRoutes.js");
 const bookingRoutes = require("./routes/bookingRoutes.js");
+const settingsRoutes = require("./routes/settingsRoutes.js");
 
 const app = express();
 
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:8080", "http://localhost:8081", "http://localhost:3000","https://railway.artechnology.pro","*"],
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:8080",
+      "http://localhost:8081",
+      "http://localhost:3000",
+      "https://railway.artechnology.pro",
+      "*",
+    ],
     credentials: true,
   })
 );
@@ -24,5 +32,6 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/worker", workerRoutes);
 app.use("/api/bookings", workerBookingsRoutes);
 app.use("/api/analytics", bookingRoutes);
+app.use("/api/settings", settingsRoutes);
 
 module.exports = app;
