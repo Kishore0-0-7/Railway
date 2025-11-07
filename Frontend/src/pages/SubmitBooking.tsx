@@ -37,6 +37,16 @@ const SubmitBooking = () => {
     paymentMethod: "cash",
   });
 
+  // normalize backend proof_type to the select values used in the form
+  const normalizeProofType = (value?: string) => {
+    if (!value) return "aadhaar";
+    const v = value.toString().toLowerCase().trim();
+    if (v.includes("pan")) return "pan id";
+    if (v.includes("pnr")) return "pnr number";
+    if (v.includes("aadhar") || v.includes("aadhaar")) return "aadhaar";
+    return v;
+  };
+
   useEffect(() => {
     if (!id) return;
 
@@ -62,7 +72,7 @@ const SubmitBooking = () => {
             : "",
           inTime: booking.in_time?.slice(0, 5) || "",
           outTime: booking.out_time?.slice(0, 5) || "",
-          proofType: booking.proof_type || "aadhaar",
+          proofType: normalizeProofType(booking.proof_type),
           proofId: booking.proof_id || "",
           pricePerPerson: booking.price_per_person?.toString() || "",
           paidAmount: booking.paid_amount?.toString() || "",
