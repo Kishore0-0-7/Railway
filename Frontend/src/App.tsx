@@ -13,6 +13,8 @@ import BookingDetailsActive from "./pages/BookingDetailsActive";
 import AddLogin from "./pages/AddLogin";
 import ManageLogin from "./pages/ManageLogin";
 import Report from "./pages/Report";
+import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import WorkerList from "./pages/WorkerList";
 import WorkerDetails from "./pages/WorkerDetails";
@@ -71,6 +73,14 @@ const App = () => (
             <Route
               path="/report"
               element={<ProtectedRoute element={<Report />} />}
+            />
+            <Route
+              path="/profile"
+              element={<ProtectedRoute element={<Profile />} />}
+            />
+            <Route
+              path="/settings"
+              element={<ProtectedRoute element={<Settings />} />}
             />
           </Route>
         </Routes>

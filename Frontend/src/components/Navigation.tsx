@@ -9,7 +9,15 @@ import {
   Users,
   Settings,
   BarChart3,
+  UserCircle,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Navigation = () => {
   const navigate = useNavigate();
@@ -45,6 +53,14 @@ const Navigation = () => {
 
     console.log("User logged out");
     navigate("/", { replace: true });
+  };
+
+  const handleProfile = () => {
+    navigate("/profile");
+  };
+
+  const handleSettings = () => {
+    navigate("/settings");
   };
 
   const handleNavClick = (path: string) => {
@@ -113,18 +129,28 @@ const Navigation = () => {
 
           {/* Right side - User & Logout - Desktop only */}
           <div className="hidden md:flex items-center space-x-4">
-            <button
-              onClick={handleLogout}
-              className="hover:text-white transition-colors flex items-center space-x-1"
-              title="Logout"
-            >
-              <LogOut className="w-5 h-5" />
-              <span>Logout</span>
-            </button>
-
-            <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
-              <User className="w-5 h-5 text-black" />
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="w-8 h-8 bg-white rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-black">
+                  <User className="w-5 h-5 text-black" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={handleProfile}>
+                  <UserCircle className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSettings}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Logout</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* Empty div for mobile to maintain flex spacing */}
@@ -182,9 +208,33 @@ const Navigation = () => {
                 </div>
               </div>
 
+              {/* Profile and Settings buttons for mobile */}
+              <div className="space-y-1 mb-2">
+                <button
+                  onClick={() => {
+                    handleProfile();
+                    setMenuOpen(false);
+                  }}
+                  className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-gray-800 hover:text-white transition-all"
+                >
+                  <UserCircle className="w-4 h-4" />
+                  <span className="text-sm">Profile</span>
+                </button>
+                <button
+                  onClick={() => {
+                    handleSettings();
+                    setMenuOpen(false);
+                  }}
+                  className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-gray-800 hover:text-white transition-all"
+                >
+                  <Settings className="w-4 h-4" />
+                  <span className="text-sm">Settings</span>
+                </button>
+              </div>
+
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center space-x-3 px-3 py-3 rounded-lg hover:bg-gray-800 hover:text-white transition-all"
+                className="w-full flex items-center space-x-3 px-3 py-3 rounded-lg hover:bg-gray-800 hover:text-white transition-all border-t border-gray-700 pt-3"
               >
                 <LogOut className="w-5 h-5" />
                 <span className="text-sm">Logout</span>
