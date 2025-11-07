@@ -22,7 +22,7 @@ const Report = () => {
 
   // Scroll to top on route change
   useScrollToTop();
-  const [selectedMonth, setSelectedMonth] = useState("January");
+  const [selectedMonth, setSelectedMonth] = useState("Jan");
   const [showRevenue, setShowRevenue] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
@@ -707,9 +707,7 @@ const Report = () => {
                                 isMobile ? "text-base" : "text-lg"
                               } font-medium text-gray-400`}
                             >
-                              {isMobile
-                                ? current.month.substring(0, 3)
-                                : current.month}
+                              {current.month.substring(0, 3)}
                             </div>
 
                             <button

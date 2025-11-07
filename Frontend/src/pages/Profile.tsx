@@ -64,10 +64,6 @@ const Profile = () => {
     address: "",
     email: "",
     joinDate: "",
-    subscription: {
-      startDate: "",
-      endDate: "",
-    },
   });
 
   // Load admin data from localStorage on component mount
@@ -98,10 +94,6 @@ const Profile = () => {
       address: profile.address,
       email: profile.email,
       joinDate: profile.joinDate,
-      subscription: {
-        startDate: profile.subscription.startDate,
-        endDate: profile.subscription.endDate,
-      },
     });
   }, []);
 
@@ -117,10 +109,6 @@ const Profile = () => {
       address: profileData.address,
       email: profileData.email,
       joinDate: profileData.joinDate,
-      subscription: {
-        startDate: profileData.subscription.startDate,
-        endDate: profileData.subscription.endDate,
-      },
     });
   };
 
@@ -137,25 +125,18 @@ const Profile = () => {
         address: editData.address,
         email: editData.email,
         joinDate: editData.joinDate,
-        subscription: {
-          startDate: editData.subscription.startDate,
-          endDate: editData.subscription.endDate,
-        },
+        // Keep subscription unchanged
+        subscription: profileData.subscription,
       };
 
       setProfileData(updatedProfile);
 
-      // Update localStorage (excluding adminId which should never change)
+      // Update localStorage (excluding adminId and subscription which should never change)
       localStorage.setItem("adminName", editData.adminName);
       localStorage.setItem("adminPhone", editData.phoneNo);
       localStorage.setItem("adminAddress", editData.address);
       localStorage.setItem("email", editData.email);
       localStorage.setItem("adminJoinDate", editData.joinDate);
-      localStorage.setItem(
-        "subscriptionStart",
-        editData.subscription.startDate
-      );
-      localStorage.setItem("subscriptionEnd", editData.subscription.endDate);
 
       setIsEditing(false);
       toast.success("Profile updated successfully!");
@@ -226,6 +207,43 @@ const Profile = () => {
     }));
     localStorage.removeItem("adminProfileImage");
     toast.success("Profile photo removed");
+  };
+
+  // Function to determine subscription status based on dates
+  const getSubscriptionStatus = () => {
+    const today = new Date();
+    const startDate = new Date(
+      profileData.subscription.startDate.split("/").reverse().join("-")
+    );
+    const endDate = new Date(
+      profileData.subscription.endDate.split("/").reverse().join("-")
+    );
+
+    if (today < startDate) {
+      return {
+        status: "Upcoming",
+        badgeClass: "bg-blue-600 text-white",
+        textColor: "text-blue-800",
+        bgColor: "from-blue-50 to-blue-100",
+        borderColor: "border-blue-200",
+      };
+    } else if (today >= startDate && today <= endDate) {
+      return {
+        status: "Active",
+        badgeClass: "bg-green-600 text-white",
+        textColor: "text-green-800",
+        bgColor: "from-green-50 to-emerald-50",
+        borderColor: "border-green-200",
+      };
+    } else {
+      return {
+        status: "Expired",
+        badgeClass: "bg-red-600 text-white",
+        textColor: "text-red-800",
+        bgColor: "from-red-50 to-red-100",
+        borderColor: "border-red-200",
+      };
+    }
   };
 
   return (
@@ -574,72 +592,58 @@ const Profile = () => {
                 <CardContent className="p-4 sm:p-6">
                   <div className="space-y-4">
                     {/* Subscription Status */}
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
+                    <div
+                      className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-gradient-to-r ${
+                        getSubscriptionStatus().bgColor
+                      } rounded-lg border ${
+                        getSubscriptionStatus().borderColor
+                      }`}
+                    >
                       <div className="flex items-center">
-                        <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
-                        <span className="font-semibold text-green-800">
-                          Active Subscription
+                        <CheckCircle
+                          className={`w-5 h-5 mr-2 ${
+                            getSubscriptionStatus().status === "Active"
+                              ? "text-green-600"
+                              : getSubscriptionStatus().status === "Expired"
+                              ? "text-red-600"
+                              : "text-blue-600"
+                          }`}
+                        />
+                        <span
+                          className={`font-semibold ${
+                            getSubscriptionStatus().textColor
+                          }`}
+                        >
+                          {getSubscriptionStatus().status} Subscription
                         </span>
                       </div>
-                      <Badge className="bg-green-600 text-white">Premium</Badge>
+                      <Badge className={getSubscriptionStatus().badgeClass}>
+                        {getSubscriptionStatus().status}
+                      </Badge>
                     </div>
 
-                    {/* Start Date */}
+                    {/* Start Date - Read-only */}
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-gray-600">
                         Start Date
                       </Label>
-                      {isEditing ? (
-                        <Input
-                          value={editData.subscription.startDate}
-                          onChange={(e) =>
-                            setEditData({
-                              ...editData,
-                              subscription: {
-                                ...editData.subscription,
-                                startDate: e.target.value,
-                              },
-                            })
-                          }
-                          placeholder="DD/MM/YYYY"
-                          className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
-                        />
-                      ) : (
-                        <div className="p-3 bg-gray-50 rounded-md border">
-                          <span className="text-gray-900">
-                            {profileData.subscription.startDate}
-                          </span>
-                        </div>
-                      )}
+                      <div className="p-3 bg-gray-50 rounded-md border">
+                        <span className="text-gray-900">
+                          {profileData.subscription.startDate}
+                        </span>
+                      </div>
                     </div>
 
-                    {/* End Date */}
+                    {/* End Date - Read-only */}
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-gray-600">
                         End Date
                       </Label>
-                      {isEditing ? (
-                        <Input
-                          value={editData.subscription.endDate}
-                          onChange={(e) =>
-                            setEditData({
-                              ...editData,
-                              subscription: {
-                                ...editData.subscription,
-                                endDate: e.target.value,
-                              },
-                            })
-                          }
-                          placeholder="DD/MM/YYYY"
-                          className="transition-all duration-200 focus:ring-2 focus:ring-blue-500"
-                        />
-                      ) : (
-                        <div className="p-3 bg-gray-50 rounded-md border">
-                          <span className="text-gray-900">
-                            {profileData.subscription.endDate}
-                          </span>
-                        </div>
-                      )}
+                      <div className="p-3 bg-gray-50 rounded-md border">
+                        <span className="text-gray-900">
+                          {profileData.subscription.endDate}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
