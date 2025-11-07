@@ -106,9 +106,6 @@ const Navigation = () => {
               </button>
             </div>
 
-            {/* Brand/Logo - Show only on mobile */}
-            <div className="md:hidden text-white font-bold text-lg">Admin</div>
-
             {/* Desktop Navigation - Moved to left corner */}
             <div className="hidden md:flex space-x-6 items-center">
               {navItems.map((item) => (
