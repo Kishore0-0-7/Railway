@@ -512,6 +512,13 @@ const workerLogin = async (req, res) => {
 
     const worker = rows[0];
 
+    // Check if worker status is active
+    if (worker.worker_status !== 'active') {
+      return res.status(403).json({ 
+        message: "Access denied. Only active workers can login." 
+      });
+    }
+
     // Verify password
     const isPasswordValid = await bcrypt.compare(
       password,
