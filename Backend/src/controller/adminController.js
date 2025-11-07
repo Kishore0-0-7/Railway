@@ -436,7 +436,7 @@ const adminLogin = async (req, res) => {
   }
 };
 
-// Get Booking Statistics
+// Get Booking Statistics (All in one)
 const getBookingStats = async (req, res) => {
   const client = await db.connect();
   try {
@@ -468,6 +468,99 @@ const getBookingStats = async (req, res) => {
   }
 };
 
+// Get Total Revenue
+const getTotalRevenue = async (req, res) => {
+  const client = await db.connect();
+  try {
+    const query = `
+      SELECT COALESCE(SUM(total_amount), 0) as total_revenue
+      FROM bookings;
+    `;
+
+    const { rows } = await client.query(query);
+
+    res.status(200).json({
+      message: "Total revenue retrieved successfully",
+      total_revenue: parseFloat(rows[0].total_revenue) || 0,
+    });
+  } catch (err) {
+    console.error("Error fetching total revenue:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  } finally {
+    client.release();
+  }
+};
+
+// Get Total Bookings Count
+const getTotalBookings = async (req, res) => {
+  const client = await db.connect();
+  try {
+    const query = `
+      SELECT COUNT(*) as total_bookings
+      FROM bookings;
+    `;
+
+    const { rows } = await client.query(query);
+
+    res.status(200).json({
+      message: "Total bookings retrieved successfully",
+      total_bookings: parseInt(rows[0].total_bookings) || 0,
+    });
+  } catch (err) {
+    console.error("Error fetching total bookings:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  } finally {
+    client.release();
+  }
+};
+
+// Get Average Booking Hours
+const getAvgBookingHours = async (req, res) => {
+  const client = await db.connect();
+  try {
+    const query = `
+      SELECT COALESCE(AVG(total_hours), 0) as avg_booking_hours
+      FROM bookings;
+    `;
+
+    const { rows } = await client.query(query);
+
+    res.status(200).json({
+      message: "Average booking hours retrieved successfully",
+      avg_booking_hours: Math.round(parseFloat(rows[0].avg_booking_hours)) || 0,
+    });
+  } catch (err) {
+    console.error("Error fetching average booking hours:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  } finally {
+    client.release();
+  }
+};
+
+// Get Today's Bookings Count
+const getTodayBookings = async (req, res) => {
+  const client = await db.connect();
+  try {
+    const query = `
+      SELECT COUNT(*) as today_bookings
+      FROM bookings
+      WHERE DATE(created_at) = CURRENT_DATE;
+    `;
+
+    const { rows } = await client.query(query);
+
+    res.status(200).json({
+      message: "Today's bookings retrieved successfully",
+      today_bookings: parseInt(rows[0].today_bookings) || 0,
+    });
+  } catch (err) {
+    console.error("Error fetching today's bookings:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = {
   createAdmin,
   getAllAdmins,
@@ -477,4 +570,8 @@ module.exports = {
   deleteAdmin,
   adminLogin,
   getBookingStats,
+  getTotalRevenue,
+  getTotalBookings,
+  getAvgBookingHours,
+  getTodayBookings,
 };

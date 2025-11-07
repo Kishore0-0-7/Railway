@@ -11,6 +11,10 @@ const {
   deleteAdmin,
   adminLogin,
   getBookingStats,
+  getTotalRevenue,
+  getTotalBookings,
+  getAvgBookingHours,
+  getTodayBookings,
 } = require("../controller/adminController");
 
 // Imports from the folder Middleware for the authentication (if you have one)
@@ -37,6 +41,18 @@ router.get("/get-admin/:id", getAdminById);
 
 // Get Booking Statistics (Total, Active, Completed)
 router.get("/booking-stats", getBookingStats);
+
+// Get Total Revenue
+router.get("/total-revenue", getTotalRevenue);
+
+// Get Total Bookings Count
+router.get("/total-bookings", getTotalBookings);
+
+// Get Average Booking Hours
+router.get("/avg-booking-hours", getAvgBookingHours);
+
+// Get Today's Bookings Count
+router.get("/today-bookings", getTodayBookings);
 
 // ==================== PUT Routes ====================
 
