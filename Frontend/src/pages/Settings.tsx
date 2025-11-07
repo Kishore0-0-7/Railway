@@ -55,8 +55,6 @@ const Settings = () => {
     seating_types: [
       { name: "", amount: "", enabled: true },
       { name: "", amount: "", enabled: true },
-      { name: "", amount: "", enabled: true },
-      { name: "", amount: "", enabled: true },
     ],
   });
 
@@ -80,25 +78,15 @@ const Settings = () => {
         const data = response.data.data;
         // Map database structure to component structure
         const seatingTypes: SeatingType[] = [
-          // {
-          //   name: data.type1 || "",
-          //   amount: data.type1_amount?.toString() || "",
-          //   enabled: !!data.type1,
-          // },
+          {
+            name: data.type1 || "",
+            amount: data.type1_amount?.toString() || "",
+            enabled: !!data.type1,
+          },
           {
             name: data.type2 || "",
             amount: data.type2_amount?.toString() || "",
             enabled: !!data.type2,
-          },
-          // {
-          //   name: data.type3 || "",
-          //   amount: data.type3_amount?.toString() || "",
-          //   enabled: !!data.type3,
-          // },
-          {
-            name: data.type4 || "",
-            amount: data.type4_amount?.toString() || "",
-            enabled: !!data.type4,
           },
         ];
 
@@ -156,22 +144,10 @@ const Settings = () => {
           settings.seating_types[1].enabled && settings.seating_types[1].amount
             ? parseFloat(settings.seating_types[1].amount)
             : null,
-        type3:
-          settings.seating_types[2].enabled && settings.seating_types[2].name
-            ? settings.seating_types[2].name
-            : null,
-        type3_amount:
-          settings.seating_types[2].enabled && settings.seating_types[2].amount
-            ? parseFloat(settings.seating_types[2].amount)
-            : null,
-        type4:
-          settings.seating_types[3].enabled && settings.seating_types[3].name
-            ? settings.seating_types[3].name
-            : null,
-        type4_amount:
-          settings.seating_types[3].enabled && settings.seating_types[3].amount
-            ? parseFloat(settings.seating_types[3].amount)
-            : null,
+        type3: null,
+        type3_amount: null,
+        type4: null,
+        type4_amount: null,
       };
 
       await settingsAPI.upsertSettings(adminId, apiData);
@@ -440,7 +416,7 @@ const Settings = () => {
                   Seating Types & Pricing
                 </CardTitle>
                 <CardDescription className="text-sm sm:text-base">
-                  Manage seating categories and their pricing (up to 4 types)
+                  Manage seating categories and their pricing (2 types)
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-4 sm:p-6">
