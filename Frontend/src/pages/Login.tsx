@@ -6,7 +6,6 @@ import { adminAPI } from "@/services/api";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react"; // 👈 import icons
 
-
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -91,7 +90,7 @@ const Login = () => {
 
       {/* Right Side - Login Form */}
       <div className="flex-1 flex items-center bg-white justify-center p-6 md:p-8 order-2 md:order-2">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl bg-white border border-gray-200 p-8 animate-fadeIn">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-200 p-8 animate-fadeIn">
           {/* Header */}
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-gray-900 mb-2">Login</h2>
@@ -148,12 +147,13 @@ const Login = () => {
               >
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
-
             </div>
 
             {/* Error Message */}
             {error && (
-              <p className="text-red-600 text-sm font-medium text-center">{error}</p>
+              <p className="text-red-600 text-sm font-medium text-center">
+                {error}
+              </p>
             )}
 
             {/* Login Button */}
@@ -177,8 +177,6 @@ const Login = () => {
       animation: fadeIn 0.5s ease-out;
     }
   `}</style>
-
-
       </div>
     </div>
   );
