@@ -110,21 +110,23 @@ const WorkerDetails = () => {
               b.status === "Booked"
           ).length;
 
-          const sittingBooked = fetchedBookings.filter(
-            (b) =>
-              (b.booking_type === "Sitting" || b.type === "Sitting") &&
-              (b.status === "active" ||
-                b.status === "Active" ||
-                b.status === "Booked")
-          ).length;
+          const sittingBooked = fetchedBookings.filter((b) => {
+            const type = (b.booking_type || b.type || "").toString().toLowerCase();
+            const status = (b.status || "").toString().toLowerCase();
+            return (
+              type.includes("sitting") &&
+              (status.includes("active") || status.includes("booked"))
+            );
+          }).length;
 
-          const sleeperBooked = fetchedBookings.filter(
-            (b) =>
-              (b.booking_type === "Sleeper" || b.type === "Sleeper") &&
-              (b.status === "active" ||
-                b.status === "Active" ||
-                b.status === "Booked")
-          ).length;
+          const sleeperBooked = fetchedBookings.filter((b) => {
+            const type = (b.booking_type || b.type || "").toString().toLowerCase();
+            const status = (b.status || "").toString().toLowerCase();
+            return (
+              type.includes("sleeper") &&
+              (status.includes("active") || status.includes("booked"))
+            );
+          }).length;
 
           setStats({
             totalRevenue,
