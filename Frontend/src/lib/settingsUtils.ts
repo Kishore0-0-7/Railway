@@ -266,12 +266,18 @@ export const saveRailwaySettings = (settings: RailwaySettings): void => {
  * Format seating type key to display label
  */
 export const formatSeatingTypeLabel = (key: string): string => {
-  const labels: Record<string, string> = {
-    sitting: "Sitting",
-    sleeper: "Sleeper",
-  };
+  // Get names from localStorage first, then fallback to defaults
+  try {
+    const appSettings = localStorage.getItem('appSettings');
+    if (appSettings) {
+      const settings = JSON.parse(appSettings);
+      if (key === 'sitting' && settings.type1) return settings.type1;
+      if (key === 'sleeper' && settings.type2) return settings.type2;
+    }
+  } catch { }
 
-  return labels[key] || key;
+  // Fallback to defaults
+  return key === 'sitting' ? "Sitting" : key === 'sleeper' ? "Sleeper" : key;
 };
 
 /**

@@ -20,6 +20,7 @@ import {
   getAdvancePaymentPercentage,
 } from "@/lib/settingsUtils";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
+import { formatSeatingTypeLabel } from "@/lib/settingsUtils";
 
 const SubmitBooking = () => {
   const { id } = useParams();
@@ -330,7 +331,7 @@ const SubmitBooking = () => {
                   <SelectContent>
                     {enabledSeatingTypes.map((seatingType) => (
                       <SelectItem key={seatingType.key} value={seatingType.key}>
-                        {seatingType.label} - ₹{seatingType.amount}/person/hour
+                        {formatSeatingTypeLabel(seatingType.key)} - ₹{seatingType.amount}/person/hour
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -463,9 +464,8 @@ const SubmitBooking = () => {
                     <Input
                       value={
                         calculatedHours
-                          ? `${calculatedHours} hour${
-                              calculatedHours > 1 ? "s" : ""
-                            }`
+                          ? `${calculatedHours} hour${calculatedHours > 1 ? "s" : ""
+                          }`
                           : "-"
                       }
                       readOnly

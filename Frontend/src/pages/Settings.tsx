@@ -70,6 +70,29 @@ const Settings = () => {
   // Get admin_id from localStorage
   const adminId = localStorage.getItem("adminId") || "";
 
+  // Persist unsaved seating type names/amounts locally so toggling off/on
+  // doesn't permanently lose previously entered values even if the server
+  // clears them when a type is disabled.
+  const DRAFTS_KEY = "seatingTypeDrafts";
+
+  const loadDrafts = (): Array<{ name?: string; amount?: string }> => {
+    try {
+      const raw = localStorage.getItem(DRAFTS_KEY);
+      if (!raw) return [];
+      return JSON.parse(raw) || [];
+    } catch {
+      return [];
+    }
+  };
+
+  const saveDrafts = (drafts: Array<{ name?: string; amount?: string }>) => {
+    try {
+      localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts));
+    } catch {
+      // ignore localStorage errors
+    }
+  };
+
   useEffect(() => {
     fetchSettings();
   }, []);
@@ -82,15 +105,18 @@ const Settings = () => {
       if (response.data && response.data.data) {
         const data = response.data.data;
         // Map database structure to component structure
+        const drafts = loadDrafts();
         const seatingTypes: SeatingType[] = [
           {
-            name: data.type1 || "",
-            amount: data.type1_amount?.toString() || "",
+            // if server has a value use it, otherwise fall back to draft so
+            // toggling off/on preserves previously entered values
+            name: data.type1 || drafts[0]?.name || "",
+            amount: data.type1_amount?.toString() || drafts[0]?.amount || "",
             enabled: !!data.type1,
           },
           {
-            name: data.type2 || "",
-            amount: data.type2_amount?.toString() || "",
+            name: data.type2 || drafts[1]?.name || "",
+            amount: data.type2_amount?.toString() || drafts[1]?.amount || "",
             enabled: !!data.type2,
           },
         ];
@@ -136,22 +162,16 @@ const Settings = () => {
       const apiData = {
         admin_name: settings.admin_name,
         hall_name: settings.hall_name,
-        type1:
-          settings.seating_types[0].enabled && settings.seating_types[0].name
-            ? settings.seating_types[0].name
-            : null,
-        type1_amount:
-          settings.seating_types[0].enabled && settings.seating_types[0].amount
-            ? parseFloat(settings.seating_types[0].amount)
-            : null,
-        type2:
-          settings.seating_types[1].enabled && settings.seating_types[1].name
-            ? settings.seating_types[1].name
-            : null,
-        type2_amount:
-          settings.seating_types[1].enabled && settings.seating_types[1].amount
-            ? parseFloat(settings.seating_types[1].amount)
-            : null,
+        // If type is disabled, send null regardless of name/amount
+        // If type is enabled, send name/amount (or null if not set)
+        type1: settings.seating_types[0].enabled ? (settings.seating_types[0].name || null) : null,
+        type1_amount: settings.seating_types[0].enabled && settings.seating_types[0].amount
+          ? parseFloat(settings.seating_types[0].amount)
+          : null,
+        type2: settings.seating_types[1].enabled ? (settings.seating_types[1].name || null) : null,
+        type2_amount: settings.seating_types[1].enabled && settings.seating_types[1].amount
+          ? parseFloat(settings.seating_types[1].amount)
+          : null,
         type3: null,
         type3_amount: null,
         type4: null,
@@ -231,11 +251,12 @@ const Settings = () => {
     }));
   };
 
-  const handleSeatingTypeChange = (
+  const handleSeatingTypeChange = async (
     index: number,
     field: string,
     value: any
   ) => {
+    // Update local state first for immediate feedback
     setSettings((prev) => {
       const newSeatingTypes = [...prev.seating_types];
       newSeatingTypes[index] = {
@@ -247,6 +268,46 @@ const Settings = () => {
         seating_types: newSeatingTypes,
       };
     });
+
+    // Save drafts locally 
+    const drafts = loadDrafts();
+    drafts[index] = {
+      ...drafts[index],
+      [field]: value
+    };
+    saveDrafts(drafts);
+
+    try {
+      // Prepare API data
+      const apiData = {
+        admin_name: settings.admin_name,
+        hall_name: settings.hall_name,
+        type1: settings.seating_types[0].enabled ? settings.seating_types[0].name : null,
+        type1_amount: settings.seating_types[0].enabled && settings.seating_types[0].amount
+          ? parseFloat(settings.seating_types[0].amount)
+          : null,
+        type2: settings.seating_types[1].enabled ? settings.seating_types[1].name : null,
+        type2_amount: settings.seating_types[1].enabled && settings.seating_types[1].amount
+          ? parseFloat(settings.seating_types[1].amount)
+          : null,
+        type3: null,
+        type3_amount: null,
+        type4: null,
+        type4_amount: null,
+      };
+
+      await settingsAPI.upsertSettings(adminId, apiData);
+      toast.success("Settings saved successfully");
+
+      // Refresh settings from server
+      await fetchSettings();
+    } catch (error) {
+      console.error("Failed to save settings:", error);
+      toast.error("Failed to save settings");
+
+      // Refresh to ensure we're in sync with server
+      await fetchSettings();
+    }
   };
 
   const saveSeatingEdit = (index: number, field: string) => {
@@ -493,13 +554,20 @@ const Settings = () => {
                               </div>
                               <Switch
                                 checked={seatType.enabled}
-                                onCheckedChange={(checked) =>
-                                  handleSeatingTypeChange(
-                                    index,
-                                    "enabled",
-                                    checked
-                                  )
-                                }
+                                onCheckedChange={(checked) => {
+                                  // Only update enabled state, preserve name/amount
+                                  setSettings(prev => {
+                                    const newSeatingTypes = [...prev.seating_types];
+                                    newSeatingTypes[index] = {
+                                      ...newSeatingTypes[index],
+                                      enabled: checked
+                                    };
+                                    return {
+                                      ...prev,
+                                      seating_types: newSeatingTypes
+                                    };
+                                  });
+                                }}
                                 className="data-[state=checked]:bg-green-600 scale-75"
                               />
                             </div>

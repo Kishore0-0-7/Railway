@@ -33,6 +33,7 @@ import {
 } from "recharts";
 import { analyticsAPI } from "@/services/api";
 import { toast } from "sonner";
+import useAppSettings from "@/lib/useAppSettings";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -50,6 +51,9 @@ const Dashboard = () => {
   const [needsScroll, setNeedsScroll] = useState(false);
   const [selectedYear, setSelectedYear] = useState("2025");
   const chartContainerRef = useRef<HTMLDivElement>(null);
+
+  // App settings (dynamic seating type names) and enabled flags
+  const { getTypeName, isTypeEnabled } = useAppSettings();
 
   // Check if chart needs scrolling based on window size
   const checkScrollNeeded = () => {
@@ -189,43 +193,56 @@ const Dashboard = () => {
   const bookingData =
     monthlyRevenue.length > 0
       ? monthlyRevenue.map((item) => ({
-          month: item.month?.substring(0, 3) || "N/A",
-          Sitting: item.sitting_bookings || 0,
-          Sleeper: item.sleeper_bookings || 0,
-        }))
+        month: item.month?.substring(0, 3) || "N/A",
+        // map backend fields to generic type1/type2 so labels can be dynamic
+        type1: item.sitting_bookings || 0,
+        type2: item.sleeper_bookings || 0,
+      }))
       : [
-          { month: "Jan", Sitting: 0, Sleeper: 0 },
-          { month: "Feb", Sitting: 0, Sleeper: 0 },
-          { month: "Mar", Sitting: 0, Sleeper: 0 },
-          { month: "Apr", Sitting: 0, Sleeper: 0 },
-          { month: "May", Sitting: 0, Sleeper: 0 },
-          { month: "Jun", Sitting: 0, Sleeper: 0 },
-          { month: "Jul", Sitting: 0, Sleeper: 0 },
-          { month: "Aug", Sitting: 0, Sleeper: 0 },
-          { month: "Sep", Sitting: 0, Sleeper: 0 },
-          { month: "Oct", Sitting: 0, Sleeper: 0 },
-          { month: "Nov", Sitting: 0, Sleeper: 0 },
-          { month: "Dec", Sitting: 0, Sleeper: 0 },
-        ];
+        { month: "Jan", type1: 0, type2: 0 },
+        { month: "Feb", type1: 0, type2: 0 },
+        { month: "Mar", type1: 0, type2: 0 },
+        { month: "Apr", type1: 0, type2: 0 },
+        { month: "May", type1: 0, type2: 0 },
+        { month: "Jun", type1: 0, type2: 0 },
+        { month: "Jul", type1: 0, type2: 0 },
+        { month: "Aug", type1: 0, type2: 0 },
+        { month: "Sep", type1: 0, type2: 0 },
+        { month: "Oct", type1: 0, type2: 0 },
+        { month: "Nov", type1: 0, type2: 0 },
+        { month: "Dec", type1: 0, type2: 0 },
+      ];
 
   // Donut chart data from stats
   const topCategoryData = dashboardStats
     ? [
-        {
-          name: "Sitting",
-          value: dashboardStats.top_category?.sitting?.percentage || 0,
-        },
-        {
-          name: "Sleeper",
-          value: dashboardStats.top_category?.sleeper?.percentage || 0,
-        },
-      ]
+      ...(isTypeEnabled(1)
+        ? [
+          {
+            type: 1,
+            name: getTypeName(1),
+            value: dashboardStats.top_category?.sitting?.percentage || 0,
+          },
+        ]
+        : []),
+      ...(isTypeEnabled(2)
+        ? [
+          {
+            type: 2,
+            name: getTypeName(2),
+            value:
+              dashboardStats.top_category?.sleeper?.percentage || 0,
+          },
+        ]
+        : []),
+    ]
     : [
-        { name: "Sitting", value: 50 },
-        { name: "Sleeper", value: 50 },
-      ];
+      ...(isTypeEnabled(1) ? [{ type: 1, name: getTypeName(1), value: 50 }] : []),
+      ...(isTypeEnabled(2) ? [{ type: 2, name: getTypeName(2), value: 50 }] : []),
+    ];
 
-  const COLORS = ["#F59E0B", "#3B82F6"];
+  // type1 -> blue, type2 -> orange
+  const COLORS = ["#3B82F6", "#F59E0B"];
 
   const handleBookingClick = (booking: any) => {
     if (booking.status === "active") {
@@ -252,9 +269,6 @@ const Dashboard = () => {
       <div className="mb-3">
         <div className="flex justify-between mb-1">
           <span className="text-sm font-medium text-gray-700">{label}</span>
-          <span className="text-sm font-bold text-gray-800">
-            {value}/{max}
-          </span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2.5">
           <div
@@ -332,11 +346,10 @@ const Dashboard = () => {
                     ₹ {dashboardStats?.revenue?.total?.toLocaleString() || "0"}
                   </p>
                   <p
-                    className={`text-xs mt-1 md:mt-2 ${
-                      dashboardStats?.revenue?.trend === "up"
-                        ? "text-green-300"
-                        : "text-red-300"
-                    }`}
+                    className={`text-xs mt-1 md:mt-2 ${dashboardStats?.revenue?.trend === "up"
+                      ? "text-green-300"
+                      : "text-red-300"
+                      }`}
                   >
                     {dashboardStats?.revenue?.trend === "up" ? "+" : ""}
                     {dashboardStats?.revenue?.percentage_change || 0}% From last
@@ -361,21 +374,28 @@ const Dashboard = () => {
                           stroke="none"
                         >
                           {topCategoryData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index]} />
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={entry.type === 1 ? COLORS[0] : COLORS[1]}
+                            />
                           ))}
                         </Pie>
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
                   <div className="space-y-1">
-                    <div className="flex items-center space-x-1">
-                      <span className="w-2 h-2 bg-yellow-400 rounded-full"></span>
-                      <span className="text-xs">Sitting</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
-                      <span className="text-xs">Sleeper</span>
-                    </div>
+                    {isTypeEnabled(1) && (
+                      <div className="flex items-center space-x-1">
+                        <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+                        <span className="text-xs">{getTypeName(1)}</span>
+                      </div>
+                    )}
+                    {isTypeEnabled(2) && (
+                      <div className="flex items-center space-x-1">
+                        <span className="w-2 h-2 bg-yellow-400 rounded-full"></span>
+                        <span className="text-xs">{getTypeName(2)}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -389,11 +409,10 @@ const Dashboard = () => {
                     {dashboardStats?.bookings?.total || 0}
                   </p>
                   <p
-                    className={`text-xs mt-1 md:mt-2 ${
-                      dashboardStats?.bookings?.trend === "up"
-                        ? "text-green-500"
-                        : "text-red-500"
-                    }`}
+                    className={`text-xs mt-1 md:mt-2 ${dashboardStats?.bookings?.trend === "up"
+                      ? "text-green-500"
+                      : "text-red-500"
+                      }`}
                   >
                     {dashboardStats?.bookings?.change >= 0 ? "+" : ""}
                     {dashboardStats?.bookings?.change || 0} From last day
@@ -410,11 +429,10 @@ const Dashboard = () => {
                     {dashboardStats?.completed?.total || 0}
                   </p>
                   <p
-                    className={`text-xs mt-1 md:mt-2 ${
-                      dashboardStats?.completed?.trend === "up"
-                        ? "text-green-500"
-                        : "text-red-500"
-                    }`}
+                    className={`text-xs mt-1 md:mt-2 ${dashboardStats?.completed?.trend === "up"
+                      ? "text-green-500"
+                      : "text-red-500"
+                      }`}
                   >
                     {dashboardStats?.completed?.trend === "up" ? "+" : ""}
                     {dashboardStats?.completed?.percentage_change || 0}% From
@@ -428,22 +446,30 @@ const Dashboard = () => {
                   Booked
                 </h3>
                 <div className="space-y-2 md:space-y-3">
-                  <ProgressBar
-                    value={dashboardStats?.active_bookings?.sitting?.count || 0}
-                    max={
-                      dashboardStats?.active_bookings?.sitting?.capacity || 50
-                    }
-                    color="#F59E0B"
-                    label="Sitting"
-                  />
-                  <ProgressBar
-                    value={dashboardStats?.active_bookings?.sleeper?.count || 0}
-                    max={
-                      dashboardStats?.active_bookings?.sleeper?.capacity || 50
-                    }
-                    color="#3B82F6"
-                    label="Sleeper"
-                  />
+                  {isTypeEnabled(1) && (
+                    <ProgressBar
+                      value={
+                        dashboardStats?.active_bookings?.sitting?.count || 0
+                      }
+                      max={
+                        dashboardStats?.active_bookings?.sitting?.capacity || 50
+                      }
+                      color="#3B82F6"
+                      label={getTypeName(1)}
+                    />
+                  )}
+                  {isTypeEnabled(2) && (
+                    <ProgressBar
+                      value={
+                        dashboardStats?.active_bookings?.sleeper?.count || 0
+                      }
+                      max={
+                        dashboardStats?.active_bookings?.sleeper?.capacity || 50
+                      }
+                      color="#F59E0B"
+                      label={getTypeName(2)}
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -538,7 +564,13 @@ const Dashboard = () => {
                                 {booking.phone_number}
                               </td>
                               <td className="p-3 md:p-4 text-xs md:text-sm text-gray-800 capitalize min-w-[100px]">
-                                {booking.booking_type}
+                                {(() => {
+                                  const bt = (booking.booking_type || "").toString().toLowerCase();
+                                  if (bt.includes("sit") || bt === "sitting" || bt === "type1" || bt === "1") return getTypeName(1);
+                                  if (bt.includes("sleep") || bt === "sleeper" || bt === "type2" || bt === "2") return getTypeName(2);
+                                  // fallback to raw value
+                                  return booking.booking_type || "-";
+                                })()}
                               </td>
                               <td className="p-3 md:p-4 text-xs md:text-sm text-gray-800 min-w-[100px]">
                                 {booking.in_time
@@ -547,11 +579,10 @@ const Dashboard = () => {
                               </td>
                               <td className="p-3 md:p-4 min-w-[100px]">
                                 <span
-                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${
-                                    booking.status === "completed"
-                                      ? "bg-green-100 text-green-800"
-                                      : "bg-amber-100 text-amber-800"
-                                  }`}
+                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${booking.status === "completed"
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-amber-100 text-amber-800"
+                                    }`}
                                 >
                                   {booking.status}
                                 </span>
@@ -589,10 +620,18 @@ const Dashboard = () => {
                     </p>
                   </div>
                   <div className="flex items-center space-x-1 md:space-x-2">
-                    <span className="w-2 h-2 bg-yellow-400 rounded-full"></span>
-                    <span className="text-xs text-gray-600">Sitting</span>
-                    <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
-                    <span className="text-xs text-gray-600">Sleeper</span>
+                    {isTypeEnabled(1) && (
+                      <>
+                        <span className="w-2 h-2 bg-yellow-400 rounded-full"></span>
+                        <span className="text-xs text-gray-600">{getTypeName(1)}</span>
+                      </>
+                    )}
+                    {isTypeEnabled(2) && (
+                      <>
+                        <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+                        <span className="text-xs text-gray-600">{getTypeName(2)}</span>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -625,11 +664,10 @@ const Dashboard = () => {
                 {/* Scrollable Chart Container */}
                 <div
                   ref={chartContainerRef}
-                  className={`flex-1 relative ${
-                    needsScroll
-                      ? "overflow-x-auto overflow-y-hidden scrollable-chart"
-                      : "overflow-hidden"
-                  }`}
+                  className={`flex-1 relative ${needsScroll
+                    ? "overflow-x-auto overflow-y-hidden scrollable-chart"
+                    : "overflow-hidden"
+                    }`}
                 >
                   {chartLoading ? (
                     <div className="flex items-center justify-center h-full">
@@ -664,18 +702,22 @@ const Dashboard = () => {
                             fontSize={needsScroll ? 10 : 11}
                           />
                           <Tooltip />
-                          <Bar
-                            dataKey="Sitting"
-                            fill="#F59E0B"
-                            radius={[4, 4, 0, 0]}
-                            name="Sitting Bookings"
-                          />
-                          <Bar
-                            dataKey="Sleeper"
-                            fill="#3B82F6"
-                            radius={[4, 4, 0, 0]}
-                            name="Sleeper Bookings"
-                          />
+                          {isTypeEnabled(1) && (
+                            <Bar
+                              dataKey="type1"
+                              fill="#3B82F6"
+                              radius={[4, 4, 0, 0]}
+                              name={`${getTypeName(1)} Bookings`}
+                            />
+                          )}
+                          {isTypeEnabled(2) && (
+                            <Bar
+                              dataKey="type2"
+                              fill="#F59E0B"
+                              radius={[4, 4, 0, 0]}
+                              name={`${getTypeName(2)} Bookings`}
+                            />
+                          )}
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
