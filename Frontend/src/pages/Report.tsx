@@ -246,7 +246,7 @@ const Report = () => {
   // Graph data points from backend
   // Filter data based on timePeriod (year vs month)
   let revenueData: number[];
-  let seatingTypeData: Record<string, number[]> = {};
+  const seatingTypeData: Record<string, number[]> = {};
   let sleeperData: number[];
   let sittingData: number[];
 

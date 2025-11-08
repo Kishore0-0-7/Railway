@@ -267,7 +267,6 @@ export const saveRailwaySettings = (settings: RailwaySettings): void => {
 export const formatSeatingTypeLabel = (key: string): string => {
   // Get names from localStorage first, then fallback to defaults
   try {
-<<<<<<< HEAD
     const appSettings = localStorage.getItem('appSettings');
     if (appSettings) {
       const settings = JSON.parse(appSettings);
@@ -278,18 +277,6 @@ export const formatSeatingTypeLabel = (key: string): string => {
 
   // Fallback to defaults
   return key === 'sitting' ? "Sitting" : key === 'sleeper' ? "Sleeper" : key;
-=======
-    const appSettings = localStorage.getItem("appSettings");
-    if (appSettings) {
-      const settings = JSON.parse(appSettings);
-      if (key === "sitting" && settings.type1) return settings.type1;
-      if (key === "sleeper" && settings.type2) return settings.type2;
-    }
-  } catch {}
-
-  // Fallback to defaults
-  return key === "sitting" ? "Sitting" : key === "sleeper" ? "Sleeper" : key;
->>>>>>> 4cacfc3 (update)
 };
 
 /**

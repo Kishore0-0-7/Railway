@@ -266,11 +266,7 @@ const Settings = () => {
     field: string,
     value: any
   ) => {
-<<<<<<< HEAD
-    // Update local state first for immediate feedback
-=======
     // Update local state immediately (no auto-save to server).
->>>>>>> 4cacfc3 (update)
     setSettings((prev) => {
       const newSeatingTypes = [...prev.seating_types];
       newSeatingTypes[index] = {
@@ -599,27 +595,12 @@ const Settings = () => {
                               <Switch
                                 checked={seatType.enabled}
                                 onCheckedChange={(checked) => {
-<<<<<<< HEAD
-                                  // Only update enabled state, preserve name/amount
-                                  setSettings(prev => {
-                                    const newSeatingTypes = [...prev.seating_types];
-                                    newSeatingTypes[index] = {
-                                      ...newSeatingTypes[index],
-                                      enabled: checked
-                                    };
-                                    return {
-                                      ...prev,
-                                      seating_types: newSeatingTypes
-                                    };
-                                  });
-=======
                                   // Only update local state - don't save to server yet
                                   handleSeatingTypeChange(index, "enabled", checked);
                                   // When toggling off, clear any open inline editor
                                   if (!checked) {
                                     setEditing(null);
                                   }
->>>>>>> 4cacfc3 (update)
                                 }}
                                 className="data-[state=checked]:bg-green-600 scale-75"
                               />
