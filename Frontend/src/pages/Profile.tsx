@@ -133,8 +133,10 @@ const Profile = () => {
             email: updated.email,
           });
           // update localStorage to keep UI consistent
-          if (updated.mobile_number) localStorage.setItem("adminPhone", updated.mobile_number);
-          if (updated.adminName) localStorage.setItem("adminName", updated.adminName);
+          if (updated.mobile_number)
+            localStorage.setItem("adminPhone", updated.mobile_number);
+          if (updated.adminName)
+            localStorage.setItem("adminName", updated.adminName);
           if (updated.email) localStorage.setItem("email", updated.email);
         }
       } catch (err) {
@@ -624,22 +626,26 @@ const Profile = () => {
                   <div className="space-y-4">
                     {/* Subscription Status */}
                     <div
-                      className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-gradient-to-r ${getSubscriptionStatus().bgColor
-                        } rounded-lg border ${getSubscriptionStatus().borderColor
-                        }`}
+                      className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-gradient-to-r ${
+                        getSubscriptionStatus().bgColor
+                      } rounded-lg border ${
+                        getSubscriptionStatus().borderColor
+                      }`}
                     >
                       <div className="flex items-center">
                         <CheckCircle
-                          className={`w-5 h-5 mr-2 ${getSubscriptionStatus().status === "Active"
-                            ? "text-green-600"
-                            : getSubscriptionStatus().status === "Expired"
+                          className={`w-5 h-5 mr-2 ${
+                            getSubscriptionStatus().status === "Active"
+                              ? "text-green-600"
+                              : getSubscriptionStatus().status === "Expired"
                               ? "text-red-600"
                               : "text-blue-600"
-                            }`}
+                          }`}
                         />
                         <span
-                          className={`font-semibold ${getSubscriptionStatus().textColor
-                            }`}
+                          className={`font-semibold ${
+                            getSubscriptionStatus().textColor
+                          }`}
                         >
                           {getSubscriptionStatus().status} Subscription
                         </span>

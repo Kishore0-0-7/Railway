@@ -5,16 +5,16 @@ const pool = new Pool({
   port: 5432,
   user: "postgres",
   password: "1234",
-  database: "railway"
+  database: "railway",
 });
 
 // Test connection
-pool.on('connect', () => {
+pool.on("connect", () => {
   // Database connected successfully
 });
 
-pool.on('error', (err) => {
-  console.error('Database connection error:', err);
+pool.on("error", (err) => {
+  console.error("Database connection error:", err);
 });
 
 module.exports = pool;
