@@ -12,6 +12,7 @@ import {
 import { bookingAPI, workerAPI } from "@/services/api";
 import { toast } from "sonner";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
+import { getAdminId } from "@/lib/cookieUtils";
 
 interface WorkerOption {
   worker_id: string;
@@ -88,7 +89,12 @@ const AddLogin = () => {
       return;
     }
 
-    const adminId = localStorage.getItem("adminId") || "ADM001";
+    const adminId = getAdminId();
+
+    if (!adminId) {
+      toast.error("Admin ID not found. Please login again.");
+      return;
+    }
 
     const payload = {
       booking_id: formData.bookingId.trim(),

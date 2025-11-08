@@ -5,6 +5,16 @@ const db = require("../config/db.js");
 
 // Get Dashboard Overview Statistics
 const getDashboardStats = async (req, res) => {
+  const { admin_id } = req.query; // Get admin_id from query params
+
+  // Make admin_id required for security
+  if (!admin_id) {
+    return res.status(400).json({
+      error: "admin_id is required",
+      message: "Please provide admin_id to access dashboard statistics",
+    });
+  }
+
   const client = await db.connect();
   try {
     // Get current date info
@@ -13,6 +23,12 @@ const getDashboardStats = async (req, res) => {
     const currentMonth = currentDate.getMonth() + 1; // 1-12
     const lastMonth = currentMonth === 1 ? 12 : currentMonth - 1;
     const lastMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+
+    // Build WHERE clause for admin filtering
+    const adminFilter = admin_id ? `WHERE admin_id = $5` : "";
+    const adminParam = admin_id
+      ? [currentMonth, currentYear, lastMonth, lastMonthYear, admin_id]
+      : [currentMonth, currentYear, lastMonth, lastMonthYear];
 
     // 1. Total Revenue (all time and current month)
     const revenueQuery = `
@@ -30,14 +46,10 @@ const getDashboardStats = async (req, res) => {
           THEN total_amount 
           ELSE 0 
         END), 0) as last_month_revenue
-      FROM bookings;
+      FROM bookings
+      ${adminFilter};
     `;
-    const { rows: revenueData } = await client.query(revenueQuery, [
-      currentMonth,
-      currentYear,
-      lastMonth,
-      lastMonthYear,
-    ]);
+    const { rows: revenueData } = await client.query(revenueQuery, adminParam);
 
     // Calculate revenue percentage change
     const currentMonthRevenue = parseFloat(
@@ -73,22 +85,25 @@ const getDashboardStats = async (req, res) => {
           AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
           THEN 1 
         END) as yesterday_bookings
-      FROM bookings;
+      FROM bookings
+      ${adminFilter};
     `;
-    const { rows: bookingsData } = await client.query(bookingsQuery, [
-      currentMonth,
-      currentYear,
-      lastMonth,
-      lastMonthYear,
-    ]);
+    const { rows: bookingsData } = await client.query(
+      bookingsQuery,
+      adminParam
+    );
 
     // Calculate bookings change (from last day)
     const todayBookingsQuery = `
       SELECT COUNT(*) as today_bookings
       FROM bookings
-      WHERE DATE(created_at) = CURRENT_DATE;
+      WHERE DATE(created_at) = CURRENT_DATE
+      ${admin_id ? "AND admin_id = $1" : ""};
     `;
-    const { rows: todayData } = await client.query(todayBookingsQuery);
+    const { rows: todayData } = await client.query(
+      todayBookingsQuery,
+      admin_id ? [admin_id] : []
+    );
     const todayBookings = parseInt(todayData[0].today_bookings);
     const yesterdayBookings = parseInt(bookingsData[0].yesterday_bookings);
     const bookingsChange = todayBookings - yesterdayBookings;
@@ -108,14 +123,13 @@ const getDashboardStats = async (req, res) => {
           THEN 1 
         END) as last_month_completed
       FROM bookings
-      WHERE status = 'completed';
+      WHERE status = 'completed'
+      ${admin_id ? "AND admin_id = $5" : ""};
     `;
-    const { rows: completedData } = await client.query(completedQuery, [
-      currentMonth,
-      currentYear,
-      lastMonth,
-      lastMonthYear,
-    ]);
+    const { rows: completedData } = await client.query(
+      completedQuery,
+      adminParam
+    );
 
     // Calculate completed percentage change
     const currentMonthCompleted = parseInt(
@@ -141,12 +155,16 @@ const getDashboardStats = async (req, res) => {
       FROM bookings
       WHERE EXTRACT(MONTH FROM created_at) = $1 
       AND EXTRACT(YEAR FROM created_at) = $2
+      ${admin_id ? "AND admin_id = $3" : ""}
       GROUP BY booking_type;
     `;
-    const { rows: categoryData } = await client.query(categoryQuery, [
-      currentMonth,
-      currentYear,
-    ]);
+    const categoryParams = admin_id
+      ? [currentMonth, currentYear, admin_id]
+      : [currentMonth, currentYear];
+    const { rows: categoryData } = await client.query(
+      categoryQuery,
+      categoryParams
+    );
 
     const categories = {
       sitting: { count: 0, revenue: 0 },
@@ -182,9 +200,13 @@ const getDashboardStats = async (req, res) => {
         COALESCE(SUM(number_of_persons), 0) as total_persons
       FROM bookings
       WHERE status = 'active'
+      ${admin_id ? "AND admin_id = $1" : ""}
       GROUP BY booking_type;
     `;
-    const { rows: activeData } = await client.query(activeBookingsQuery);
+    const { rows: activeData } = await client.query(
+      activeBookingsQuery,
+      admin_id ? [admin_id] : []
+    );
 
     const activeBookings = {
       sitting: { count: 0, persons: 0 },
@@ -263,7 +285,15 @@ const getDashboardStats = async (req, res) => {
 
 // Get Monthly Revenue Chart Data (for the last 6 months or custom range)
 const getMonthlyRevenue = async (req, res) => {
-  const { year, months } = req.query; // Optional: specify year and number of months
+  const { year, months, admin_id } = req.query; // Optional: specify year, months, and admin_id
+
+  // Make admin_id required for security
+  if (!admin_id) {
+    return res.status(400).json({
+      error: "admin_id is required",
+      message: "Please provide admin_id to access revenue data",
+    });
+  }
 
   const client = await db.connect();
   try {
@@ -281,11 +311,13 @@ const getMonthlyRevenue = async (req, res) => {
         COALESCE(SUM(paid_amount), 0) as paid_revenue
       FROM bookings
       WHERE EXTRACT(YEAR FROM booking_date) = $1
+      ${admin_id ? "AND admin_id = $2" : ""}
       GROUP BY EXTRACT(MONTH FROM booking_date), EXTRACT(YEAR FROM booking_date), booking_type
       ORDER BY year, month;
     `;
 
-    const { rows } = await client.query(monthlyRevenueQuery, [currentYear]);
+    const queryParams = admin_id ? [currentYear, admin_id] : [currentYear];
+    const { rows } = await client.query(monthlyRevenueQuery, queryParams);
 
     // Organize data by month
     const monthNames = [
@@ -359,7 +391,15 @@ const getMonthlyRevenue = async (req, res) => {
 
 // Get Daily Revenue for Current Month
 const getDailyRevenue = async (req, res) => {
-  const { month, year } = req.query;
+  const { month, year, admin_id } = req.query;
+
+  // Make admin_id required for security
+  if (!admin_id) {
+    return res.status(400).json({
+      error: "admin_id is required",
+      message: "Please provide admin_id to access revenue data",
+    });
+  }
 
   const client = await db.connect();
   try {
@@ -376,14 +416,16 @@ const getDailyRevenue = async (req, res) => {
       FROM bookings
       WHERE EXTRACT(MONTH FROM booking_date) = $1
       AND EXTRACT(YEAR FROM booking_date) = $2
+      ${admin_id ? "AND admin_id = $3" : ""}
       GROUP BY EXTRACT(DAY FROM booking_date), booking_type
       ORDER BY day;
     `;
 
-    const { rows } = await client.query(dailyRevenueQuery, [
-      targetMonth,
-      targetYear,
-    ]);
+    const queryParams = admin_id
+      ? [targetMonth, targetYear, admin_id]
+      : [targetMonth, targetYear];
+
+    const { rows } = await client.query(dailyRevenueQuery, queryParams);
 
     // Get number of days in the month
     const daysInMonth = new Date(targetYear, targetMonth, 0).getDate();
@@ -496,7 +538,15 @@ const getTopWorkers = async (req, res) => {
 
 // Get Recent Bookings (for dashboard display)
 const getRecentBookings = async (req, res) => {
-  const { limit = 10, status } = req.query;
+  const { limit = 10, status, admin_id } = req.query;
+
+  // Make admin_id required for security
+  if (!admin_id) {
+    return res.status(400).json({
+      error: "admin_id is required",
+      message: "Please provide admin_id to access bookings",
+    });
+  }
 
   const client = await db.connect();
   try {
@@ -525,8 +575,13 @@ const getRecentBookings = async (req, res) => {
     const params = [];
     let paramCount = 1;
 
+    // Always filter by admin_id
+    query += ` WHERE b.admin_id = $${paramCount}`;
+    params.push(admin_id);
+    paramCount++;
+
     if (status) {
-      query += ` WHERE b.status = $${paramCount}`;
+      query += ` AND b.status = $${paramCount}`;
       params.push(status);
       paramCount++;
     }

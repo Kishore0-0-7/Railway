@@ -1,7 +1,8 @@
 // Settings Utility Functions
-// Provides centralized access to railway settings from database with localStorage fallback
+// Provides centralized access to railway settings from database with cookies fallback
 
 import { settingsAPI } from "@/services/api";
+import { getAdminId, getEmail } from "./cookieUtils";
 
 export interface SeatingType {
   amount: string;
@@ -56,9 +57,9 @@ const DEFAULT_SETTINGS: RailwaySettings = {
  */
 const fetchSettingsFromDB = async (): Promise<RailwaySettings | null> => {
   try {
-    const adminId = localStorage.getItem("adminId");
+    const adminId = getAdminId();
     if (!adminId) {
-      console.error("Admin ID not found in localStorage");
+      console.error("Admin ID not found in cookies");
       return null;
     }
 
@@ -69,10 +70,8 @@ const fetchSettingsFromDB = async (): Promise<RailwaySettings | null> => {
       // Convert database format to RailwaySettings format
       return {
         admin_name: data.admin_name || DEFAULT_SETTINGS.admin_name,
-        admin_email:
-          localStorage.getItem("email") || DEFAULT_SETTINGS.admin_email,
-        admin_contact:
-          localStorage.getItem("adminPhone") || DEFAULT_SETTINGS.admin_contact,
+        admin_email: getEmail() || DEFAULT_SETTINGS.admin_email,
+        admin_contact: data.admin_contact || DEFAULT_SETTINGS.admin_contact,
         seating_types: {
           sitting: {
             amount: data.type1_amount?.toString() || "15",
@@ -268,6 +267,7 @@ export const saveRailwaySettings = (settings: RailwaySettings): void => {
 export const formatSeatingTypeLabel = (key: string): string => {
   // Get names from localStorage first, then fallback to defaults
   try {
+<<<<<<< HEAD
     const appSettings = localStorage.getItem('appSettings');
     if (appSettings) {
       const settings = JSON.parse(appSettings);
@@ -278,6 +278,18 @@ export const formatSeatingTypeLabel = (key: string): string => {
 
   // Fallback to defaults
   return key === 'sitting' ? "Sitting" : key === 'sleeper' ? "Sleeper" : key;
+=======
+    const appSettings = localStorage.getItem("appSettings");
+    if (appSettings) {
+      const settings = JSON.parse(appSettings);
+      if (key === "sitting" && settings.type1) return settings.type1;
+      if (key === "sleeper" && settings.type2) return settings.type2;
+    }
+  } catch {}
+
+  // Fallback to defaults
+  return key === "sitting" ? "Sitting" : key === "sleeper" ? "Sleeper" : key;
+>>>>>>> 4cacfc3 (update)
 };
 
 /**

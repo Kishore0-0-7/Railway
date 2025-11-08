@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { workerAPI } from "@/services/api";
 import { toast } from "sonner";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
+import { getAdminId } from "@/lib/cookieUtils";
 
 const WorkerList = () => {
   const navigate = useNavigate();
@@ -25,7 +26,16 @@ const WorkerList = () => {
   const fetchWorkers = async () => {
     try {
       setLoading(true);
-      const response = await workerAPI.getAllWorkers();
+
+      // Get admin_id from cookies
+      const adminId = getAdminId();
+
+      if (!adminId) {
+        toast.error("Admin ID not found. Please login again.");
+        return;
+      }
+
+      const response = await workerAPI.getAllWorkers({ admin_id: adminId });
 
       if (response.data && response.data.workers) {
         // normalize status field (some backends return worker_status)

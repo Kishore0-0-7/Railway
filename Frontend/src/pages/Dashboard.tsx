@@ -34,6 +34,10 @@ import {
 import { analyticsAPI } from "@/services/api";
 import { toast } from "sonner";
 import useAppSettings from "@/lib/useAppSettings";
+<<<<<<< HEAD
+=======
+import { getAdminId } from "@/lib/cookieUtils";
+>>>>>>> 4cacfc3 (update)
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -93,9 +97,20 @@ const Dashboard = () => {
     try {
       setLoading(true);
 
+      // Get admin_id from cookies
+      const adminId = getAdminId();
+
+      if (!adminId) {
+        toast.error("Admin ID not found. Please login again.");
+        return;
+      }
+
       const [statsRes, bookingsRes] = await Promise.all([
-        analyticsAPI.getDashboardStats(),
-        analyticsAPI.getRecentBookings({ limit: 10 }),
+        analyticsAPI.getDashboardStats({ admin_id: adminId }),
+        analyticsAPI.getRecentBookings({
+          limit: 10,
+          admin_id: adminId,
+        }),
       ]);
 
       setDashboardStats(statsRes.data.data);
@@ -115,9 +130,19 @@ const Dashboard = () => {
   const fetchChartData = async () => {
     try {
       setChartLoading(true);
+
+      // Get admin_id from cookies
+      const adminId = getAdminId();
+
+      if (!adminId) {
+        toast.error("Admin ID not found. Please login again.");
+        return;
+      }
+
       const revenueRes = await analyticsAPI.getMonthlyRevenue({
         year: parseInt(selectedYear),
         months: 12,
+        admin_id: adminId,
       });
       setMonthlyRevenue(revenueRes.data.data || []);
     } catch (error: any) {
@@ -193,6 +218,7 @@ const Dashboard = () => {
   const bookingData =
     monthlyRevenue.length > 0
       ? monthlyRevenue.map((item) => ({
+<<<<<<< HEAD
         month: item.month?.substring(0, 3) || "N/A",
         // map backend fields to generic type1/type2 so labels can be dynamic
         type1: item.sitting_bookings || 0,
@@ -212,10 +238,32 @@ const Dashboard = () => {
         { month: "Nov", type1: 0, type2: 0 },
         { month: "Dec", type1: 0, type2: 0 },
       ];
+=======
+          month: item.month?.substring(0, 3) || "N/A",
+          // map backend fields to generic type1/type2 so labels can be dynamic
+          type1: item.sitting_bookings || 0,
+          type2: item.sleeper_bookings || 0,
+        }))
+      : [
+          { month: "Jan", type1: 0, type2: 0 },
+          { month: "Feb", type1: 0, type2: 0 },
+          { month: "Mar", type1: 0, type2: 0 },
+          { month: "Apr", type1: 0, type2: 0 },
+          { month: "May", type1: 0, type2: 0 },
+          { month: "Jun", type1: 0, type2: 0 },
+          { month: "Jul", type1: 0, type2: 0 },
+          { month: "Aug", type1: 0, type2: 0 },
+          { month: "Sep", type1: 0, type2: 0 },
+          { month: "Oct", type1: 0, type2: 0 },
+          { month: "Nov", type1: 0, type2: 0 },
+          { month: "Dec", type1: 0, type2: 0 },
+        ];
+>>>>>>> 4cacfc3 (update)
 
   // Donut chart data from stats
   const topCategoryData = dashboardStats
     ? [
+<<<<<<< HEAD
       ...(isTypeEnabled(1)
         ? [
           {
@@ -240,6 +288,35 @@ const Dashboard = () => {
       ...(isTypeEnabled(1) ? [{ type: 1, name: getTypeName(1), value: 50 }] : []),
       ...(isTypeEnabled(2) ? [{ type: 2, name: getTypeName(2), value: 50 }] : []),
     ];
+=======
+        ...(isTypeEnabled(1)
+          ? [
+              {
+                type: 1,
+                name: getTypeName(1),
+                value: dashboardStats.top_category?.sitting?.percentage || 0,
+              },
+            ]
+          : []),
+        ...(isTypeEnabled(2)
+          ? [
+              {
+                type: 2,
+                name: getTypeName(2),
+                value: dashboardStats.top_category?.sleeper?.percentage || 0,
+              },
+            ]
+          : []),
+      ]
+    : [
+        ...(isTypeEnabled(1)
+          ? [{ type: 1, name: getTypeName(1), value: 50 }]
+          : []),
+        ...(isTypeEnabled(2)
+          ? [{ type: 2, name: getTypeName(2), value: 50 }]
+          : []),
+      ];
+>>>>>>> 4cacfc3 (update)
 
   // type1 -> blue, type2 -> orange
   const COLORS = ["#3B82F6", "#F59E0B"];
@@ -565,9 +642,29 @@ const Dashboard = () => {
                               </td>
                               <td className="p-3 md:p-4 text-xs md:text-sm text-gray-800 capitalize min-w-[100px]">
                                 {(() => {
+<<<<<<< HEAD
                                   const bt = (booking.booking_type || "").toString().toLowerCase();
                                   if (bt.includes("sit") || bt === "sitting" || bt === "type1" || bt === "1") return getTypeName(1);
                                   if (bt.includes("sleep") || bt === "sleeper" || bt === "type2" || bt === "2") return getTypeName(2);
+=======
+                                  const bt = (booking.booking_type || "")
+                                    .toString()
+                                    .toLowerCase();
+                                  if (
+                                    bt.includes("sit") ||
+                                    bt === "sitting" ||
+                                    bt === "type1" ||
+                                    bt === "1"
+                                  )
+                                    return getTypeName(1);
+                                  if (
+                                    bt.includes("sleep") ||
+                                    bt === "sleeper" ||
+                                    bt === "type2" ||
+                                    bt === "2"
+                                  )
+                                    return getTypeName(2);
+>>>>>>> 4cacfc3 (update)
                                   // fallback to raw value
                                   return booking.booking_type || "-";
                                 })()}
@@ -623,13 +720,25 @@ const Dashboard = () => {
                     {isTypeEnabled(1) && (
                       <>
                         <span className="w-2 h-2 bg-yellow-400 rounded-full"></span>
+<<<<<<< HEAD
                         <span className="text-xs text-gray-600">{getTypeName(1)}</span>
+=======
+                        <span className="text-xs text-gray-600">
+                          {getTypeName(1)}
+                        </span>
+>>>>>>> 4cacfc3 (update)
                       </>
                     )}
                     {isTypeEnabled(2) && (
                       <>
                         <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+<<<<<<< HEAD
                         <span className="text-xs text-gray-600">{getTypeName(2)}</span>
+=======
+                        <span className="text-xs text-gray-600">
+                          {getTypeName(2)}
+                        </span>
+>>>>>>> 4cacfc3 (update)
                       </>
                     )}
                   </div>

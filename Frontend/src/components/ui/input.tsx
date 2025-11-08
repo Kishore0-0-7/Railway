@@ -3,7 +3,22 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  ({ className, type, ...props }, ref) => {
+  ({ className, type, onKeyDown, ...props }: React.ComponentProps<"input">, ref) => {
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      // If the consumer provided an onKeyDown, call it first.
+      if (onKeyDown) {
+        onKeyDown(e);
+        return;
+      }
+
+      // Otherwise, prevent the default action for Enter to avoid
+      // implicit form submits or navigation reloads in places where
+      // no explicit form handling is implemented.
+      if (e.key === "Enter") {
+        e.preventDefault();
+      }
+    };
+
     return (
       <input
         type={type}
@@ -12,6 +27,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
           className,
         )}
         ref={ref}
+        onKeyDown={handleKeyDown}
         {...props}
       />
     );

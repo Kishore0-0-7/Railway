@@ -15,6 +15,7 @@ import { workerAPI } from "@/services/api";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
+import { getAdminId } from "@/lib/cookieUtils";
 
 const ManageLogin = () => {
   const location = useLocation();
@@ -90,7 +91,16 @@ const ManageLogin = () => {
   const fetchWorkers = async () => {
     try {
       setLoading(true);
-      const response = await workerAPI.getAllWorkers();
+      const adminId = getAdminId();
+      console.log("=== ManageLogin fetchWorkers ===");
+      console.log("adminId from cookies:", adminId);
+
+      if (!adminId) {
+        toast.error("Admin ID not found. Please login again.");
+        return;
+      }
+
+      const response = await workerAPI.getAllWorkers({ admin_id: adminId });
 
       if (response.data && response.data.workers) {
         // normalize fields so ManageLogin table can safely read status and total_bookings
@@ -186,8 +196,13 @@ const ManageLogin = () => {
     try {
       setSubmitting(true);
 
-      // Get admin ID from localStorage
-      const adminId = localStorage.getItem("adminId") || "ADM001";
+      // Get admin ID from cookies
+      const adminId = getAdminId();
+
+      if (!adminId) {
+        toast.error("Admin ID not found. Please login again.");
+        return;
+      }
 
       const workerData = {
         admin_id: adminId,

@@ -18,6 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { clearAuthData } from "@/lib/cookieUtils";
 
 const Navigation = () => {
   const navigate = useNavigate();
@@ -45,11 +46,8 @@ const Navigation = () => {
   ];
 
   const handleLogout = () => {
-    // Clear all authentication data from localStorage
-    localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("email");
-    localStorage.removeItem("adminId");
-    localStorage.removeItem("adminName");
+    // Clear all authentication data from cookies
+    clearAuthData();
 
     console.log("User logged out");
     navigate("/", { replace: true });

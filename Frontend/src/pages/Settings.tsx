@@ -42,6 +42,8 @@ interface SettingsData {
   hall_name: string;
   seating_types: SeatingType[];
   advance_payment_enabled: boolean;
+  discount_enabled: boolean;
+  discount_percentage: number;
   default_advance_percentage: string;
 }
 
@@ -60,6 +62,8 @@ const Settings = () => {
       { name: "", amount: "", enabled: true },
     ],
     advance_payment_enabled: true,
+    discount_enabled: false,
+    discount_percentage: 0,
     default_advance_percentage: "20",
   });
 
@@ -127,6 +131,8 @@ const Settings = () => {
           hall_name: data.hall_name,
           seating_types: seatingTypes,
           advance_payment_enabled: data.advance_payment_enabled ?? true,
+          discount_enabled: data.discount_enabled ?? false,
+          discount_percentage: data.discount_percentage ?? 0,
           default_advance_percentage:
             data.default_advance_percentage?.toString() || "20",
         });
@@ -145,11 +151,7 @@ const Settings = () => {
   };
 
   const handleSave = async () => {
-    // Validation
-    if (!settings.admin_name.trim()) {
-      toast.error("Admin name is required");
-      return;
-    }
+    // Validation - hall_name is required. admin_name will fall back to localStorage if missing.
     if (!settings.hall_name.trim()) {
       toast.error("Hall name is required");
       return;
@@ -159,8 +161,16 @@ const Settings = () => {
       setSaving(true);
 
       // Prepare data for API
+      // Ensure we always send an admin_name because backend requires it.
+      const payloadAdminName =
+        (settings.admin_name && settings.admin_name.trim()) ||
+        localStorage.getItem("adminName") ||
+        localStorage.getItem("email") ||
+        adminId ||
+        "Admin";
+
       const apiData = {
-        admin_name: settings.admin_name,
+        admin_name: payloadAdminName,
         hall_name: settings.hall_name,
         // If type is disabled, send null regardless of name/amount
         // If type is enabled, send name/amount (or null if not set)
@@ -185,14 +195,14 @@ const Settings = () => {
 
       // Update localStorage for settings utils
       const railwaySettings = {
-        admin_name: settings.admin_name,
+        admin_name: payloadAdminName,
         admin_email: localStorage.getItem("email") || "admin@railway.com",
         admin_contact: localStorage.getItem("adminPhone") || "+91-9876543210",
         seating_types: {
           sitting: {
             amount:
               settings.seating_types[0].enabled &&
-              settings.seating_types[0].amount
+                settings.seating_types[0].amount
                 ? settings.seating_types[0].amount
                 : "15",
             enabled: settings.seating_types[0].enabled,
@@ -200,7 +210,7 @@ const Settings = () => {
           sleeper: {
             amount:
               settings.seating_types[1].enabled &&
-              settings.seating_types[1].amount
+                settings.seating_types[1].amount
                 ? settings.seating_types[1].amount
                 : "20",
             enabled: settings.seating_types[1].enabled,
@@ -256,17 +266,35 @@ const Settings = () => {
     field: string,
     value: any
   ) => {
+<<<<<<< HEAD
     // Update local state first for immediate feedback
+=======
+    // Update local state immediately (no auto-save to server).
+>>>>>>> 4cacfc3 (update)
     setSettings((prev) => {
       const newSeatingTypes = [...prev.seating_types];
       newSeatingTypes[index] = {
         ...newSeatingTypes[index],
         [field]: value,
       };
-      return {
+      const newSettings = {
         ...prev,
         seating_types: newSeatingTypes,
-      };
+      } as SettingsData;
+
+      // Persist drafts locally so toggling doesn't lose user-entered values
+      try {
+        const drafts = loadDrafts();
+        drafts[index] = {
+          ...drafts[index],
+          [field]: value,
+        };
+        saveDrafts(drafts);
+      } catch (e) {
+        // ignore localStorage errors
+      }
+
+      return newSettings;
     });
 
     // Save drafts locally 
@@ -368,7 +396,7 @@ const Settings = () => {
           {/* Main Content Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
             {/* Admin Information Card */}
-            <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <Card className="lg:col-span-2 shadow-lg hover:shadow-xl transition-shadow duration-300">
               <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b p-4 sm:p-6">
                 <CardTitle className="flex items-center text-gray-800 text-lg sm:text-xl">
                   <User className="w-5 h-5 mr-2 text-blue-600" />
@@ -381,7 +409,7 @@ const Settings = () => {
               <CardContent className="p-4 sm:p-6">
                 <div className="space-y-6">
                   {/* Admin Name */}
-                  <div className="space-y-2">
+                  {/* <div className="space-y-2">
                     <Label
                       htmlFor="admin_name"
                       className="flex items-center text-sm font-medium text-gray-700"
@@ -394,10 +422,17 @@ const Settings = () => {
                         <Input
                           value={editValue}
                           onChange={(e) => setEditValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              saveEdit("admin_name");
+                            }
+                          }}
                           placeholder="Enter admin name"
                           className="flex-1 transition-all duration-200 focus:ring-2 focus:ring-blue-500"
                         />
                         <Button
+                          type="button"
                           size="sm"
                           onClick={() => saveEdit("admin_name")}
                           className="bg-green-600 hover:bg-green-700 shadow-md"
@@ -405,6 +440,7 @@ const Settings = () => {
                           <Check className="h-4 w-4" />
                         </Button>
                         <Button
+                          type="button"
                           size="sm"
                           variant="outline"
                           onClick={cancelEdit}
@@ -427,7 +463,7 @@ const Settings = () => {
                         <Edit className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                       </div>
                     )}
-                  </div>
+                  </div> */}
 
                   {/* Hall Name */}
                   <div className="space-y-2">
@@ -443,10 +479,17 @@ const Settings = () => {
                         <Input
                           value={editValue}
                           onChange={(e) => setEditValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              saveEdit("hall_name");
+                            }
+                          }}
                           placeholder="Enter hall name"
                           className="flex-1 transition-all duration-200 focus:ring-2 focus:ring-blue-500"
                         />
                         <Button
+                          type="button"
                           size="sm"
                           onClick={() => saveEdit("hall_name")}
                           className="bg-green-600 hover:bg-green-700 shadow-md"
@@ -454,6 +497,7 @@ const Settings = () => {
                           <Check className="h-4 w-4" />
                         </Button>
                         <Button
+                          type="button"
                           size="sm"
                           variant="outline"
                           onClick={cancelEdit}
@@ -482,7 +526,7 @@ const Settings = () => {
             </Card>
 
             {/* Placeholder Card */}
-            <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
+            {/* <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
               <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b p-4 sm:p-6">
                 <CardTitle className="flex items-center text-gray-800 text-lg sm:text-xl">
                   <Train className="w-5 h-5 mr-2 text-green-600" />
@@ -508,7 +552,7 @@ const Settings = () => {
                   </div>
                 </div>
               </CardContent>
-            </Card>
+            </Card> */}
           </div>
 
           {/* Seating Types Section - Full Width */}
@@ -555,6 +599,7 @@ const Settings = () => {
                               <Switch
                                 checked={seatType.enabled}
                                 onCheckedChange={(checked) => {
+<<<<<<< HEAD
                                   // Only update enabled state, preserve name/amount
                                   setSettings(prev => {
                                     const newSeatingTypes = [...prev.seating_types];
@@ -567,6 +612,14 @@ const Settings = () => {
                                       seating_types: newSeatingTypes
                                     };
                                   });
+=======
+                                  // Only update local state - don't save to server yet
+                                  handleSeatingTypeChange(index, "enabled", checked);
+                                  // When toggling off, clear any open inline editor
+                                  if (!checked) {
+                                    setEditing(null);
+                                  }
+>>>>>>> 4cacfc3 (update)
                                 }}
                                 className="data-[state=checked]:bg-green-600 scale-75"
                               />
@@ -585,10 +638,17 @@ const Settings = () => {
                                       onChange={(e) =>
                                         setEditValue(e.target.value)
                                       }
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          e.preventDefault();
+                                          saveSeatingEdit(index, "name");
+                                        }
+                                      }}
                                       placeholder="e.g. Sitting"
                                       className="flex-1 text-sm"
                                     />
                                     <Button
+                                      type="button"
                                       size="sm"
                                       onClick={() =>
                                         saveSeatingEdit(index, "name")
@@ -598,6 +658,7 @@ const Settings = () => {
                                       <Check className="h-3 w-3" />
                                     </Button>
                                     <Button
+                                      type="button"
                                       size="sm"
                                       variant="outline"
                                       onClick={cancelEdit}
@@ -642,12 +703,19 @@ const Settings = () => {
                                         onChange={(e) =>
                                           setEditValue(e.target.value)
                                         }
+                                        onKeyDown={(e) => {
+                                          if (e.key === "Enter") {
+                                            e.preventDefault();
+                                            saveSeatingEdit(index, "amount");
+                                          }
+                                        }}
                                         placeholder="0"
                                         type="number"
                                         className="pl-7 text-sm"
                                       />
                                     </div>
                                     <Button
+                                      type="button"
                                       size="sm"
                                       onClick={() =>
                                         saveSeatingEdit(index, "amount")
@@ -657,6 +725,7 @@ const Settings = () => {
                                       <Check className="h-3 w-3" />
                                     </Button>
                                     <Button
+                                      type="button"
                                       size="sm"
                                       variant="outline"
                                       onClick={cancelEdit}
@@ -708,7 +777,7 @@ const Settings = () => {
             </Card>
 
             {/* Advance Payment Settings */}
-            <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 mt-8">
               <CardHeader className="bg-gradient-to-r from-purple-50 to-indigo-50 border-b p-4 sm:p-6">
                 <CardTitle className="flex items-center text-gray-800 text-lg sm:text-xl">
                   <Zap className="w-5 h-5 mr-2 text-purple-600" />
@@ -752,12 +821,11 @@ const Settings = () => {
                           (percentage) => (
                             <div
                               key={percentage}
-                              className={`p-2 rounded-md border cursor-pointer transition-all text-center ${
-                                settings.default_advance_percentage ===
+                              className={`p-2 rounded-md border cursor-pointer transition-all text-center ${settings.default_advance_percentage ===
                                 percentage
-                                  ? "border-purple-500 bg-purple-50"
-                                  : "border-gray-200 hover:border-purple-300"
-                              }`}
+                                ? "border-purple-500 bg-purple-50"
+                                : "border-gray-200 hover:border-purple-300"
+                                }`}
                               onClick={() =>
                                 handleSettingChange(
                                   "default_advance_percentage",
@@ -767,17 +835,16 @@ const Settings = () => {
                             >
                               <div className="flex items-center justify-center space-x-1">
                                 <div
-                                  className={`w-3 h-3 rounded-full border ${
-                                    settings.default_advance_percentage ===
+                                  className={`w-3 h-3 rounded-full border ${settings.default_advance_percentage ===
                                     percentage
-                                      ? "border-purple-500 bg-purple-500"
-                                      : "border-gray-300"
-                                  }`}
+                                    ? "border-purple-500 bg-purple-500"
+                                    : "border-gray-300"
+                                    }`}
                                 >
                                   {settings.default_advance_percentage ===
                                     percentage && (
-                                    <div className="w-1.5 h-1.5 bg-white rounded-full m-0.5"></div>
-                                  )}
+                                      <div className="w-1.5 h-1.5 bg-white rounded-full m-0.5"></div>
+                                    )}
                                 </div>
                                 <p className="text-sm font-medium text-gray-800">
                                   {percentage}%
@@ -805,6 +872,12 @@ const Settings = () => {
                               max="100"
                               value={editValue}
                               onChange={(e) => setEditValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  saveEdit("default_advance_percentage");
+                                }
+                              }}
                               placeholder="e.g. 20"
                               className="pr-8"
                             />
@@ -813,6 +886,7 @@ const Settings = () => {
                             </span>
                           </div>
                           <Button
+                            type="button"
                             size="sm"
                             onClick={() =>
                               saveEdit("default_advance_percentage")
@@ -822,6 +896,7 @@ const Settings = () => {
                             <Check className="h-4 w-4" />
                           </Button>
                           <Button
+                            type="button"
                             size="sm"
                             variant="outline"
                             onClick={cancelEdit}
@@ -882,7 +957,7 @@ const Settings = () => {
                               parseFloat(
                                 settings.default_advance_percentage || "0"
                               )) /
-                              100
+                            100
                           ).toFixed(0)}
                         </p>
                       </div>
@@ -892,10 +967,34 @@ const Settings = () => {
               </CardContent>
             </Card>
           </div>
-
+          {/* Enable/Disable Advance Payment */}
+          {/* <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
+            <div className="flex items-center space-x-3">
+              <Badge variant="secondary" className="bg-purple-100">
+                <span className="text-purple-700">%</span>
+              </Badge>
+              <div>
+                <Label className="text-sm font-medium text-gray-800">
+                  Enable Discount
+                </Label>
+                <p className="text-xs text-gray-600 mt-1">
+                  Allow discounts on bookings
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={settings.discount_enabled}
+              onCheckedChange={(checked) => {
+                // Only update local state until Save All is clicked
+                handleSettingChange("discount_enabled", checked);
+              }}
+              className="data-[state=checked]:bg-purple-600"
+            />
+          </div> */}
           {/* Footer Actions */}
           <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 mt-6">
             <Button
+              type="button"
               variant="outline"
               onClick={fetchSettings}
               className="px-6 shadow-md hover:shadow-lg transition-shadow"
@@ -905,6 +1004,7 @@ const Settings = () => {
               Reset
             </Button>
             <Button
+              type="button"
               onClick={handleSave}
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-6 shadow-md hover:shadow-lg transition-all"
               disabled={saving}

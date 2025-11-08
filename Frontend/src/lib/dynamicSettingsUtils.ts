@@ -1,7 +1,8 @@
 // Dynamic Settings Utility Functions
-// Fetches settings from the backend API instead of localStorage
+// Fetches settings from the backend API with cookie-based authentication
 
 import { settingsAPI } from "@/services/api";
+import { getAdminId } from "./cookieUtils";
 
 export interface SeatingType {
   key: string;
@@ -33,9 +34,9 @@ export const fetchDynamicSettings = async (): Promise<any> => {
   }
 
   try {
-    const adminId = localStorage.getItem("adminId");
+    const adminId = getAdminId();
     if (!adminId) {
-      console.error("Admin ID not found in localStorage");
+      console.error("Admin ID not found in cookies");
       return null;
     }
 

@@ -6,6 +6,11 @@ import { adminAPI } from "@/services/api";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react"; // 👈 import icons
 import { useScrollToTop } from "@/hooks/useScrollToTop";
+import {
+  setAuthData,
+  isUserLoggedIn,
+  migrateFromLocalStorage,
+} from "@/lib/cookieUtils";
 
 const Login = () => {
   // Scroll to top on route change
@@ -21,8 +26,11 @@ const Login = () => {
 
   // Check if user is already logged in
   useEffect(() => {
-    const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
-    if (isLoggedIn) {
+    // Migrate from localStorage if data exists
+    migrateFromLocalStorage();
+
+    // Check cookies for existing login
+    if (isUserLoggedIn()) {
       navigate("/dashboard", { replace: true });
     }
   }, [navigate]);
@@ -43,14 +51,13 @@ const Login = () => {
       const response = await adminAPI.login(normalizedEmail, sanitizedPassword);
 
       if (response.data) {
-        localStorage.setItem("isLoggedIn", "true");
-        localStorage.setItem("email", normalizedEmail);
-
-        // Store admin details if provided
-        if (response.data.admin) {
-          localStorage.setItem("adminId", response.data.admin.admin_id);
-          localStorage.setItem("adminName", response.data.admin.full_name);
-        }
+        // Store authentication data in cookies (more secure than localStorage)
+        setAuthData({
+          adminId: response.data.admin.admin_id,
+          adminName: response.data.admin.full_name,
+          email: normalizedEmail,
+          isLoggedIn: true,
+        });
 
         toast.success("Login successful!");
 

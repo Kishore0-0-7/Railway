@@ -1,11 +1,12 @@
 import { Navigate } from "react-router-dom";
+import { isUserLoggedIn } from "@/lib/cookieUtils";
 
 interface ProtectedRouteProps {
   element: JSX.Element;
 }
 
 const ProtectedRoute = ({ element }: ProtectedRouteProps) => {
-  const isAuthenticated = localStorage.getItem("isLoggedIn") === "true";
+  const isAuthenticated = isUserLoggedIn();
 
   if (!isAuthenticated) {
     // Redirect to login if not authenticated

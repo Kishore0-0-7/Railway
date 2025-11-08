@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Base API URL - Backend server address
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "https://railway-api.artechnology.pro/api";
+  import.meta.env.VITE_API_URL || "https://lrailway-api.artechnology.pro/api";
 
 // Create axios instance with default config
 const apiClient = axios.create({
@@ -72,7 +72,8 @@ export const adminAPI = {
 // ==================== WORKER APIs ====================
 
 export const workerAPI = {
-  getAllWorkers: () => apiClient.get("/worker/get-all-workers"),
+  getAllWorkers: (params?: { admin_id?: string }) =>
+    apiClient.get("/worker/get-all-workers", { params }),
 
   getWorkerById: (id: string) => apiClient.get(`/worker/get-worker/${id}`),
 
@@ -117,22 +118,39 @@ export const bookingAPI = {
 // ==================== ANALYTICS/DASHBOARD APIs ====================
 
 export const analyticsAPI = {
-  getDashboardStats: () => apiClient.get("/analytics/dashboard/stats"),
+  getDashboardStats: (params?: { admin_id?: string }) =>
+    apiClient.get("/analytics/dashboard/stats", { params }),
 
-  getMonthlyRevenue: (params?: { year?: number; months?: number }) =>
-    apiClient.get("/analytics/dashboard/monthly-revenue", { params }),
+  getMonthlyRevenue: (params?: {
+    year?: number;
+    months?: number;
+    admin_id?: string;
+  }) => apiClient.get("/analytics/dashboard/monthly-revenue", { params }),
 
-  getDailyRevenue: (params?: { month?: number; year?: number }) =>
-    apiClient.get("/analytics/dashboard/daily-revenue", { params }),
+  getDailyRevenue: (params?: {
+    month?: number;
+    year?: number;
+    admin_id?: string;
+  }) => apiClient.get("/analytics/dashboard/daily-revenue", { params }),
 
-  getTopWorkers: (params?: { limit?: number; month?: number; year?: number }) =>
-    apiClient.get("/analytics/dashboard/top-workers", { params }),
+  getTopWorkers: (params?: {
+    limit?: number;
+    month?: number;
+    year?: number;
+    admin_id?: string;
+  }) => apiClient.get("/analytics/dashboard/top-workers", { params }),
 
-  getRecentBookings: (params?: { limit?: number; status?: string }) =>
-    apiClient.get("/analytics/dashboard/recent-bookings", { params }),
+  getRecentBookings: (params?: {
+    limit?: number;
+    status?: string;
+    admin_id?: string;
+  }) => apiClient.get("/analytics/dashboard/recent-bookings", { params }),
 
-  getPaymentAnalytics: (params?: { month?: number; year?: number }) =>
-    apiClient.get("/analytics/dashboard/payment-analytics", { params }),
+  getPaymentAnalytics: (params?: {
+    month?: number;
+    year?: number;
+    admin_id?: string;
+  }) => apiClient.get("/analytics/dashboard/payment-analytics", { params }),
 };
 
 // ==================== SETTINGS APIs ====================

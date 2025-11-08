@@ -123,11 +123,21 @@ const createWorker = async (req, res) => {
   }
 };
 
-// Get All Workers
+// Get All Workers (filtered by admin_id if provided)
 const getAllWorkers = async (req, res) => {
+  const { admin_id } = req.query; // Get admin_id from query params
+
+  // Make admin_id required for security
+  if (!admin_id) {
+    return res.status(400).json({
+      error: "admin_id is required",
+      message: "Please provide admin_id to access workers",
+    });
+  }
+
   const client = await db.connect();
   try {
-    const query = `
+    let query = `
       SELECT 
         w.worker_id, 
         w.admin_id, 
@@ -144,12 +154,23 @@ const getAllWorkers = async (req, res) => {
       FROM worker_accounts w
       LEFT JOIN admin_accounts a ON w.admin_id = a.admin_id
       LEFT JOIN bookings b ON w.worker_id = b.worker_id
+    `;
+
+    const params = [];
+
+    // Filter by admin_id if provided
+    if (admin_id) {
+      query += ` WHERE w.admin_id = $1`;
+      params.push(admin_id);
+    }
+
+    query += `
       GROUP BY w.worker_id, w.admin_id, w.full_name, w.mobile_number, w.worker_status, 
                w.joining_date, w.gender, w.user_name, w.created_at, w.updated_at, a.full_name
       ORDER BY w.created_at DESC;
     `;
 
-    const { rows } = await client.query(query);
+    const { rows } = await client.query(query, params);
 
     res.status(200).json({
       message: "Workers retrieved successfully",
@@ -513,9 +534,9 @@ const workerLogin = async (req, res) => {
     const worker = rows[0];
 
     // Check if worker status is active
-    if (worker.worker_status !== 'active') {
-      return res.status(403).json({ 
-        message: "Access denied. Only active workers can login." 
+    if (worker.worker_status !== "active") {
+      return res.status(403).json({
+        message: "Access denied. Only active workers can login.",
       });
     }
 

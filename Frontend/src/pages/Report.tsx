@@ -8,13 +8,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { analyticsAPI } from "@/services/api";
+import apiClient, { analyticsAPI } from "@/services/api";
 import { toast } from "sonner";
 import {
   getEnabledSeatingTypes,
   formatSeatingTypeLabel,
   getSeatingTypePrice,
 } from "@/lib/settingsUtils";
+import { getAdminId } from "@/lib/cookieUtils";
 
 const Report = () => {
   const [timePeriod, setTimePeriod] = useState("year");
@@ -44,6 +45,7 @@ const Report = () => {
   const [monthlyRevenueData, setMonthlyRevenueData] = useState<any[]>([]);
   const [dailyRevenueData, setDailyRevenueData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -83,37 +85,97 @@ const Report = () => {
   const fetchReportData = async () => {
     try {
       setLoading(true);
+      setFetchError(null);
 
-      // Fetch dashboard stats
-      const statsResponse = await analyticsAPI.getDashboardStats();
-      setDashboardStats(statsResponse.data);
+      // Get admin_id from cookies
+      const adminId = getAdminId();
+      if (!adminId) {
+        throw new Error("Admin ID not found. Please log in again.");
+      }
 
-      // Fetch monthly revenue for the selected year
-      const year = parseInt(selectedYear);
-      const revenueResponse = await analyticsAPI.getMonthlyRevenue({
-        year,
-        months: 12,
+      const parsedYear = Number(selectedYear);
+      const year = Number.isNaN(parsedYear)
+        ? new Date().getFullYear()
+        : parsedYear;
+
+      const [analyticsRes, bookingStatsRes, monthlyRes] = await Promise.all([
+        analyticsAPI.getDashboardStats({ admin_id: adminId }),
+        apiClient.get("/admin/booking-stats", {
+          params: { admin_id: adminId },
+        }),
+        analyticsAPI.getMonthlyRevenue({ year, months: 12, admin_id: adminId }),
+      ]);
+
+      const analyticsData =
+        analyticsRes?.data?.data ?? analyticsRes?.data ?? analyticsRes ?? {};
+      const bookingStats =
+        bookingStatsRes?.data?.stats ?? bookingStatsRes?.data ?? {};
+      const monthlyPayload =
+        monthlyRes?.data?.data ?? monthlyRes?.data ?? monthlyRes ?? [];
+
+      const completedTotal = analyticsData?.completed?.total ?? 0;
+      const totalBookings =
+        bookingStats?.total_bookings ?? analyticsData?.bookings?.total ?? 0;
+      const activeBookingsCount =
+        (analyticsData?.active_bookings?.sitting?.count ?? 0) +
+        (analyticsData?.active_bookings?.sleeper?.count ?? 0);
+      const completionRate =
+        totalBookings > 0 ? (completedTotal / totalBookings) * 100 : 0;
+
+      // Combine analytics + admin aggregates so UI keeps existing field names
+      setDashboardStats({
+        rawAnalytics: analyticsData,
+        totalRevenue:
+          bookingStats?.total_revenue ?? analyticsData?.revenue?.total ?? 0,
+        totalBookings,
+        avgBookingHour: bookingStats?.avg_booking_hours ?? 0,
+        todayBookings:
+          bookingStats?.today_bookings ?? analyticsData?.bookings?.today ?? 0,
+        completedBookings: completedTotal,
+        activeBookings: activeBookingsCount,
+        completionRate: Math.round(completionRate * 100) / 100,
       });
-      console.log("Monthly Revenue Response:", revenueResponse.data); // Debug log
-      setMonthlyRevenueData(revenueResponse.data.data || []); // Backend returns {data: chartData}
 
-      // If in month view, also fetch daily revenue for the selected month
+      console.log("Monthly Revenue Response (normalized):", monthlyPayload);
+      setMonthlyRevenueData(
+        Array.isArray(monthlyPayload) ? monthlyPayload : []
+      );
+
+      setDailyRevenueData([]);
       if (timePeriod === "month") {
-        const monthNumber = months.indexOf(selectedMonth) + 1; // Convert month name to number (1-12)
-        const dailyResponse = await analyticsAPI.getDailyRevenue({
-          month: monthNumber,
-          year,
-        });
-        console.log("Daily Revenue Response:", dailyResponse.data); // Debug log
-        setDailyRevenueData(dailyResponse.data.data || []);
+        const monthNumber = months.indexOf(selectedMonth) + 1;
+        if (monthNumber > 0) {
+          try {
+            const dailyRes = await analyticsAPI.getDailyRevenue({
+              month: monthNumber,
+              year,
+              admin_id: adminId,
+            });
+            const dailyPayload =
+              dailyRes?.data?.data ?? dailyRes?.data ?? dailyRes ?? [];
+            console.log("Daily Revenue Response (normalized):", dailyPayload);
+            setDailyRevenueData(
+              Array.isArray(dailyPayload) ? dailyPayload : []
+            );
+          } catch (dailyError) {
+            console.error("Error fetching daily revenue data:", dailyError);
+            toast.error("Failed to load daily revenue data");
+          }
+        }
       }
     } catch (error: any) {
       console.error("Error fetching report data:", error);
-      toast.error("Failed to load report data. Showing empty view.");
-      // Set empty data to prevent crashes
+      const message =
+        error?.response?.data?.error ||
+        error?.message ||
+        "Failed to load report data. Showing empty view.";
+      setFetchError(message);
+      toast.error("Failed to load report data", { description: message });
       setDashboardStats({
         totalRevenue: 0,
         totalBookings: 0,
+        avgBookingHour: 0,
+        todayBookings: 0,
         completedBookings: 0,
         activeBookings: 0,
         completionRate: 0,
@@ -268,115 +330,95 @@ const Report = () => {
   console.log("Sitting Data:", sittingData);
 
   const getStatsForPeriod = (period: string) => {
-    if (!dashboardStats) {
-      return [
-        {
-          title: "Total Revenue",
-          amount: "₹ 0",
-          change: "Loading...",
-          period: "",
-          trending: true,
-        },
-        {
-          title: "Total Bookings",
-          amount: "0",
-          change: "Loading...",
-          period: "",
-          trending: true,
-        },
-        {
-          title: "Avg Booking Hour",
-          amount: "0Hr",
-          change: "Loading...",
-          period: "",
-          trending: true,
-        },
-        {
-          title: "Today Bookings",
-          amount: "0",
-          change: "Loading...",
-          period: "",
-          trending: true,
-        },
-      ];
-    }
-
     const formatCurrency = (amount: number) => {
       return `₹ ${amount.toLocaleString("en-IN")}`;
     };
+
+    // safe helpers
+    const totalRevenueYear = dashboardStats?.totalRevenue || 0;
+    const totalBookingsYear = dashboardStats?.totalBookings || 0;
+    const avgBookingHourYear = dashboardStats?.avgBookingHour || 0; // backend may not provide
+    const todayBookings = dashboardStats?.todayBookings || 0; // backend may not provide
 
     if (period === "year") {
       return [
         {
           title: "Total Revenue",
-          amount: formatCurrency(dashboardStats.totalRevenue || 0),
-          change: `${dashboardStats.totalBookings || 0} bookings`,
+          amount: formatCurrency(totalRevenueYear),
+          change: `${totalBookingsYear} bookings`,
           period: selectedYear,
           trending: true,
         },
         {
           title: "Total Bookings",
-          amount: (dashboardStats.totalBookings || 0).toString(),
-          change: `${dashboardStats.completedBookings || 0} completed`,
+          amount: totalBookingsYear.toString(),
+          change: `${dashboardStats?.completedBookings || 0} completed`,
           period: selectedYear,
           trending: true,
         },
         {
-          title: "Active Bookings",
-          amount: (dashboardStats.activeBookings || 0).toString(),
-          change: "Current active bookings",
-          period: "",
+          title: "Avg Booking Hour",
+          amount: `${avgBookingHourYear}Hr`,
+          change: "Average booking duration",
+          period: selectedYear,
           trending: true,
         },
         {
-          title: "Completed",
-          amount: (dashboardStats.completedBookings || 0).toString(),
-          change: `${dashboardStats.completionRate || 0}% completion rate`,
-          period: "",
+          title: "Today Bookings",
+          amount: todayBookings.toString(),
+          change: "Bookings today",
+          period: selectedYear,
           trending: true,
         },
       ];
     } else {
-      // Month view - use monthly revenue data for selected month
-      const currentMonthData = monthlyRevenueData.find(
-        (m) => m.month === selectedMonth
-      ); // Use 'month' not 'month_name'
-      const avgValue =
-        currentMonthData && currentMonthData.total_bookings > 0
-          ? currentMonthData.total_revenue / currentMonthData.total_bookings
-          : 0;
+      // Month view - derive values from monthlyRevenueData (fallback to dashboardStats)
+      const monthIndex = months.indexOf(selectedMonth);
+      const selectedMonthKey = selectedMonth.toLowerCase();
+      const normalizeLabel = (value?: string) =>
+        value ? value.slice(0, 3).toLowerCase() : "";
+      const currentMonthData = monthlyRevenueData.find((m) => {
+        if (typeof m?.month_number === "number" && monthIndex >= 0) {
+          return m.month_number === monthIndex + 1;
+        }
+        const label =
+          normalizeLabel(m?.month?.toString()) ||
+          normalizeLabel(m?.month_name?.toString());
+        return label === selectedMonthKey;
+      });
+      const monthRevenue =
+        parseFloat(currentMonthData?.total_revenue || "0") || 0;
+      const monthBookings = currentMonthData?.total_bookings || 0;
+      const avgBookingHourMonth =
+        currentMonthData?.avg_booking_hour || avgBookingHourYear || 0;
 
       return [
         {
           title: "Total Revenue",
-          amount: formatCurrency(
-            parseFloat(currentMonthData?.total_revenue || 0)
-          ),
-          change: `${currentMonthData?.total_bookings || 0} bookings`,
+          amount: formatCurrency(monthRevenue),
+          change: `${monthBookings} bookings`,
           period: selectedMonth,
-          trending: (currentMonthData?.total_bookings || 0) > 0,
+          trending: monthBookings > 0,
         },
         {
           title: "Total Bookings",
-          amount: (currentMonthData?.total_bookings || 0).toString(),
+          amount: monthBookings.toString(),
           change: `${selectedMonth} bookings`,
           period: selectedMonth,
           trending: true,
         },
         {
-          title: "Avg Revenue",
-          amount: formatCurrency(avgValue),
-          change: "Per booking average",
-          period: "",
+          title: "Avg Booking Hour",
+          amount: `${avgBookingHourMonth}Hr`,
+          change: "Average booking duration",
+          period: selectedMonth,
           trending: true,
         },
         {
-          title: "Paid Amount",
-          amount: formatCurrency(
-            parseFloat(currentMonthData?.paid_amount || 0)
-          ),
-          change: "Total paid",
-          period: "",
+          title: "Today Bookings",
+          amount: (dashboardStats?.todayBookings || 0).toString(),
+          change: "Bookings today",
+          period: selectedMonth,
           trending: true,
         },
       ];
@@ -384,49 +426,6 @@ const Report = () => {
   };
 
   const stats = getStatsForPeriod(timePeriod);
-
-  // Function to get card data based on current month (using backend data)
-  const getCardDataForMonth = (cardIndex: number, month: string) => {
-    const monthData = monthlyRevenueData.find((m) => m.month === month); // Use 'month' not 'month_name'
-
-    if (!monthData) {
-      return { amount: "N/A", change: "No data", trending: false };
-    }
-
-    const formatCurrency = (amount: number) =>
-      `₹ ${amount.toLocaleString("en-IN")}`;
-    const avgValue =
-      monthData.total_bookings > 0
-        ? monthData.total_revenue / monthData.total_bookings
-        : 0;
-
-    const cards = [
-      {
-        amount: formatCurrency(parseFloat(monthData.total_revenue || 0)),
-        change: `${monthData.total_bookings} bookings`,
-        trending: monthData.total_bookings > 0,
-      },
-      {
-        amount: (monthData.total_bookings || 0).toString(),
-        change: `${month} bookings`,
-        trending: true,
-      },
-      {
-        amount: formatCurrency(avgValue),
-        change: "Average per booking",
-        trending: true,
-      },
-      {
-        amount: formatCurrency(parseFloat(monthData.paid_amount || 0)),
-        change: "Amount paid",
-        trending: true,
-      },
-    ];
-
-    return (
-      cards[cardIndex - 1] || { amount: "N/A", change: "N/A", trending: false }
-    );
-  };
 
   // Calculate dynamic max value for better graph scaling
   const allValues = [...sleeperData, ...sittingData, ...revenueData];
@@ -628,6 +627,24 @@ const Report = () => {
           </p>
         </div>
 
+        {/* Inline error banner with retry */}
+        {fetchError && (
+          <div className="mb-4 p-4 rounded-lg bg-red-50 border border-red-200 text-red-800 flex items-start justify-between">
+            <div>
+              <div className="font-semibold">Error loading report</div>
+              <div className="text-sm mt-1">{fetchError}</div>
+            </div>
+            <div className="ml-4 flex-shrink-0">
+              <button
+                onClick={() => fetchReportData()}
+                className="bg-red-600 text-white px-3 py-1 rounded-md text-sm hover:bg-red-700"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="text-center py-12">
             <p className="text-gray-600">Loading analytics data...</p>
@@ -663,24 +680,17 @@ const Report = () => {
                                 isMobile ? "text-2xl" : "text-3xl"
                               } font-bold text-white`}
                             >
-                              {timePeriod === "month"
-                                ? stat.amount
-                                : `₹ ${(
-                                    current.revenue / 100
-                                  ).toLocaleString()}`}
+                              {stat.amount}
                             </div>
                             <div
                               className={`mt-2 text-xs md:text-sm font-medium ${
-                                current.change >= 0
-                                  ? "text-green-400"
-                                  : "text-red-400"
+                                stat.change &&
+                                stat.change.toString().includes("-")
+                                  ? "text-red-400"
+                                  : "text-green-400"
                               }`}
                             >
-                              {timePeriod === "month"
-                                ? stat.change
-                                : `${current.change >= 0 ? "+" : ""}${
-                                    current.change
-                                  }% From last month`}
+                              {stat.change}
                             </div>
                           </div>
                         </div>
@@ -730,10 +740,7 @@ const Report = () => {
                     </div>
                   );
                 } else {
-                  const monthToUse =
-                    timePeriod === "month" ? selectedMonth : current.month;
-                  const cardData = getCardDataForMonth(index, monthToUse);
-
+                  // Use stat values prepared by getStatsForPeriod
                   return (
                     <div
                       key={index}
@@ -760,19 +767,17 @@ const Report = () => {
                             isMobile ? "text-2xl" : "text-3xl"
                           } font-bold text-gray-900`}
                         >
-                          {cardData.amount}
+                          {stat.amount}
                         </div>
                       </div>
 
                       <div className="flex items-center justify-between">
                         <span
                           className={`text-xs md:text-sm font-medium flex align ${
-                            cardData.trending
-                              ? "text-green-500"
-                              : "text-red-500"
+                            stat.trending ? "text-green-500" : "text-red-500"
                           }`}
                         >
-                          {cardData.change}
+                          {stat.change}
                         </span>
                       </div>
                     </div>

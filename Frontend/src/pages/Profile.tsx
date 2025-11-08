@@ -31,6 +31,7 @@ import {
   Crown,
 } from "lucide-react";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
+import { adminAPI } from "@/services/api";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -45,7 +46,7 @@ const Profile = () => {
   const [profileData, setProfileData] = useState({
     adminName: "",
     adminId: "",
-    phoneNo: "",
+    mobile_number: "",
     address: "",
     email: "",
     joinDate: "",
@@ -60,10 +61,9 @@ const Profile = () => {
 
   const [editData, setEditData] = useState({
     adminName: "",
-    phoneNo: "",
+    mobile_number: "",
     address: "",
     email: "",
-    joinDate: "",
   });
 
   // Load admin data from localStorage on component mount
@@ -75,7 +75,7 @@ const Profile = () => {
     const profile = {
       adminName: adminName,
       adminId: adminId,
-      phoneNo: localStorage.getItem("adminPhone") || "",
+      mobile_number: localStorage.getItem("adminPhone") || "",
       address: localStorage.getItem("adminAddress") || "",
       email: adminEmail,
       joinDate: localStorage.getItem("adminJoinDate") || "",
@@ -90,11 +90,52 @@ const Profile = () => {
     setProfileData(profile);
     setEditData({
       adminName: profile.adminName,
-      phoneNo: profile.phoneNo,
+      mobile_number: profile.mobile_number,
       address: profile.address,
       email: profile.email,
-      joinDate: profile.joinDate,
     });
+
+    // Fetch latest admin info from backend (to get authoritative mobile_number etc.)
+    const fetchAdmin = async () => {
+      try {
+        const res = await adminAPI.getAdminById(adminId);
+        if (res?.data?.admin) {
+          const admin = res.data.admin;
+          // Format created_at as DD/MM/YYYY for display
+          const createdAt = admin.created_at
+            ? new Date(admin.created_at).toLocaleDateString("en-GB")
+            : profile.joinDate;
+
+          const updated = {
+            adminName: admin.full_name || profile.adminName,
+            adminId: admin.admin_id || profile.adminId,
+            mobile_number: admin.mobile_number || profile.mobile_number,
+            address: profile.address,
+            email: admin.email || profile.email,
+            joinDate: createdAt,
+            role: profile.role,
+            profileImage: profile.profileImage,
+            subscription: profile.subscription,
+          };
+
+          setProfileData(updated);
+          setEditData({
+            adminName: updated.adminName,
+            mobile_number: updated.mobile_number,
+            address: updated.address,
+            email: updated.email,
+          });
+          // update localStorage to keep UI consistent
+          if (updated.mobile_number) localStorage.setItem("adminPhone", updated.mobile_number);
+          if (updated.adminName) localStorage.setItem("adminName", updated.adminName);
+          if (updated.email) localStorage.setItem("email", updated.email);
+        }
+      } catch (err) {
+        console.error("Failed to fetch admin from API:", err);
+      }
+    };
+
+    fetchAdmin();
   }, []);
 
   const handleEdit = () => {
@@ -105,10 +146,9 @@ const Profile = () => {
     setIsEditing(false);
     setEditData({
       adminName: profileData.adminName,
-      phoneNo: profileData.phoneNo,
+      mobile_number: profileData.mobile_number,
       address: profileData.address,
       email: profileData.email,
-      joinDate: profileData.joinDate,
     });
   };
 
@@ -121,10 +161,9 @@ const Profile = () => {
       const updatedProfile = {
         ...profileData,
         adminName: editData.adminName,
-        phoneNo: editData.phoneNo,
+        mobile_number: editData.mobile_number,
         address: editData.address,
         email: editData.email,
-        joinDate: editData.joinDate,
         // Keep subscription unchanged
         subscription: profileData.subscription,
       };
@@ -133,10 +172,10 @@ const Profile = () => {
 
       // Update localStorage (excluding adminId and subscription which should never change)
       localStorage.setItem("adminName", editData.adminName);
-      localStorage.setItem("adminPhone", editData.phoneNo);
+      localStorage.setItem("adminPhone", editData.mobile_number);
       localStorage.setItem("adminAddress", editData.address);
       localStorage.setItem("email", editData.email);
-      localStorage.setItem("adminJoinDate", editData.joinDate);
+      // joinDate is read-only (created_at) and should not be changed by the user
 
       setIsEditing(false);
       toast.success("Profile updated successfully!");
@@ -453,7 +492,7 @@ const Profile = () => {
                     {/* Phone No */}
                     <div className="space-y-2">
                       <Label
-                        htmlFor="phoneNo"
+                        htmlFor="mobile_number"
                         className="flex items-center text-sm font-medium text-gray-700"
                       >
                         <Phone className="w-4 h-4 mr-2 text-green-500" />
@@ -461,12 +500,12 @@ const Profile = () => {
                       </Label>
                       {isEditing ? (
                         <Input
-                          id="phoneNo"
-                          value={editData.phoneNo}
+                          id="mobile_number"
+                          value={editData.mobile_number}
                           onChange={(e) =>
                             setEditData({
                               ...editData,
-                              phoneNo: e.target.value,
+                              mobile_number: e.target.value,
                             })
                           }
                           placeholder="Enter phone number"
@@ -475,14 +514,14 @@ const Profile = () => {
                       ) : (
                         <div className="mt-2 p-3 bg-gray-50 rounded-md border flex items-center">
                           <span className="text-gray-900">
-                            {profileData.phoneNo || "Not provided"}
+                            {profileData.mobile_number || "Not provided"}
                           </span>
                         </div>
                       )}
                     </div>
 
                     {/* Address */}
-                    <div className="space-y-2">
+                    {/* <div className="space-y-2">
                       <Label
                         htmlFor="address"
                         className="flex items-center text-sm font-medium text-gray-700"
@@ -510,7 +549,7 @@ const Profile = () => {
                           </span>
                         </div>
                       )}
-                    </div>
+                    </div> */}
 
                     {/* Email */}
                     <div className="space-y-2">
@@ -550,26 +589,11 @@ const Profile = () => {
                         <Calendar className="w-4 h-4 mr-2 text-indigo-500" />
                         Join Date
                       </Label>
-                      {isEditing ? (
-                        <Input
-                          id="joinDate"
-                          type="date"
-                          value={editData.joinDate}
-                          onChange={(e) =>
-                            setEditData({
-                              ...editData,
-                              joinDate: e.target.value,
-                            })
-                          }
-                          className="mt-2 transition-all duration-200 focus:ring-2 focus:ring-blue-500"
-                        />
-                      ) : (
-                        <div className="mt-2 p-3 bg-gray-50 rounded-md border flex items-center">
-                          <span className="text-gray-900">
-                            {profileData.joinDate || "Not set"}
-                          </span>
-                        </div>
-                      )}
+                      <div className="mt-2 p-3 bg-gray-50 rounded-md border flex items-center">
+                        <span className="text-gray-900">
+                          {profileData.joinDate || "Not set"}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -593,26 +617,22 @@ const Profile = () => {
                   <div className="space-y-4">
                     {/* Subscription Status */}
                     <div
-                      className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-gradient-to-r ${
-                        getSubscriptionStatus().bgColor
-                      } rounded-lg border ${
-                        getSubscriptionStatus().borderColor
-                      }`}
+                      className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-gradient-to-r ${getSubscriptionStatus().bgColor
+                        } rounded-lg border ${getSubscriptionStatus().borderColor
+                        }`}
                     >
                       <div className="flex items-center">
                         <CheckCircle
-                          className={`w-5 h-5 mr-2 ${
-                            getSubscriptionStatus().status === "Active"
-                              ? "text-green-600"
-                              : getSubscriptionStatus().status === "Expired"
+                          className={`w-5 h-5 mr-2 ${getSubscriptionStatus().status === "Active"
+                            ? "text-green-600"
+                            : getSubscriptionStatus().status === "Expired"
                               ? "text-red-600"
                               : "text-blue-600"
-                          }`}
+                            }`}
                         />
                         <span
-                          className={`font-semibold ${
-                            getSubscriptionStatus().textColor
-                          }`}
+                          className={`font-semibold ${getSubscriptionStatus().textColor
+                            }`}
                         >
                           {getSubscriptionStatus().status} Subscription
                         </span>

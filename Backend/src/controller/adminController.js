@@ -87,6 +87,35 @@ const createAdmin = async (req, res) => {
 
     const { rows } = await client.query(insertQuery, values);
 
+    // Create default settings for the new admin
+    const defaultSettingsQuery = `
+      INSERT INTO settings (
+        admin_id, admin_name, hall_name, 
+        type1, type1_amount, 
+        type2, type2_amount, 
+        type3, type3_amount, 
+        type4, type4_amount,
+        advance_payment_enabled, default_advance_percentage
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      ON CONFLICT (admin_id) DO NOTHING;
+    `;
+
+    await client.query(defaultSettingsQuery, [
+      newAdminId,
+      full_name,
+      "Default Hall", // Default hall name
+      "Sitting",
+      100, // Default type1
+      "Sleeper",
+      150, // Default type2
+      "AC",
+      200, // Default type3
+      "Premium",
+      250, // Default type4
+      0, // advance_payment_enabled (disabled by default)
+      0, // default_advance_percentage
+    ]);
+
     await client.query("COMMIT");
 
     res.status(201).json({
@@ -438,6 +467,8 @@ const adminLogin = async (req, res) => {
 
 // Get Booking Statistics (All in one)
 const getBookingStats = async (req, res) => {
+  const { admin_id } = req.query; // Get admin_id from query params
+
   const client = await db.connect();
   try {
     const statsQuery = `
@@ -446,17 +477,19 @@ const getBookingStats = async (req, res) => {
         COALESCE(SUM(total_amount), 0) as total_revenue,
         COALESCE(AVG(total_hours), 0) as avg_booking_hours,
         COUNT(CASE WHEN DATE(created_at) = CURRENT_DATE THEN 1 END) as today_bookings
-      FROM bookings;
+      FROM bookings
+      ${admin_id ? "WHERE admin_id = $1" : ""};
     `;
 
-    const { rows } = await client.query(statsQuery);
+    const { rows } = await client.query(statsQuery, admin_id ? [admin_id] : []);
 
     res.status(200).json({
       message: "Booking statistics retrieved successfully",
       stats: {
         total_revenue: parseFloat(rows[0].total_revenue) || 0,
         total_bookings: parseInt(rows[0].total_bookings) || 0,
-        avg_booking_hours: Math.round(parseFloat(rows[0].avg_booking_hours)) || 0,
+        avg_booking_hours:
+          Math.round(parseFloat(rows[0].avg_booking_hours)) || 0,
         today_bookings: parseInt(rows[0].today_bookings) || 0,
       },
     });
@@ -470,14 +503,27 @@ const getBookingStats = async (req, res) => {
 
 // Get Total Revenue
 const getTotalRevenue = async (req, res) => {
+<<<<<<< HEAD
+=======
+  const { admin_id } = req.query;
+
+>>>>>>> 4cacfc3 (update)
   const client = await db.connect();
   try {
     const query = `
       SELECT COALESCE(SUM(total_amount), 0) as total_revenue
+<<<<<<< HEAD
       FROM bookings;
     `;
 
     const { rows } = await client.query(query);
+=======
+      FROM bookings
+      ${admin_id ? "WHERE admin_id = $1" : ""};
+    `;
+
+    const { rows } = await client.query(query, admin_id ? [admin_id] : []);
+>>>>>>> 4cacfc3 (update)
 
     res.status(200).json({
       message: "Total revenue retrieved successfully",
@@ -493,14 +539,27 @@ const getTotalRevenue = async (req, res) => {
 
 // Get Total Bookings Count
 const getTotalBookings = async (req, res) => {
+<<<<<<< HEAD
+=======
+  const { admin_id } = req.query;
+
+>>>>>>> 4cacfc3 (update)
   const client = await db.connect();
   try {
     const query = `
       SELECT COUNT(*) as total_bookings
+<<<<<<< HEAD
       FROM bookings;
     `;
 
     const { rows } = await client.query(query);
+=======
+      FROM bookings
+      ${admin_id ? "WHERE admin_id = $1" : ""};
+    `;
+
+    const { rows } = await client.query(query, admin_id ? [admin_id] : []);
+>>>>>>> 4cacfc3 (update)
 
     res.status(200).json({
       message: "Total bookings retrieved successfully",
@@ -516,14 +575,27 @@ const getTotalBookings = async (req, res) => {
 
 // Get Average Booking Hours
 const getAvgBookingHours = async (req, res) => {
+<<<<<<< HEAD
+=======
+  const { admin_id } = req.query;
+
+>>>>>>> 4cacfc3 (update)
   const client = await db.connect();
   try {
     const query = `
       SELECT COALESCE(AVG(total_hours), 0) as avg_booking_hours
+<<<<<<< HEAD
       FROM bookings;
     `;
 
     const { rows } = await client.query(query);
+=======
+      FROM bookings
+      ${admin_id ? "WHERE admin_id = $1" : ""};
+    `;
+
+    const { rows } = await client.query(query, admin_id ? [admin_id] : []);
+>>>>>>> 4cacfc3 (update)
 
     res.status(200).json({
       message: "Average booking hours retrieved successfully",
@@ -539,15 +611,28 @@ const getAvgBookingHours = async (req, res) => {
 
 // Get Today's Bookings Count
 const getTodayBookings = async (req, res) => {
+<<<<<<< HEAD
+=======
+  const { admin_id } = req.query;
+
+>>>>>>> 4cacfc3 (update)
   const client = await db.connect();
   try {
     const query = `
       SELECT COUNT(*) as today_bookings
       FROM bookings
+<<<<<<< HEAD
       WHERE DATE(created_at) = CURRENT_DATE;
     `;
 
     const { rows } = await client.query(query);
+=======
+      WHERE DATE(created_at) = CURRENT_DATE
+      ${admin_id ? "AND admin_id = $1" : ""};
+    `;
+
+    const { rows } = await client.query(query, admin_id ? [admin_id] : []);
+>>>>>>> 4cacfc3 (update)
 
     res.status(200).json({
       message: "Today's bookings retrieved successfully",
