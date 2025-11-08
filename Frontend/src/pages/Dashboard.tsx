@@ -371,10 +371,11 @@ const Dashboard = () => {
                     ₹ {dashboardStats?.revenue?.total?.toLocaleString() || "0"}
                   </p>
                   <p
-                    className={`text-xs mt-1 md:mt-2 ${dashboardStats?.revenue?.trend === "up"
-                      ? "text-green-300"
-                      : "text-red-300"
-                      }`}
+                    className={`text-xs mt-1 md:mt-2 ${
+                      dashboardStats?.revenue?.trend === "up"
+                        ? "text-green-300"
+                        : "text-red-300"
+                    }`}
                   >
                     {dashboardStats?.revenue?.trend === "up" ? "+" : ""}
                     {dashboardStats?.revenue?.percentage_change || 0}% From last
@@ -434,10 +435,11 @@ const Dashboard = () => {
                     {dashboardStats?.bookings?.total || 0}
                   </p>
                   <p
-                    className={`text-xs mt-1 md:mt-2 ${dashboardStats?.bookings?.trend === "up"
-                      ? "text-green-500"
-                      : "text-red-500"
-                      }`}
+                    className={`text-xs mt-1 md:mt-2 ${
+                      dashboardStats?.bookings?.trend === "up"
+                        ? "text-green-500"
+                        : "text-red-500"
+                    }`}
                   >
                     {dashboardStats?.bookings?.change >= 0 ? "+" : ""}
                     {dashboardStats?.bookings?.change || 0} From last day
@@ -454,10 +456,11 @@ const Dashboard = () => {
                     {dashboardStats?.completed?.total || 0}
                   </p>
                   <p
-                    className={`text-xs mt-1 md:mt-2 ${dashboardStats?.completed?.trend === "up"
-                      ? "text-green-500"
-                      : "text-red-500"
-                      }`}
+                    className={`text-xs mt-1 md:mt-2 ${
+                      dashboardStats?.completed?.trend === "up"
+                        ? "text-green-500"
+                        : "text-red-500"
+                    }`}
                   >
                     {dashboardStats?.completed?.trend === "up" ? "+" : ""}
                     {dashboardStats?.completed?.percentage_change || 0}% From
@@ -618,10 +621,11 @@ const Dashboard = () => {
                               </td>
                               <td className="p-3 md:p-4 min-w-[100px]">
                                 <span
-                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${booking.status === "completed"
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-amber-100 text-amber-800"
-                                    }`}
+                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${
+                                    booking.status === "completed"
+                                      ? "bg-green-100 text-green-800"
+                                      : "bg-amber-100 text-amber-800"
+                                  }`}
                                 >
                                   {booking.status}
                                 </span>
@@ -707,10 +711,11 @@ const Dashboard = () => {
                 {/* Scrollable Chart Container */}
                 <div
                   ref={chartContainerRef}
-                  className={`flex-1 relative ${needsScroll
-                    ? "overflow-x-auto overflow-y-hidden scrollable-chart"
-                    : "overflow-hidden"
-                    }`}
+                  className={`flex-1 relative ${
+                    needsScroll
+                      ? "overflow-x-auto overflow-y-hidden scrollable-chart"
+                      : "overflow-hidden"
+                  }`}
                 >
                   {chartLoading ? (
                     <div className="flex items-center justify-center h-full">

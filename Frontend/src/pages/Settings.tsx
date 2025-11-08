@@ -174,14 +174,20 @@ const Settings = () => {
         hall_name: settings.hall_name,
         // If type is disabled, send null regardless of name/amount
         // If type is enabled, send name/amount (or null if not set)
-        type1: settings.seating_types[0].enabled ? (settings.seating_types[0].name || null) : null,
-        type1_amount: settings.seating_types[0].enabled && settings.seating_types[0].amount
-          ? parseFloat(settings.seating_types[0].amount)
+        type1: settings.seating_types[0].enabled
+          ? settings.seating_types[0].name || null
           : null,
-        type2: settings.seating_types[1].enabled ? (settings.seating_types[1].name || null) : null,
-        type2_amount: settings.seating_types[1].enabled && settings.seating_types[1].amount
-          ? parseFloat(settings.seating_types[1].amount)
+        type1_amount:
+          settings.seating_types[0].enabled && settings.seating_types[0].amount
+            ? parseFloat(settings.seating_types[0].amount)
+            : null,
+        type2: settings.seating_types[1].enabled
+          ? settings.seating_types[1].name || null
           : null,
+        type2_amount:
+          settings.seating_types[1].enabled && settings.seating_types[1].amount
+            ? parseFloat(settings.seating_types[1].amount)
+            : null,
         type3: null,
         type3_amount: null,
         type4: null,
@@ -202,7 +208,7 @@ const Settings = () => {
           sitting: {
             amount:
               settings.seating_types[0].enabled &&
-                settings.seating_types[0].amount
+              settings.seating_types[0].amount
                 ? settings.seating_types[0].amount
                 : "15",
             enabled: settings.seating_types[0].enabled,
@@ -210,7 +216,7 @@ const Settings = () => {
           sleeper: {
             amount:
               settings.seating_types[1].enabled &&
-                settings.seating_types[1].amount
+              settings.seating_types[1].amount
                 ? settings.seating_types[1].amount
                 : "20",
             enabled: settings.seating_types[1].enabled,
@@ -293,11 +299,11 @@ const Settings = () => {
       return newSettings;
     });
 
-    // Save drafts locally 
+    // Save drafts locally
     const drafts = loadDrafts();
     drafts[index] = {
       ...drafts[index],
-      [field]: value
+      [field]: value,
     };
     saveDrafts(drafts);
 
@@ -306,14 +312,20 @@ const Settings = () => {
       const apiData = {
         admin_name: settings.admin_name,
         hall_name: settings.hall_name,
-        type1: settings.seating_types[0].enabled ? settings.seating_types[0].name : null,
-        type1_amount: settings.seating_types[0].enabled && settings.seating_types[0].amount
-          ? parseFloat(settings.seating_types[0].amount)
+        type1: settings.seating_types[0].enabled
+          ? settings.seating_types[0].name
           : null,
-        type2: settings.seating_types[1].enabled ? settings.seating_types[1].name : null,
-        type2_amount: settings.seating_types[1].enabled && settings.seating_types[1].amount
-          ? parseFloat(settings.seating_types[1].amount)
+        type1_amount:
+          settings.seating_types[0].enabled && settings.seating_types[0].amount
+            ? parseFloat(settings.seating_types[0].amount)
+            : null,
+        type2: settings.seating_types[1].enabled
+          ? settings.seating_types[1].name
           : null,
+        type2_amount:
+          settings.seating_types[1].enabled && settings.seating_types[1].amount
+            ? parseFloat(settings.seating_types[1].amount)
+            : null,
         type3: null,
         type3_amount: null,
         type4: null,
@@ -596,7 +608,11 @@ const Settings = () => {
                                 checked={seatType.enabled}
                                 onCheckedChange={(checked) => {
                                   // Only update local state - don't save to server yet
-                                  handleSeatingTypeChange(index, "enabled", checked);
+                                  handleSeatingTypeChange(
+                                    index,
+                                    "enabled",
+                                    checked
+                                  );
                                   // When toggling off, clear any open inline editor
                                   if (!checked) {
                                     setEditing(null);
@@ -802,11 +818,12 @@ const Settings = () => {
                           (percentage) => (
                             <div
                               key={percentage}
-                              className={`p-2 rounded-md border cursor-pointer transition-all text-center ${settings.default_advance_percentage ===
+                              className={`p-2 rounded-md border cursor-pointer transition-all text-center ${
+                                settings.default_advance_percentage ===
                                 percentage
-                                ? "border-purple-500 bg-purple-50"
-                                : "border-gray-200 hover:border-purple-300"
-                                }`}
+                                  ? "border-purple-500 bg-purple-50"
+                                  : "border-gray-200 hover:border-purple-300"
+                              }`}
                               onClick={() =>
                                 handleSettingChange(
                                   "default_advance_percentage",
@@ -816,16 +833,17 @@ const Settings = () => {
                             >
                               <div className="flex items-center justify-center space-x-1">
                                 <div
-                                  className={`w-3 h-3 rounded-full border ${settings.default_advance_percentage ===
+                                  className={`w-3 h-3 rounded-full border ${
+                                    settings.default_advance_percentage ===
                                     percentage
-                                    ? "border-purple-500 bg-purple-500"
-                                    : "border-gray-300"
-                                    }`}
+                                      ? "border-purple-500 bg-purple-500"
+                                      : "border-gray-300"
+                                  }`}
                                 >
                                   {settings.default_advance_percentage ===
                                     percentage && (
-                                      <div className="w-1.5 h-1.5 bg-white rounded-full m-0.5"></div>
-                                    )}
+                                    <div className="w-1.5 h-1.5 bg-white rounded-full m-0.5"></div>
+                                  )}
                                 </div>
                                 <p className="text-sm font-medium text-gray-800">
                                   {percentage}%
@@ -938,7 +956,7 @@ const Settings = () => {
                               parseFloat(
                                 settings.default_advance_percentage || "0"
                               )) /
-                            100
+                              100
                           ).toFixed(0)}
                         </p>
                       </div>
