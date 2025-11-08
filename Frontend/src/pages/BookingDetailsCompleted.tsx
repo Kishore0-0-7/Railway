@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Navigation from "@/components/Navigation";
+import { formatSeatingTypeLabel } from "@/lib/settingsUtils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { bookingAPI } from "@/services/api";
@@ -162,7 +163,7 @@ const BookingDetails = () => {
                   </label>
                   <Input
                     placeholder="Sleeper"
-                    value={booking.booking_type || ""}
+                    value={formatSeatingTypeLabel(booking.booking_type || "")}
                     readOnly
                   />
                 </div>

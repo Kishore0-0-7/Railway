@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Navigation from "@/components/Navigation";
+import { formatSeatingTypeLabel } from "@/lib/settingsUtils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -366,8 +367,8 @@ const BookingDetails = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="sleeper">Sleeper</SelectItem>
-                      <SelectItem value="sitting">Sitting</SelectItem>
+                      <SelectItem value="sleeper">{formatSeatingTypeLabel('sleeper')}</SelectItem>
+                      <SelectItem value="sitting">{formatSeatingTypeLabel('sitting')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
