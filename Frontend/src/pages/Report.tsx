@@ -136,7 +136,6 @@ const Report = () => {
         completionRate: Math.round(completionRate * 100) / 100,
       });
 
-      console.log("Monthly Revenue Response (normalized):", monthlyPayload);
       setMonthlyRevenueData(
         Array.isArray(monthlyPayload) ? monthlyPayload : []
       );
@@ -153,7 +152,6 @@ const Report = () => {
             });
             const dailyPayload =
               dailyRes?.data?.data ?? dailyRes?.data ?? dailyRes ?? [];
-            console.log("Daily Revenue Response (normalized):", dailyPayload);
             setDailyRevenueData(
               Array.isArray(dailyPayload) ? dailyPayload : []
             );
@@ -319,16 +317,6 @@ const Report = () => {
     }
   }
 
-  // Debug: Log the graph data
-  console.log("Time Period:", timePeriod);
-  console.log("Selected Month:", selectedMonth);
-  console.log("Selected Year:", selectedYear);
-  console.log("Monthly Revenue Data:", monthlyRevenueData);
-  console.log("Daily Revenue Data:", dailyRevenueData);
-  console.log("Revenue Data for Graph:", revenueData);
-  console.log("Sleeper Data:", sleeperData);
-  console.log("Sitting Data:", sittingData);
-
   const getStatsForPeriod = (period: string) => {
     const formatCurrency = (amount: number) => {
       return `₹ ${amount.toLocaleString("en-IN")}`;
@@ -431,9 +419,6 @@ const Report = () => {
   const allValues = [...sleeperData, ...sittingData, ...revenueData];
   const maxDataValue = Math.max(...allValues, 1); // Minimum 1 to avoid division by zero
   const dynamicMaxValue = Math.ceil(maxDataValue * 1.2); // Add 20% padding for better visualization
-
-  console.log("Max Data Value:", maxDataValue);
-  console.log("Dynamic Max Value for Graph:", dynamicMaxValue);
 
   // Dynamic X-axis labels
   const xLabels =

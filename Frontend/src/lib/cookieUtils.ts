@@ -139,9 +139,5 @@ export const migrateFromLocalStorage = (): void => {
     localStorage.removeItem("adminName");
     localStorage.removeItem("email");
     localStorage.removeItem("isLoggedIn");
-
-    console.log(
-      "✅ Successfully migrated auth data from localStorage to cookies"
-    );
   }
 };

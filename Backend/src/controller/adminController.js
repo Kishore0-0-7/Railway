@@ -402,11 +402,6 @@ const adminLogin = async (req, res) => {
   const normalizedEmail = email ? email.trim().toLowerCase() : "";
   const sanitizedPassword = password ? password.trim() : "";
 
-  console.log("[adminLogin] Incoming login attempt", {
-    email: normalizedEmail,
-    hasPassword: Boolean(sanitizedPassword),
-  });
-
   if (!normalizedEmail || !sanitizedPassword) {
     console.warn("[adminLogin] Missing email or password input", {
       emailPresent: Boolean(normalizedEmail),
@@ -447,11 +442,6 @@ const adminLogin = async (req, res) => {
 
     // Return admin data without password hash
     const { password_hash, ...adminData } = admin;
-
-    console.log("[adminLogin] Login successful", {
-      email: normalizedEmail,
-      adminId: admin.admin_id,
-    });
 
     res.status(200).json({
       message: "Login successful",

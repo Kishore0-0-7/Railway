@@ -92,8 +92,6 @@ const ManageLogin = () => {
     try {
       setLoading(true);
       const adminId = getAdminId();
-      console.log("=== ManageLogin fetchWorkers ===");
-      console.log("adminId from cookies:", adminId);
 
       if (!adminId) {
         toast.error("Admin ID not found. Please login again.");

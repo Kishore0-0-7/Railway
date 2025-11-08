@@ -29,6 +29,7 @@ import {
 import { useScrollToTop } from "@/hooks/useScrollToTop";
 import { settingsAPI } from "@/services/api";
 import { clearSettingsCache } from "@/lib/settingsUtils";
+import { getAdminId } from "@/lib/cookieUtils";
 
 interface SeatingType {
   name: string;
@@ -71,8 +72,8 @@ const Settings = () => {
   const [editing, setEditing] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
 
-  // Get admin_id from localStorage
-  const adminId = localStorage.getItem("adminId") || "";
+  // Get admin_id from cookies
+  const adminId = getAdminId() || "";
 
   // Persist unsaved seating type names/amounts locally so toggling off/on
   // doesn't permanently lose previously entered values even if the server

@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
 import { adminAPI } from "@/services/api";
+import { getAdminId } from "@/lib/cookieUtils";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -70,7 +71,13 @@ const Profile = () => {
   useEffect(() => {
     const adminName = localStorage.getItem("adminName") || "#1225";
     const adminEmail = localStorage.getItem("email") || "admin@railway.com";
-    const adminId = localStorage.getItem("adminId") || "ADMIN001";
+    const adminId = getAdminId();
+
+    if (!adminId) {
+      toast.error("Admin ID not found. Please login again.");
+      navigate("/login");
+      return;
+    }
 
     const profile = {
       adminName: adminName,

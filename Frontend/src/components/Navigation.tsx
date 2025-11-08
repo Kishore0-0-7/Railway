@@ -49,7 +49,6 @@ const Navigation = () => {
     // Clear all authentication data from cookies
     clearAuthData();
 
-    console.log("User logged out");
     navigate("/", { replace: true });
   };
 
