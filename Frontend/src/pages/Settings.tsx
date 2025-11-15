@@ -209,7 +209,7 @@ const Settings = () => {
           sitting: {
             amount:
               settings.seating_types[0].enabled &&
-              settings.seating_types[0].amount
+                settings.seating_types[0].amount
                 ? settings.seating_types[0].amount
                 : "15",
             enabled: settings.seating_types[0].enabled,
@@ -217,7 +217,7 @@ const Settings = () => {
           sleeper: {
             amount:
               settings.seating_types[1].enabled &&
-              settings.seating_types[1].amount
+                settings.seating_types[1].amount
                 ? settings.seating_types[1].amount
                 : "20",
             enabled: settings.seating_types[1].enabled,
@@ -273,19 +273,13 @@ const Settings = () => {
     field: string,
     value: any
   ) => {
-    // Update local state immediately (no auto-save to server).
+    // Update local state using the previous state (avoid closure staleness)
     setSettings((prev) => {
-      const newSeatingTypes = [...prev.seating_types];
-      newSeatingTypes[index] = {
-        ...newSeatingTypes[index],
-        [field]: value,
-      };
-      const newSettings = {
-        ...prev,
-        seating_types: newSeatingTypes,
-      } as SettingsData;
+      const updatedSeatingTypes = prev.seating_types.map((st, i) =>
+        i === index ? { ...st, [field]: value } : st
+      );
 
-      // Persist drafts locally so toggling doesn't lose user-entered values
+      // Persist drafts locally based on updated seating types
       try {
         const drafts = loadDrafts();
         drafts[index] = {
@@ -297,54 +291,91 @@ const Settings = () => {
         // ignore localStorage errors
       }
 
-      return newSettings;
+      // Fire-and-forget API call outside the synchronous setState
+      (async () => {
+        try {
+          // Ensure admin_name fallback (same as Save All)
+          const payloadAdminName =
+            (prev.admin_name && prev.admin_name.trim()) ||
+            localStorage.getItem("adminName") ||
+            localStorage.getItem("email") ||
+            adminId ||
+            "Admin";
+
+          const apiData = {
+            admin_name: payloadAdminName,
+            hall_name: prev.hall_name,
+            type1: updatedSeatingTypes[0].enabled
+              ? updatedSeatingTypes[0].name || null
+              : null,
+            type1_amount:
+              updatedSeatingTypes[0].enabled && updatedSeatingTypes[0].amount
+                ? parseFloat(updatedSeatingTypes[0].amount)
+                : null,
+            type2: updatedSeatingTypes[1].enabled
+              ? updatedSeatingTypes[1].name || null
+              : null,
+            type2_amount:
+              updatedSeatingTypes[1].enabled && updatedSeatingTypes[1].amount
+                ? parseFloat(updatedSeatingTypes[1].amount)
+                : null,
+            type3: null,
+            type3_amount: null,
+            type4: null,
+            type4_amount: null,
+          };
+
+          await settingsAPI.upsertSettings(adminId, apiData);
+          toast.success("Settings saved successfully");
+
+          // Also update railwaySettings in localStorage so other UI can read new values
+          try {
+            const railwaySettings = {
+              admin_name: payloadAdminName,
+              admin_email: localStorage.getItem("email") ||
+                "admin@railway.com",
+              admin_contact:
+                localStorage.getItem("adminPhone") || "+91-9876543210",
+              seating_types: {
+                sitting: {
+                  amount:
+                    updatedSeatingTypes[0].enabled &&
+                      updatedSeatingTypes[0].amount
+                      ? updatedSeatingTypes[0].amount
+                      : "15",
+                  enabled: updatedSeatingTypes[0].enabled,
+                },
+                sleeper: {
+                  amount:
+                    updatedSeatingTypes[1].enabled &&
+                      updatedSeatingTypes[1].amount
+                      ? updatedSeatingTypes[1].amount
+                      : "20",
+                  enabled: updatedSeatingTypes[1].enabled,
+                },
+              },
+              advance_payment_enabled: prev.advance_payment_enabled,
+              default_advance_percentage: prev.default_advance_percentage,
+            };
+            localStorage.setItem("railwaySettings", JSON.stringify(railwaySettings));
+          } catch (e) {
+            // ignore storage errors
+          }
+
+          // NOTE: intentionally avoid calling fetchSettings() here.
+          // Calling fetchSettings() immediately after upsert can trigger
+          // the global axios 401 handler (which redirects the page).
+          // We already updated local state above, so skip the extra GET
+          // to prevent unexpected page reloads.
+        } catch (error) {
+          console.error("Failed to save settings:", error);
+          toast.error("Failed to save settings");
+          // Do not call fetchSettings() here to avoid triggering global redirect
+        }
+      })();
+
+      return { ...prev, seating_types: updatedSeatingTypes } as SettingsData;
     });
-
-    // Save drafts locally
-    const drafts = loadDrafts();
-    drafts[index] = {
-      ...drafts[index],
-      [field]: value,
-    };
-    saveDrafts(drafts);
-
-    try {
-      // Prepare API data
-      const apiData = {
-        admin_name: settings.admin_name,
-        hall_name: settings.hall_name,
-        type1: settings.seating_types[0].enabled
-          ? settings.seating_types[0].name
-          : null,
-        type1_amount:
-          settings.seating_types[0].enabled && settings.seating_types[0].amount
-            ? parseFloat(settings.seating_types[0].amount)
-            : null,
-        type2: settings.seating_types[1].enabled
-          ? settings.seating_types[1].name
-          : null,
-        type2_amount:
-          settings.seating_types[1].enabled && settings.seating_types[1].amount
-            ? parseFloat(settings.seating_types[1].amount)
-            : null,
-        type3: null,
-        type3_amount: null,
-        type4: null,
-        type4_amount: null,
-      };
-
-      await settingsAPI.upsertSettings(adminId, apiData);
-      toast.success("Settings saved successfully");
-
-      // Refresh settings from server
-      await fetchSettings();
-    } catch (error) {
-      console.error("Failed to save settings:", error);
-      toast.error("Failed to save settings");
-
-      // Refresh to ensure we're in sync with server
-      await fetchSettings();
-    }
   };
 
   const saveSeatingEdit = (index: number, field: string) => {
@@ -605,22 +636,32 @@ const Settings = () => {
                                   {color.label}
                                 </span>
                               </div>
-                              <Switch
-                                checked={seatType.enabled}
-                                onCheckedChange={(checked) => {
-                                  // Only update local state - don't save to server yet
-                                  handleSeatingTypeChange(
-                                    index,
-                                    "enabled",
-                                    checked
-                                  );
-                                  // When toggling off, clear any open inline editor
-                                  if (!checked) {
-                                    setEditing(null);
-                                  }
+                              <button
+                                type="button"
+                                className="-m-1 p-1 z-50 inline-flex rounded focus:outline-none cursor-pointer pointer-events-auto relative"
+                                aria-pressed={seatType.enabled}
+                                onClick={(e) => {
+                                  // Use type="button" to avoid implicit form submit even if inside a form.
+                                  e.stopPropagation();
+                                  const newVal = !seatType.enabled;
+                                  handleSeatingTypeChange(index, "enabled", newVal);
+                                  if (!newVal) setEditing(null);
                                 }}
-                                className="data-[state=checked]:bg-green-600 scale-75"
-                              />
+                              >
+                                {/* Custom lightweight toggle to avoid third-party internal behavior */}
+                                <div
+                                  role="switch"
+                                  aria-checked={seatType.enabled}
+                                  aria-label={`Toggle seating type ${index + 1}`}
+                                  className={`w-10 h-6 rounded-full p-1 transition-colors flex items-center cursor-pointer ${seatType.enabled ? "bg-green-600" : "bg-gray-300"
+                                    }`}
+                                >
+                                  <div
+                                    className={`w-4 h-4 bg-white rounded-full shadow transform transition-transform ${seatType.enabled ? "translate-x-4" : "translate-x-0"
+                                      }`}
+                                  />
+                                </div>
+                              </button>
                             </div>
 
                             {/* Seating Type Name */}
@@ -819,12 +860,11 @@ const Settings = () => {
                           (percentage) => (
                             <div
                               key={percentage}
-                              className={`p-2 rounded-md border cursor-pointer transition-all text-center ${
-                                settings.default_advance_percentage ===
+                              className={`p-2 rounded-md border cursor-pointer transition-all text-center ${settings.default_advance_percentage ===
                                 percentage
-                                  ? "border-purple-500 bg-purple-50"
-                                  : "border-gray-200 hover:border-purple-300"
-                              }`}
+                                ? "border-purple-500 bg-purple-50"
+                                : "border-gray-200 hover:border-purple-300"
+                                }`}
                               onClick={() =>
                                 handleSettingChange(
                                   "default_advance_percentage",
@@ -834,17 +874,16 @@ const Settings = () => {
                             >
                               <div className="flex items-center justify-center space-x-1">
                                 <div
-                                  className={`w-3 h-3 rounded-full border ${
-                                    settings.default_advance_percentage ===
+                                  className={`w-3 h-3 rounded-full border ${settings.default_advance_percentage ===
                                     percentage
-                                      ? "border-purple-500 bg-purple-500"
-                                      : "border-gray-300"
-                                  }`}
+                                    ? "border-purple-500 bg-purple-500"
+                                    : "border-gray-300"
+                                    }`}
                                 >
                                   {settings.default_advance_percentage ===
                                     percentage && (
-                                    <div className="w-1.5 h-1.5 bg-white rounded-full m-0.5"></div>
-                                  )}
+                                      <div className="w-1.5 h-1.5 bg-white rounded-full m-0.5"></div>
+                                    )}
                                 </div>
                                 <p className="text-sm font-medium text-gray-800">
                                   {percentage}%
@@ -957,7 +996,7 @@ const Settings = () => {
                               parseFloat(
                                 settings.default_advance_percentage || "0"
                               )) /
-                              100
+                            100
                           ).toFixed(0)}
                         </p>
                       </div>
