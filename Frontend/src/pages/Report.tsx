@@ -241,6 +241,28 @@ const Report = () => {
   // Get enabled seating types from Settings
   const enabledSeatingTypes = getEnabledSeatingTypes();
 
+  // Color mapping for seating types
+  const getSeatingTypeColor = (key: string, index: number): string => {
+    const colorMap: Record<string, string> = {
+      sitting: "#3B82F6", // Blue
+      sleeper: "#EAB308", // Yellow
+      type3: "#10B981", // Green
+    };
+    return (
+      colorMap[key] || ["#3B82F6", "#EAB308", "#10B981"][index] || "#9ca3af"
+    );
+  };
+
+  // Map settings keys to backend column names
+  const getBackendColumnName = (key: string): string => {
+    const columnMap: Record<string, string> = {
+      sitting: "sitting",
+      sleeper: "sleeper",
+      type3: "type3",
+    };
+    return columnMap[key] || key;
+  };
+
   // Graph data points from backend
   // Filter data based on timePeriod (year vs month)
   let revenueData: number[];
@@ -264,7 +286,8 @@ const Report = () => {
 
     // Process seating type data dynamically based on Settings
     enabledSeatingTypes.forEach((seatingType) => {
-      const columnName = `${seatingType.key}_revenue`;
+      const backendKey = getBackendColumnName(seatingType.key);
+      const columnName = `${backendKey}_revenue`;
       seatingTypeData[seatingType.key] =
         monthlyRevenueData.length > 0
           ? monthlyRevenueData.map(
@@ -289,7 +312,8 @@ const Report = () => {
 
       // Process daily seating type data dynamically
       enabledSeatingTypes.forEach((seatingType) => {
-        const columnName = `${seatingType.key}_revenue`;
+        const backendKey = getBackendColumnName(seatingType.key);
+        const columnName = `${backendKey}_revenue`;
         seatingTypeData[seatingType.key] = dailyRevenueData.map(
           (item) => parseFloat(item[columnName] || 0) / 1000
         );
@@ -795,24 +819,28 @@ const Report = () => {
                   <div className="flex items-center space-x-4 md:space-x-4 md:mr-8 flex-wrap gap-2">
                     {!showRevenue ? (
                       <>
-                        <div className="flex items-center space-x-2">
-                          <span
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: "#f97316" }}
-                          ></span>
-                          <span className="text-xs md:text-sm font-medium text-gray-700">
-                            Sleeper
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <span
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: "#9ca3af" }}
-                          ></span>
-                          <span className="text-xs md:text-sm font-medium text-gray-700">
-                            Sitting
-                          </span>
-                        </div>
+                        {enabledSeatingTypes.map((seatingType, index) => {
+                          const color = getSeatingTypeColor(
+                            seatingType.key,
+                            index
+                          );
+                          return (
+                            <div
+                              key={seatingType.key}
+                              className="flex items-center space-x-2"
+                            >
+                              <span
+                                className="w-3 h-3 rounded-full"
+                                style={{
+                                  backgroundColor: color,
+                                }}
+                              ></span>
+                              <span className="text-xs md:text-sm font-medium text-gray-700">
+                                {seatingType.label}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </>
                     ) : (
                       <div className="flex items-center space-x-2">
@@ -944,63 +972,53 @@ const Report = () => {
                     >
                       {!showRevenue ? (
                         <>
-                          {/* Sleeper Line */}
-                          <path
-                            d={buildPathString(sleeperData, 1, dynamicMaxValue)}
-                            stroke="#f97316"
-                            strokeWidth={isMobile ? "2" : "3"}
-                            fill="none"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className={graphAnimation ? "animate-draw" : ""}
-                            style={{
-                              strokeDasharray: 4000,
-                              strokeDashoffset: graphAnimation ? 0 : 4000,
-                              transition: "stroke-dashoffset 1.5s ease-in-out",
-                            }}
-                          />
-                          {/* Sitting Line */}
-                          <path
-                            d={buildPathString(sittingData, 1, dynamicMaxValue)}
-                            stroke="#9ca3af"
-                            strokeWidth={isMobile ? "2" : "3"}
-                            fill="none"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className={graphAnimation ? "animate-draw" : ""}
-                            style={{
-                              strokeDasharray: 4000,
-                              strokeDashoffset: graphAnimation ? 0 : 4000,
-                              transition:
-                                "stroke-dashoffset 1.5s ease-in-out 0.3s",
-                            }}
-                          />
+                          {/* Dynamic seating type lines based on enabled types */}
+                          {enabledSeatingTypes.map((seatingType, index) => {
+                            const data = seatingTypeData[seatingType.key] || [];
+                            const color = getSeatingTypeColor(
+                              seatingType.key,
+                              index
+                            );
+                            return (
+                              <path
+                                key={`line-${seatingType.key}`}
+                                d={buildPathString(data, 1, dynamicMaxValue)}
+                                stroke={color}
+                                strokeWidth={isMobile ? "2" : "3"}
+                                fill="none"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className={graphAnimation ? "animate-draw" : ""}
+                                style={{
+                                  strokeDasharray: 4000,
+                                  strokeDashoffset: graphAnimation ? 0 : 4000,
+                                  transition: `stroke-dashoffset 1.5s ease-in-out ${
+                                    index * 0.3
+                                  }s`,
+                                }}
+                              />
+                            );
+                          })}
 
-                          {/* Interactive points for Sleeper */}
-                          {sleeperData.map((point, idx) => (
-                            <circle
-                              key={`sleeper-${idx}`}
-                              cx={getX(idx)}
-                              cy={calculateYPosition(point, dynamicMaxValue)}
-                              r={isMobile ? "4" : "6"}
-                              fill="#f97316"
-                              opacity="0"
-                              className="interactive-point"
-                            />
-                          ))}
-
-                          {/* Interactive points for Sitting */}
-                          {sittingData.map((point, idx) => (
-                            <circle
-                              key={`sitting-${idx}`}
-                              cx={getX(idx)}
-                              cy={calculateYPosition(point, dynamicMaxValue)}
-                              r={isMobile ? "4" : "6"}
-                              fill="#9ca3af"
-                              opacity="0"
-                              className="interactive-point"
-                            />
-                          ))}
+                          {/* Interactive points for each seating type */}
+                          {enabledSeatingTypes.map((seatingType, index) => {
+                            const data = seatingTypeData[seatingType.key] || [];
+                            const color = getSeatingTypeColor(
+                              seatingType.key,
+                              index
+                            );
+                            return data.map((point, idx) => (
+                              <circle
+                                key={`${seatingType.key}-${idx}`}
+                                cx={getX(idx)}
+                                cy={calculateYPosition(point, dynamicMaxValue)}
+                                r={isMobile ? "4" : "6"}
+                                fill={color}
+                                opacity="0"
+                                className="interactive-point"
+                              />
+                            ));
+                          })}
                         </>
                       ) : (
                         <>
@@ -1109,34 +1127,41 @@ const Report = () => {
                   </div>
                   {!showRevenue ? (
                     <div className="space-y-1">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-full bg-orange-500"></span>
-                          <span className="text-xs text-gray-600">
-                            Sleeper:
-                          </span>
-                        </div>
-                        <span className="text-xs font-semibold text-gray-800">
-                          {tooltip.data.sleeper}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-full bg-gray-400"></span>
-                          <span className="text-xs text-gray-600">
-                            Sitting:
-                          </span>
-                        </div>
-                        <span className="text-xs font-semibold text-gray-800">
-                          {tooltip.data.sitting}
-                        </span>
-                      </div>
+                      {enabledSeatingTypes.map((seatingType, index) => {
+                        const bgColor = getSeatingTypeColor(
+                          seatingType.key,
+                          index
+                        );
+                        const value = tooltip.data[seatingType.key] || 0;
+                        return (
+                          <div
+                            key={seatingType.key}
+                            className="flex items-center justify-between gap-3"
+                          >
+                            <div className="flex items-center gap-1">
+                              <span
+                                className="w-2 h-2 rounded-full"
+                                style={{ backgroundColor: bgColor }}
+                              ></span>
+                              <span className="text-xs text-gray-600">
+                                {seatingType.label}:
+                              </span>
+                            </div>
+                            <span className="text-xs font-semibold text-gray-800">
+                              {value}
+                            </span>
+                          </div>
+                        );
+                      })}
                       <div className="flex items-center justify-between gap-3 pt-1 border-t">
                         <span className="text-xs text-gray-600 font-medium">
                           Total:
                         </span>
                         <span className="text-xs font-bold text-gray-800">
-                          {tooltip.data.sleeper + tooltip.data.sitting}
+                          {enabledSeatingTypes.reduce(
+                            (sum, type) => sum + (tooltip.data[type.key] || 0),
+                            0
+                          )}
                         </span>
                       </div>
                     </div>

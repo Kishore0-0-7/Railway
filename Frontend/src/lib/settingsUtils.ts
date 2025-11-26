@@ -16,6 +16,7 @@ export interface RailwaySettings {
   seating_types: {
     sitting: SeatingType;
     sleeper: SeatingType;
+    type3?: SeatingType;
   };
   advance_payment_enabled: boolean;
   default_advance_percentage: string;
@@ -68,20 +69,30 @@ const fetchSettingsFromDB = async (): Promise<RailwaySettings | null> => {
       const data = response.data.data;
 
       // Convert database format to RailwaySettings format
+      const seatingTypes: any = {
+        sitting: {
+          amount: data.type1_amount?.toString() || "15",
+          enabled: !!data.type1,
+        },
+        sleeper: {
+          amount: data.type2_amount?.toString() || "20",
+          enabled: !!data.type2,
+        },
+      };
+
+      // Add type3 if it exists
+      if (data.type3) {
+        seatingTypes.type3 = {
+          amount: data.type3_amount?.toString() || "0",
+          enabled: true,
+        };
+      }
+
       return {
         admin_name: data.admin_name || DEFAULT_SETTINGS.admin_name,
         admin_email: getEmail() || DEFAULT_SETTINGS.admin_email,
         admin_contact: data.admin_contact || DEFAULT_SETTINGS.admin_contact,
-        seating_types: {
-          sitting: {
-            amount: data.type1_amount?.toString() || "15",
-            enabled: !!data.type1,
-          },
-          sleeper: {
-            amount: data.type2_amount?.toString() || "20",
-            enabled: !!data.type2,
-          },
-        },
+        seating_types: seatingTypes,
         advance_payment_enabled: data.advance_payment_enabled ?? true,
         default_advance_percentage:
           data.default_advance_percentage?.toString() || "20",
@@ -191,16 +202,28 @@ export const getEnabledSeatingTypes = () => {
   const seatingOptions: Array<{ key: string; label: string; amount: number }> =
     [];
 
+  // Get actual type names from localStorage
+  let typeNames: Record<string, string> = {
+    sitting: "Sitting",
+    sleeper: "Sleeper",
+    type3: "Type 3",
+  };
+
+  try {
+    const appSettings = localStorage.getItem("appSettings");
+    if (appSettings) {
+      const parsed = JSON.parse(appSettings);
+      if (parsed.type1) typeNames.sitting = parsed.type1;
+      if (parsed.type2) typeNames.sleeper = parsed.type2;
+      if (parsed.type3) typeNames.type3 = parsed.type3;
+    }
+  } catch {}
+
   Object.entries(settings.seating_types).forEach(([key, config]) => {
     if (config.enabled) {
-      const labels: Record<string, string> = {
-        sitting: "Sitting",
-        sleeper: "Sleeper",
-      };
-
       seatingOptions.push({
         key,
-        label: labels[key] || key,
+        label: typeNames[key] || key,
         amount: parseFloat(config.amount) || 0,
       });
     }
@@ -267,16 +290,23 @@ export const saveRailwaySettings = (settings: RailwaySettings): void => {
 export const formatSeatingTypeLabel = (key: string): string => {
   // Get names from localStorage first, then fallback to defaults
   try {
-    const appSettings = localStorage.getItem('appSettings');
+    const appSettings = localStorage.getItem("appSettings");
     if (appSettings) {
       const settings = JSON.parse(appSettings);
-      if (key === 'sitting' && settings.type1) return settings.type1;
-      if (key === 'sleeper' && settings.type2) return settings.type2;
+      if (key === "sitting" && settings.type1) return settings.type1;
+      if (key === "sleeper" && settings.type2) return settings.type2;
+      if (key === "type3" && settings.type3) return settings.type3;
     }
-  } catch { }
+  } catch {}
 
   // Fallback to defaults
-  return key === 'sitting' ? "Sitting" : key === 'sleeper' ? "Sleeper" : key;
+  return key === "sitting"
+    ? "Sitting"
+    : key === "sleeper"
+    ? "Sleeper"
+    : key === "type3"
+    ? "Type 3"
+    : key;
 };
 
 /**

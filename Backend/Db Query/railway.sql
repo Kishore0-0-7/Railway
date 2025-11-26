@@ -2,12 +2,12 @@
 -- PostgreSQL database dump
 --
 
-\restrict 7o3lKR3kAocUNpdTir4k2B5zuD525u3w9NOOhOiXAJDAdnILN0OldmchiO2ZsrZ
+\restrict 6QvifzeEI4dmh3hZ95YGSQIDikHVs1ftY5TiFdfEZW0j7FVH5BfPAacgOpgKkhn
 
 -- Dumped from database version 16.10 (Ubuntu 16.10-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.10 (Ubuntu 16.10-0ubuntu0.24.04.1)
 
--- Started on 2025-11-08 14:44:02 IST
+-- Started on 2025-11-15 18:12:08 IST
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -20,6 +20,7 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
+DROP DATABASE IF EXISTS railway;
 --
 -- TOC entry 3480 (class 1262 OID 17719)
 -- Name: railway; Type: DATABASE; Schema: -; Owner: postgres
@@ -30,9 +31,9 @@ CREATE DATABASE railway WITH TEMPLATE = template0 ENCODING = 'UTF8' LOCALE_PROVI
 
 ALTER DATABASE railway OWNER TO postgres;
 
-\unrestrict 7o3lKR3kAocUNpdTir4k2B5zuD525u3w9NOOhOiXAJDAdnILN0OldmchiO2ZsrZ
+\unrestrict 6QvifzeEI4dmh3hZ95YGSQIDikHVs1ftY5TiFdfEZW0j7FVH5BfPAacgOpgKkhn
 \connect railway
-\restrict 7o3lKR3kAocUNpdTir4k2B5zuD525u3w9NOOhOiXAJDAdnILN0OldmchiO2ZsrZ
+\restrict 6QvifzeEI4dmh3hZ95YGSQIDikHVs1ftY5TiFdfEZW0j7FVH5BfPAacgOpgKkhn
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -45,14 +46,225 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- TOC entry 215 (class 1259 OID 17720)
+-- Name: admin_accounts; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.admin_accounts (
+    admin_id character varying(20) NOT NULL,
+    full_name character varying(100) NOT NULL,
+    email character varying(150) NOT NULL,
+    mobile_number character varying(15),
+    password_hash text NOT NULL,
+    role character varying(50) DEFAULT 'Admin'::character varying NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT admin_accounts_role_check CHECK (((role)::text = 'Admin'::text))
+);
+
+
+ALTER TABLE public.admin_accounts OWNER TO postgres;
+
+--
+-- TOC entry 217 (class 1259 OID 17755)
+-- Name: bookings; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.bookings (
+    booking_id character varying(50) NOT NULL,
+    admin_id character varying(20) NOT NULL,
+    worker_id character varying(20) NOT NULL,
+    guest_name character varying(100) NOT NULL,
+    phone_number character varying(15) NOT NULL,
+    number_of_persons integer NOT NULL,
+    booking_type character varying(50) NOT NULL,
+    total_hours integer NOT NULL,
+    booking_date date NOT NULL,
+    in_time time without time zone NOT NULL,
+    out_time time without time zone,
+    proof_type character varying(50) NOT NULL,
+    proof_id character varying(50) NOT NULL,
+    price_per_person numeric(10,2) NOT NULL,
+    total_amount numeric(12,2) NOT NULL,
+    paid_amount numeric(12,2) DEFAULT 0,
+    balance_amount numeric(12,2),
+    payment_method character varying(50) DEFAULT 'cash'::character varying,
+    status character varying(20) DEFAULT 'active'::character varying,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.bookings OWNER TO postgres;
+
+--
+-- TOC entry 219 (class 1259 OID 33613)
+-- Name: settings; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.settings (
+    id integer NOT NULL,
+    admin_id character varying(100) NOT NULL,
+    admin_name character varying(100) NOT NULL,
+    hall_name character varying(100) NOT NULL,
+    type1 character varying(50) DEFAULT NULL::character varying,
+    type1_amount numeric(10,2) DEFAULT NULL::numeric,
+    type2 character varying(50) DEFAULT NULL::character varying,
+    type2_amount numeric(10,2) DEFAULT NULL::numeric,
+    type3 character varying(50) DEFAULT NULL::character varying,
+    type3_amount numeric(10,2) DEFAULT NULL::numeric,
+    type4 character varying(50) DEFAULT NULL::character varying,
+    type4_amount numeric(10,2) DEFAULT NULL::numeric,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    advance_payment_enabled integer DEFAULT 1 NOT NULL,
+    default_advance_percentage numeric(5,2) DEFAULT 20.00,
+    CONSTRAINT settings_advance_payment_enabled_check CHECK ((advance_payment_enabled = ANY (ARRAY[0, 1]))),
+    CONSTRAINT settings_default_advance_percentage_check CHECK (((default_advance_percentage >= (0)::numeric) AND (default_advance_percentage <= (100)::numeric)))
+);
+
+
+ALTER TABLE public.settings OWNER TO postgres;
+
+--
+-- TOC entry 3481 (class 0 OID 0)
+-- Dependencies: 219
+-- Name: COLUMN settings.advance_payment_enabled; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.settings.advance_payment_enabled IS 'Flag to enable (1) or disable (0) advance payment feature';
+
+
+--
+-- TOC entry 3482 (class 0 OID 0)
+-- Dependencies: 219
+-- Name: COLUMN settings.default_advance_percentage; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON COLUMN public.settings.default_advance_percentage IS 'Default percentage for advance payment (0-100)';
+
+
+--
+-- TOC entry 218 (class 1259 OID 33612)
+-- Name: hall_details_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.hall_details_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.hall_details_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 3483 (class 0 OID 0)
+-- Dependencies: 218
+-- Name: hall_details_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.hall_details_id_seq OWNED BY public.settings.id;
+
+
+--
+-- TOC entry 221 (class 1259 OID 33637)
+-- Name: super_admin; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.super_admin (
+    super_admin_id integer NOT NULL,
+    super_admin_name character varying(100) NOT NULL,
+    phone_number character varying(15) NOT NULL,
+    email character varying(100) NOT NULL,
+    password text NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.super_admin OWNER TO postgres;
+
+--
+-- TOC entry 220 (class 1259 OID 33636)
+-- Name: super_admin_super_admin_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.super_admin_super_admin_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.super_admin_super_admin_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 3484 (class 0 OID 0)
+-- Dependencies: 220
+-- Name: super_admin_super_admin_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.super_admin_super_admin_id_seq OWNED BY public.super_admin.super_admin_id;
+
+
+--
+-- TOC entry 216 (class 1259 OID 17735)
+-- Name: worker_accounts; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.worker_accounts (
+    worker_id character varying(20) NOT NULL,
+    admin_id character varying(20) NOT NULL,
+    full_name character varying(100) NOT NULL,
+    mobile_number character varying(15) NOT NULL,
+    joining_date date NOT NULL,
+    gender character varying(10),
+    user_name character varying(100) NOT NULL,
+    password_hash text NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    worker_status character varying(20) DEFAULT 'active'::character varying,
+    CONSTRAINT worker_accounts_gender_check CHECK (((gender)::text = ANY ((ARRAY['Male'::character varying, 'Female'::character varying, 'Other'::character varying])::text[]))),
+    CONSTRAINT worker_accounts_joining_date_check CHECK ((joining_date <= CURRENT_DATE)),
+    CONSTRAINT worker_accounts_worker_status_check CHECK (((worker_status)::text = ANY ((ARRAY['active'::character varying, 'inactive'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.worker_accounts OWNER TO postgres;
+
+--
+-- TOC entry 3277 (class 2604 OID 33616)
+-- Name: settings id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.settings ALTER COLUMN id SET DEFAULT nextval('public.hall_details_id_seq'::regclass);
+
+
+--
+-- TOC entry 3290 (class 2604 OID 33640)
+-- Name: super_admin super_admin_id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.super_admin ALTER COLUMN super_admin_id SET DEFAULT nextval('public.super_admin_super_admin_id_seq'::regclass);
+
+
 --
 -- TOC entry 3468 (class 0 OID 17720)
 -- Dependencies: 215
 -- Data for Name: admin_accounts; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.admin_accounts VALUES ('ADM001', 'Ratheesh', 'rrr@gmail.com', '1237894560', '$2b$10$6ja.lpAfNSKlWdX.Azwb3.s.uE4yktde5CrUc2VqfJE9CAnPNuOOu', 'Admin', '2025-10-25 09:21:50.022888+00', '2025-10-25 09:21:50.022888+00');
-INSERT INTO public.admin_accounts VALUES ('ADM002', 'admin', 'admin@gmail.com', '9876543210', '$2b$10$.n6YCVZ.MHyfwtYFtmvpD.TrjpK5A2RgCiZOhmnd7XV80rl1vOjjW', 'Admin', '2025-10-28 15:29:58.632355+00', '2025-10-28 15:29:58.632355+00');
+INSERT INTO public.admin_accounts VALUES ('ADM001', 'erode', 'erode@gmail.com', '9865911972', '$2b$10$mWAMwTNhv1DSWxqOc60or.hpyjA1JM2gKAERYSAhmPjJjhl8zF/RK', 'Admin', '2025-11-15 12:39:11.063684+00', '2025-11-15 12:39:11.063684+00') ON CONFLICT DO NOTHING;
 
 
 --
@@ -61,31 +273,6 @@ INSERT INTO public.admin_accounts VALUES ('ADM002', 'admin', 'admin@gmail.com', 
 -- Data for Name: bookings; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.bookings VALUES ('0711202593615780861416', 'ADM002', 'WOR007', 'subaranjani sakthivel', '9361578086', 2, 'sleeper', 2, '2025-11-07', '14:20:48.181658', '00:00:00', 'aadhar', '678204507669', 100.00, 400.00, 200.00, 200.00, 'cash', 'active', '2025-11-07 09:14:37.885837+00', '2025-11-07 09:14:37.885837+00');
-INSERT INTO public.bookings VALUES ('0711202578964513211445', 'ADM002', 'WOR014', 'Mohideen S', '7896451321', 10, 'sleeper', 11, '2025-11-07', '14:45:35.789871', NULL, 'aadhar', '6354343413', 100.00, 11000.00, 5500.00, 5500.00, 'cash', 'active', '2025-11-07 09:15:36.278094+00', '2025-11-07 09:15:36.278094+00');
-INSERT INTO public.bookings VALUES ('0711202543146516541122', 'ADM002', 'WOR007', 'Mohid s', '4314651654', 4, 'sitting', 10, '2025-11-07', '11:22:47.328991', '00:00:00', 'aadhar', '354445465465', 50.00, 2000.00, 1000.00, 1000.00, 'cash', 'active', '2025-11-07 09:16:15.514395+00', '2025-11-07 09:16:15.514395+00');
-INSERT INTO public.bookings VALUES ('0711202589778879891447', 'ADM002', 'WOR007', 'Vimal P', '8977887989', 4, 'sleeper', 6, '2025-11-07', '14:47:00', '20:35:00', 'aadhaar', '121212121212', 100.00, 2400.00, 1200.00, 1200.00, 'cash', 'completed', '2025-11-07 09:17:26.924471+00', '2025-11-07 10:04:48.371583+00');
-INSERT INTO public.bookings VALUES ('0711202595665465881252', 'ADM002', 'WOR007', 'vimal k', '9566546588', 5, 'sitting', 6, '2025-11-07', '12:52:00', '18:00:00', 'aadhaar', '148614645464', 50.00, 1500.00, 1250.00, 1250.00, 'cash', 'completed', '2025-11-07 09:16:15.517022+00', '2025-11-07 12:30:38.204817+00');
-INSERT INTO public.bookings VALUES ('0711202564513132322115', 'ADM002', 'WOR016', 'gone s', '6451313232', 10, 'sleeper', 12, '2025-11-07', '21:16:16.293129', NULL, 'aadhar', '653132132121', 100.00, 12000.00, 6000.00, 6000.00, 'cash', 'active', '2025-11-07 15:46:15.706255+00', '2025-11-07 15:46:15.706255+00');
-INSERT INTO public.bookings VALUES ('0711202586464646462118', 'ADM002', 'WOR016', 'john don Y', '8646464646', 5, 'sitting', 11, '2025-11-07', '21:18:52.655089', NULL, 'aadhar', '986494646464', 50.00, 2750.00, 1375.00, 1375.00, 'cash', 'active', '2025-11-07 15:48:52.194679+00', '2025-11-07 15:48:52.194679+00');
-INSERT INTO public.bookings VALUES ('0711202587788798661830', 'ADM002', 'WOR017', 'Soorya S', '8778879866', 2, 'sleeping', 2, '2025-11-07', '18:31:10.115954', '00:28:50', 'aadhar', '787787787787', 100.00, 200.00, 40.00, 160.00, 'Cash', 'completed', '2025-11-07 18:31:47.163026+00', '2025-11-07 18:59:08.103522+00');
-INSERT INTO public.bookings VALUES ('0711202587788798661745', 'ADM002', 'WOR007', 'Vimal P', '8778879866', 1, 'sleeping', 1, '2025-11-07', '17:45:27.294102', '00:29:54', 'aadhar', '451220181054', 50.00, 50.00, 10.00, 40.00, 'Card', 'completed', '2025-11-07 17:45:28.646748+00', '2025-11-07 19:00:02.178474+00');
-INSERT INTO public.bookings VALUES ('0811202578787878780054', 'ADM002', 'WOR017', 'Kishore M', '7878787878', 1, 'sitting', 2, '2025-11-07', '00:54:35.490412', NULL, 'aadhar', '212121212121', 50.00, 50.00, 0.00, 50.00, 'cash', 'active', '2025-11-07 19:24:36.482956+00', '2025-11-07 19:24:36.482956+00');
-INSERT INTO public.bookings VALUES ('0811202587788798660839', 'ADM002', 'WOR017', 'Jagan M', '8778879866', 1, 'sitting', 1, '2025-11-08', '08:40:06.777858', NULL, 'aadhar', '787878787878', 25.00, 25.00, 0.00, 25.00, 'cash', 'active', '2025-11-08 03:10:06.857361+00', '2025-11-08 03:10:06.857361+00');
-INSERT INTO public.bookings VALUES ('0811202578787878780913', 'ADM002', 'WOR017', 'Sabari S', '7878787878', 4, 'sitting', 1, '2025-11-08', '09:14:00.995974', NULL, 'aadhar', '121212121212', 25.00, 100.00, 0.00, 100.00, 'cash', 'active', '2025-11-08 03:44:01.712361+00', '2025-11-08 03:44:01.712361+00');
-INSERT INTO public.bookings VALUES ('0811202578778787870946', 'ADM002', 'WOR017', 'Vimal P', '7877878787', 1, 'sitting', 1, '2025-11-08', '09:46:51.258955', '09:48:27', 'aadhar', '787878787878', 25.00, 25.00, 0.00, 25.00, 'Cash', 'completed', '2025-11-08 04:17:12.205829+00', '2025-11-08 04:18:49.256481+00');
-INSERT INTO public.bookings VALUES ('0811202512121212121224', 'ADM002', 'WOR007', 'Vimal P', '1212121212', 1, 'sitting', 1, '2025-11-08', '12:24:53.986194', '12:45:13', 'aadhar', '121212121212', 50.00, 50.00, 25.00, 25.00, 'Cash', 'completed', '2025-11-08 06:54:56.90519+00', '2025-11-08 07:15:19.093914+00');
-INSERT INTO public.bookings VALUES ('0811202592432461661243', 'ADM002', 'WOR007', 'sabari sekaran', '9243246166', 5, 'sitting', 2, '2025-11-08', '12:43:18.261821', '12:45:59', 'aadhar', '78489765486', 50.00, 500.00, 250.00, 250.00, 'Cash', 'completed', '2025-11-08 07:13:19.980108+00', '2025-11-08 07:16:05.641463+00');
-INSERT INTO public.bookings VALUES ('0811202594987645411209', 'ADM002', 'WOR007', 'sabari sekaran', '9498764541', 5, 'sitting', 6, '2025-11-08', '12:09:00', '17:11:00', 'aadhaar', '465464865465', 50.00, 1500.00, 1250.00, 1250.00, 'cash', 'completed', '2025-11-08 06:39:23.91998+00', '2025-11-08 07:25:01.105916+00');
-INSERT INTO public.bookings VALUES ('0811202598496466541210', 'ADM002', 'WOR007', 'Sabari sekaran', '9849646654', 5, 'sitting', 10, '2025-11-08', '12:11:00', '21:55:00', 'pnr number', '5489456461', 50.00, 2500.00, 1375.00, 1375.00, 'cash', 'completed', '2025-11-08 06:41:01.308779+00', '2025-11-08 07:25:46.869536+00');
-INSERT INTO public.bookings VALUES ('0811202587788798661257', 'ADM002', 'WOR007', 'Vimal P', '8778879866', 1, 'sleeping', 2, '2025-11-08', '12:57:00', '13:58:00', 'aadhaar', '444444444444', 50.00, 100.00, 10.00, 40.00, 'cash', 'completed', '2025-11-08 07:27:41.278401+00', '2025-11-08 07:28:41.80383+00');
-INSERT INTO public.bookings VALUES ('0811202599765498161330', 'ADM002', 'WOR007', 'Sabari sekaran', '9976549816', 4, 'sitting', 2, '2025-11-08', '13:30:43.225728', NULL, 'aadhar', '768765498654', 80.00, 320.00, 64.00, 256.00, 'cash', 'active', '2025-11-08 08:00:44.45604+00', '2025-11-08 08:00:44.45604+00');
-INSERT INTO public.bookings VALUES ('0811202581894614341338', 'ADM002', 'WOR007', 'vimal r', '8189461434', 5, 'sitting', 1, '2025-11-08', '13:38:23.917807', NULL, 'aadhar', '987654345678', 40.00, 200.00, 40.00, 160.00, 'cash', 'active', '2025-11-08 08:08:26.355025+00', '2025-11-08 08:08:26.355025+00');
-INSERT INTO public.bookings VALUES ('0811202594984654651345', 'ADM002', 'WOR007', 'Sabari sekaran', '9498465465', 4, 'sitting', 3, '2025-11-08', '13:45:36.156802', NULL, 'aadhar', '856646544884', 120.00, 480.00, 96.00, 384.00, 'cash', 'active', '2025-11-08 08:15:38.050243+00', '2025-11-08 08:15:38.050243+00');
-INSERT INTO public.bookings VALUES ('0811202578764646541349', 'ADM002', 'WOR007', 'Kishore s', '7876464654', 4, 'sitting', 1, '2025-11-08', '13:49:41.416216', NULL, 'aadhar', '876456789876', 40.00, 160.00, 32.00, 128.00, 'cash', 'active', '2025-11-08 08:19:43.033082+00', '2025-11-08 08:19:43.033082+00');
-INSERT INTO public.bookings VALUES ('0811202546465346431355', 'ADM002', 'WOR007', 'Naveen s', '4646534643', 4, 'sitting', 1, '2025-11-08', '13:56:04.297986', NULL, 'aadhar', '876543245678', 40.00, 160.00, 32.00, 128.00, 'cash', 'active', '2025-11-08 08:26:06.242988+00', '2025-11-08 08:26:06.242988+00');
-INSERT INTO public.bookings VALUES ('0811202594835464651435', 'ADM002', 'WOR007', 'Naveen R', '9483546465', 4, 'sitting', 2, '2025-11-08', '14:35:42.227545', NULL, 'pnr number', '0987656789876', 80.00, 320.00, 64.00, 256.00, 'cash', 'active', '2025-11-08 09:05:44.22172+00', '2025-11-08 09:05:44.22172+00');
-INSERT INTO public.bookings VALUES ('0811202584984676541440', 'ADM002', 'WOR007', 'vimal R', '8498467654', 4, 'sitting', 4, '2025-11-08', '14:41:06.423212', NULL, 'aadhar', '875435467898', 160.00, 640.00, 128.00, 512.00, 'cash', 'active', '2025-11-08 09:11:08.270446+00', '2025-11-08 09:11:08.270446+00');
 
 
 --
@@ -94,7 +281,7 @@ INSERT INTO public.bookings VALUES ('0811202584984676541440', 'ADM002', 'WOR007'
 -- Data for Name: settings; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.settings VALUES (2, 'ADM002', 'Vimal', 'Artechnology', 'sitting', 40.00, NULL, NULL, NULL, NULL, NULL, NULL, '2025-11-07 10:17:55.71307', '2025-11-08 07:46:12.289433', 1, 20.00);
+INSERT INTO public.settings VALUES (7, 'ADM001', 'erode', 'Default Hall', 'Sitting', 100.00, 'Sleeper', 150.00, 'AC', 200.00, 'Premium', 250.00, '2025-11-15 12:39:11.063684', '2025-11-15 12:39:11.063684', 0, 0.00) ON CONFLICT DO NOTHING;
 
 
 --
@@ -111,23 +298,6 @@ INSERT INTO public.settings VALUES (2, 'ADM002', 'Vimal', 'Artechnology', 'sitti
 -- Data for Name: worker_accounts; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO public.worker_accounts VALUES ('WOR015', 'ADM002', 'subaranjani', '9361578086', '2005-12-12', 'Female', 'suba', '$2b$10$jMvp8CSZidZlWKIDKyWoe.5XRK1ZZGd.K.Gw8DmGV8IpHIAYXFpP2', '2025-11-07 06:44:50.348135+00', '2025-11-07 06:48:42.687959+00', 'active');
-INSERT INTO public.worker_accounts VALUES ('WOR016', 'ADM002', 'suba', '9092261384', '2025-11-07', 'Female', 'ranjani', '$2b$10$yrrdYKim36zNClnyG1xpnOhXYMIilHGabVmc5V1A9YRvWIdHDQjkC', '2025-11-07 09:10:07.45501+00', '2025-11-07 09:45:21.120433+00', 'active');
-INSERT INTO public.worker_accounts VALUES ('WOR002', 'ADM002', 'Asha Nair', '9876500009', '2025-10-18', 'Female', 'asha', 'hash2', '2025-11-02 14:51:35.951649+00', '2025-11-04 05:52:24.341367+00', 'inactive');
-INSERT INTO public.worker_accounts VALUES ('WOR006', 'ADM002', 'sampleworker', '1234567890', '2025-11-03', 'Female', 'admin@gmail.com', '$2b$10$7PIE1ABOTsQRDzL6o58cxuOvVyar4Yp./r8DdYms7OHHXb9YiBuau', '2025-11-03 05:33:49.896917+00', '2025-11-04 05:52:45.412272+00', 'active');
-INSERT INTO public.worker_accounts VALUES ('WOR014', 'ADM002', 'Mohid', '8832666531', '2025-11-06', 'Male', 'mohid123', '$2b$10$HORkvSJmPGeW.zaxAc4LF.08QDNrhvwdJigfgVg/1o9rzTLcqSwVW', '2025-11-06 07:11:57.094002+00', '2025-11-07 10:48:15.045604+00', 'active');
-INSERT INTO public.worker_accounts VALUES ('WOR004', 'ADM002', 'Divya Raj', '9876500003', '2025-10-24', 'Female', 'divya', 'hash4', '2025-11-02 14:51:35.951649+00', '2025-11-04 05:53:09.164113+00', 'active');
-INSERT INTO public.worker_accounts VALUES ('WOR017', 'ADM002', 'Vimal', '8778879866', '2025-11-07', 'Male', 'vimal', '$2b$10$KtS9Ge./Zb7TMSSJPGLsre05CJg2gHueEIJVPgy2SC6B2eFCJ6dPO', '2025-11-07 18:21:10.80909+00', '2025-11-07 18:21:10.80909+00', 'active');
-INSERT INTO public.worker_accounts VALUES ('WOR008', 'ADM002', 'bbbb', '1234567000', '2025-04-04', 'Male', 'bbbb', '$2b$10$NVn8Z5QrtLOr1TwNQ.oo6eLfCy2COa7WraFpxjbt.kpgcTEoE82dW', '2025-11-04 13:24:03.713058+00', '2025-11-04 13:24:03.713058+00', 'active');
-INSERT INTO public.worker_accounts VALUES ('WOR009', 'ADM002', 'T1', '7728882899', '2025-11-05', 'Male', 'abb', '$2b$10$b/CL0rgut6Hnv8va7W9NuehWLGgTnbDq5UUdMIgk3A0inBBp8Q8W2', '2025-11-05 04:02:38.469448+00', '2025-11-05 04:02:38.469448+00', 'active');
-INSERT INTO public.worker_accounts VALUES ('WOR010', 'ADM002', 'T2', '6839902067', '2025-11-05', 'Male', 'abbb', '$2b$10$UJY0W70xPmnjljKYvFPT6uKf4ko4N6nNbcJqYkR/Sk6Q7ENl8Fhu2', '2025-11-05 04:04:16.326932+00', '2025-11-05 04:04:16.326932+00', 'active');
-INSERT INTO public.worker_accounts VALUES ('WOR011', 'ADM002', 'Vimal', '8778879833', '2025-11-05', 'Male', 'Vimal12', '$2b$10$xTM85dCR47gqJEbT2Xt8NuQcOw/MOoxRDmbekLg7IZ9o/v6MrHvqC', '2025-11-05 04:05:51.196069+00', '2025-11-05 04:05:51.196069+00', 'active');
-INSERT INTO public.worker_accounts VALUES ('WOR003', 'ADM002', 'Manoj Singh', '9876500002', '2025-09-23', 'Male', 'manoj', 'hash3', '2025-11-02 14:51:35.951649+00', '2025-11-02 18:18:35.044172+00', 'active');
-INSERT INTO public.worker_accounts VALUES ('WOR012', 'ADM002', 'Sabari ', '8685866886', '2025-11-05', 'Male', 'SabariWA01@Gmail.com', '$2b$10$HecY4mwXcf4MC2NIKGllMu6.AzGMA83U3EpBtULED1bIw7LOKHGgu', '2025-11-05 08:27:27.596576+00', '2025-11-05 08:27:27.596576+00', 'active');
-INSERT INTO public.worker_accounts VALUES ('WOR013', 'ADM002', 'Kishore', '8673464347', '2025-11-05', 'Male', 'kishore02@gmail.com', '$2b$10$CPwOsjTsEBBaD1nPNVGX2uVIxxnQL0erzLNJeB23K2nsjit1tzePG', '2025-11-05 08:29:17.868743+00', '2025-11-05 08:29:17.868743+00', 'active');
-INSERT INTO public.worker_accounts VALUES ('WOR007', 'ADM002', 'aaaa', '0123456787', '2025-11-03', 'Male', 'aaaa', '$2b$10$sKQJUMYnqhN5IES8.W68P.zWAt6itRgr2Cpq0q5Y4ubo7POR2AI9y', '2025-11-03 05:36:24.854263+00', '2025-11-05 10:01:46.838024+00', 'active');
-INSERT INTO public.worker_accounts VALUES ('WOR001', 'ADM002', 'wroker', '9876543210', '2025-11-01', 'Male', 'worker', '$2b$10$vHEaQglC8dPxdPdTS6J4reLBt22TcGBhXlNIi90jClV/G12VDzBL6', '2025-11-01 08:59:38.666883+00', '2025-11-06 05:56:24.722866+00', 'inactive');
-INSERT INTO public.worker_accounts VALUES ('WOR005', 'ADM002', 'Sathish Kumar', '9876500004', '2025-08-04', 'Male', 'sathish', 'hash5', '2025-11-02 14:51:35.951649+00', '2025-11-06 05:57:07.53032+00', 'active');
 
 
 --
@@ -136,7 +306,7 @@ INSERT INTO public.worker_accounts VALUES ('WOR005', 'ADM002', 'Sathish Kumar', 
 -- Name: hall_details_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.hall_details_id_seq', 2, true);
+SELECT pg_catalog.setval('public.hall_details_id_seq', 7, true);
 
 
 --
@@ -148,11 +318,146 @@ SELECT pg_catalog.setval('public.hall_details_id_seq', 2, true);
 SELECT pg_catalog.setval('public.super_admin_super_admin_id_seq', 1, false);
 
 
--- Completed on 2025-11-08 14:44:07 IST
+--
+-- TOC entry 3300 (class 2606 OID 33907)
+-- Name: admin_accounts admin_accounts_email_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.admin_accounts
+    ADD CONSTRAINT admin_accounts_email_key UNIQUE (email);
+
+
+--
+-- TOC entry 3302 (class 2606 OID 17734)
+-- Name: admin_accounts admin_accounts_mobile_number_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.admin_accounts
+    ADD CONSTRAINT admin_accounts_mobile_number_key UNIQUE (mobile_number);
+
+
+--
+-- TOC entry 3304 (class 2606 OID 17730)
+-- Name: admin_accounts admin_accounts_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.admin_accounts
+    ADD CONSTRAINT admin_accounts_pkey PRIMARY KEY (admin_id);
+
+
+--
+-- TOC entry 3310 (class 2606 OID 17776)
+-- Name: bookings bookings_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.bookings
+    ADD CONSTRAINT bookings_pkey PRIMARY KEY (booking_id);
+
+
+--
+-- TOC entry 3312 (class 2606 OID 33630)
+-- Name: settings hall_details_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.settings
+    ADD CONSTRAINT hall_details_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 3314 (class 2606 OID 33909)
+-- Name: settings settings_admin_id_unique; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.settings
+    ADD CONSTRAINT settings_admin_id_unique UNIQUE (admin_id);
+
+
+--
+-- TOC entry 3316 (class 2606 OID 33650)
+-- Name: super_admin super_admin_email_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.super_admin
+    ADD CONSTRAINT super_admin_email_key UNIQUE (email);
+
+
+--
+-- TOC entry 3318 (class 2606 OID 33648)
+-- Name: super_admin super_admin_phone_number_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.super_admin
+    ADD CONSTRAINT super_admin_phone_number_key UNIQUE (phone_number);
+
+
+--
+-- TOC entry 3320 (class 2606 OID 33646)
+-- Name: super_admin super_admin_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.super_admin
+    ADD CONSTRAINT super_admin_pkey PRIMARY KEY (super_admin_id);
+
+
+--
+-- TOC entry 3306 (class 2606 OID 17747)
+-- Name: worker_accounts worker_accounts_mobile_number_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.worker_accounts
+    ADD CONSTRAINT worker_accounts_mobile_number_key UNIQUE (mobile_number);
+
+
+--
+-- TOC entry 3308 (class 2606 OID 17745)
+-- Name: worker_accounts worker_accounts_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.worker_accounts
+    ADD CONSTRAINT worker_accounts_pkey PRIMARY KEY (worker_id);
+
+
+--
+-- TOC entry 3322 (class 2606 OID 17777)
+-- Name: bookings bookings_admin_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.bookings
+    ADD CONSTRAINT bookings_admin_id_fkey FOREIGN KEY (admin_id) REFERENCES public.admin_accounts(admin_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- TOC entry 3323 (class 2606 OID 17782)
+-- Name: bookings bookings_worker_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.bookings
+    ADD CONSTRAINT bookings_worker_id_fkey FOREIGN KEY (worker_id) REFERENCES public.worker_accounts(worker_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- TOC entry 3324 (class 2606 OID 33631)
+-- Name: settings fk_admin; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.settings
+    ADD CONSTRAINT fk_admin FOREIGN KEY (admin_id) REFERENCES public.admin_accounts(admin_id) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 3321 (class 2606 OID 17750)
+-- Name: worker_accounts worker_accounts_admin_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.worker_accounts
+    ADD CONSTRAINT worker_accounts_admin_id_fkey FOREIGN KEY (admin_id) REFERENCES public.admin_accounts(admin_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+-- Completed on 2025-11-15 18:12:16 IST
 
 --
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 7o3lKR3kAocUNpdTir4k2B5zuD525u3w9NOOhOiXAJDAdnILN0OldmchiO2ZsrZ
+\unrestrict 6QvifzeEI4dmh3hZ95YGSQIDikHVs1ftY5TiFdfEZW0j7FVH5BfPAacgOpgKkhn
 

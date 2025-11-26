@@ -216,23 +216,24 @@ const Dashboard = () => {
     monthlyRevenue.length > 0
       ? monthlyRevenue.map((item) => ({
           month: item.month?.substring(0, 3) || "N/A",
-          // map backend fields to generic type1/type2 so labels can be dynamic
+          // map backend fields to generic type1/type2/type3 so labels can be dynamic
           type1: item.sitting_bookings || 0,
           type2: item.sleeper_bookings || 0,
+          type3: item.type3_bookings || 0,
         }))
       : [
-          { month: "Jan", type1: 0, type2: 0 },
-          { month: "Feb", type1: 0, type2: 0 },
-          { month: "Mar", type1: 0, type2: 0 },
-          { month: "Apr", type1: 0, type2: 0 },
-          { month: "May", type1: 0, type2: 0 },
-          { month: "Jun", type1: 0, type2: 0 },
-          { month: "Jul", type1: 0, type2: 0 },
-          { month: "Aug", type1: 0, type2: 0 },
-          { month: "Sep", type1: 0, type2: 0 },
-          { month: "Oct", type1: 0, type2: 0 },
-          { month: "Nov", type1: 0, type2: 0 },
-          { month: "Dec", type1: 0, type2: 0 },
+          { month: "Jan", type1: 0, type2: 0, type3: 0 },
+          { month: "Feb", type1: 0, type2: 0, type3: 0 },
+          { month: "Mar", type1: 0, type2: 0, type3: 0 },
+          { month: "Apr", type1: 0, type2: 0, type3: 0 },
+          { month: "May", type1: 0, type2: 0, type3: 0 },
+          { month: "Jun", type1: 0, type2: 0, type3: 0 },
+          { month: "Jul", type1: 0, type2: 0, type3: 0 },
+          { month: "Aug", type1: 0, type2: 0, type3: 0 },
+          { month: "Sep", type1: 0, type2: 0, type3: 0 },
+          { month: "Oct", type1: 0, type2: 0, type3: 0 },
+          { month: "Nov", type1: 0, type2: 0, type3: 0 },
+          { month: "Dec", type1: 0, type2: 0, type3: 0 },
         ];
 
   // Donut chart data from stats
@@ -256,18 +257,30 @@ const Dashboard = () => {
               },
             ]
           : []),
+        ...(isTypeEnabled(3)
+          ? [
+              {
+                type: 3,
+                name: getTypeName(3),
+                value: dashboardStats.top_category?.type3?.percentage || 0,
+              },
+            ]
+          : []),
       ]
     : [
         ...(isTypeEnabled(1)
-          ? [{ type: 1, name: getTypeName(1), value: 50 }]
+          ? [{ type: 1, name: getTypeName(1), value: 33 }]
           : []),
         ...(isTypeEnabled(2)
-          ? [{ type: 2, name: getTypeName(2), value: 50 }]
+          ? [{ type: 2, name: getTypeName(2), value: 33 }]
+          : []),
+        ...(isTypeEnabled(3)
+          ? [{ type: 3, name: getTypeName(3), value: 34 }]
           : []),
       ];
 
-  // type1 -> blue, type2 -> orange
-  const COLORS = ["#3B82F6", "#F59E0B"];
+  // type1 -> blue, type2 -> orange, type3 -> green
+  const COLORS = ["#3B82F6", "#F59E0B", "#10B981"];
 
   const handleBookingClick = (booking: any) => {
     if (booking.status === "active") {
@@ -362,7 +375,7 @@ const Dashboard = () => {
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-5 mb-4 md:mb-6">
-              <div className="bg-gradient-to-br from-gray-900 to-black text-white rounded-lg p-4 md:p-5 shadow-sm h-32 md:h-40 flex flex-col justify-between">
+              <div className="bg-gradient-to-br from-gray-900 to-black text-white rounded-lg p-4 md:p-5 shadow-sm h-48 md:h-48 flex flex-col justify-between">
                 <h3 className="text-xs md:text-sm mb-1 md:mb-2 opacity-90">
                   Total Revenue
                 </h3>
@@ -384,7 +397,7 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-gray-900 to-black text-white rounded-lg p-5 shadow-sm h-40 flex flex-col justify-between">
+              <div className="bg-gradient-to-br from-gray-900 to-black text-white rounded-lg p-5 shadow-sm h-48 flex flex-col justify-between">
                 <p className="text-sm font-semibold mb-4">Top category</p>
                 <div className="flex items-center justify-between">
                   <div className="w-20 h-20">
@@ -422,11 +435,17 @@ const Dashboard = () => {
                         <span className="text-xs">{getTypeName(2)}</span>
                       </div>
                     )}
+                    {isTypeEnabled(3) && (
+                      <div className="flex items-center space-x-1">
+                        <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                        <span className="text-xs">{getTypeName(3)}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg p-4 md:p-5 shadow-sm h-32 md:h-40 flex flex-col justify-between">
+              <div className="bg-white rounded-lg p-4 md:p-5 shadow-sm h-48 md:h-48 flex flex-col justify-between">
                 <h3 className="text-xs md:text-sm text-gray-500 mb-1 md:mb-2">
                   Total Bookings
                 </h3>
@@ -447,7 +466,7 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg p-4 md:p-5 shadow-sm h-32 md:h-40 flex flex-col justify-between">
+              <div className="bg-white rounded-lg p-4 md:p-5 shadow-sm h-48 md:h-48 flex flex-col justify-between">
                 <h3 className="text-xs md:text-sm text-gray-500 mb-1 md:mb-2">
                   Completed
                 </h3>
@@ -469,11 +488,11 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg p-4 md:p-5 shadow-sm h-32 md:h-40 flex flex-col justify-between">
+              <div className="bg-white rounded-lg p-4 md:p-5 shadow-sm h-48 md:h-48 flex flex-col justify-between">
                 <h3 className="text-xs md:text-sm text-gray-500 mb-2 md:mb-3">
                   Booked
                 </h3>
-                <div className="space-y-2 md:space-y-3">
+                <div className="space-y-2 md:space-y-2">
                   {isTypeEnabled(1) && (
                     <ProgressBar
                       value={
@@ -496,6 +515,16 @@ const Dashboard = () => {
                       }
                       color="#F59E0B"
                       label={getTypeName(2)}
+                    />
+                  )}
+                  {isTypeEnabled(3) && (
+                    <ProgressBar
+                      value={dashboardStats?.active_bookings?.type3?.count || 0}
+                      max={
+                        dashboardStats?.active_bookings?.type3?.capacity || 50
+                      }
+                      color="#10B981"
+                      label={getTypeName(3)}
                     />
                   )}
                 </div>
@@ -560,7 +589,7 @@ const Dashboard = () => {
                             Phone No.
                           </th>
                           <th className="text-left p-3 md:p-4 font-medium text-white text-xs uppercase min-w-[100px]">
-                            Seat Type
+                            Type
                           </th>
                           <th className="text-left p-3 md:p-4 font-medium text-white text-xs uppercase min-w-[100px]">
                             In Time
@@ -610,6 +639,8 @@ const Dashboard = () => {
                                     bt === "2"
                                   )
                                     return getTypeName(2);
+                                  if (bt === "type3" || bt === "3")
+                                    return getTypeName(3);
                                   // fallback to raw value
                                   return booking.booking_type || "-";
                                 })()}
@@ -665,7 +696,7 @@ const Dashboard = () => {
                   <div className="flex items-center space-x-1 md:space-x-2">
                     {isTypeEnabled(1) && (
                       <>
-                        <span className="w-2 h-2 bg-yellow-400 rounded-full"></span>
+                        <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
                         <span className="text-xs text-gray-600">
                           {getTypeName(1)}
                         </span>
@@ -673,9 +704,17 @@ const Dashboard = () => {
                     )}
                     {isTypeEnabled(2) && (
                       <>
-                        <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
+                        <span className="w-2 h-2 bg-yellow-400 rounded-full"></span>
                         <span className="text-xs text-gray-600">
                           {getTypeName(2)}
+                        </span>
+                      </>
+                    )}
+                    {isTypeEnabled(3) && (
+                      <>
+                        <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                        <span className="text-xs text-gray-600">
+                          {getTypeName(3)}
                         </span>
                       </>
                     )}
@@ -764,6 +803,14 @@ const Dashboard = () => {
                               fill="#F59E0B"
                               radius={[4, 4, 0, 0]}
                               name={`${getTypeName(2)} Bookings`}
+                            />
+                          )}
+                          {isTypeEnabled(3) && (
+                            <Bar
+                              dataKey="type3"
+                              fill="#10B981"
+                              radius={[4, 4, 0, 0]}
+                              name={`${getTypeName(3)} Bookings`}
                             />
                           )}
                         </BarChart>

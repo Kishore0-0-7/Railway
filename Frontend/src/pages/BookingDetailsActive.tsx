@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Navigation from "@/components/Navigation";
-import { formatSeatingTypeLabel } from "@/lib/settingsUtils";
+import {
+  formatSeatingTypeLabel,
+  getEnabledSeatingTypes,
+} from "@/lib/settingsUtils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -59,6 +62,12 @@ const BookingDetails = () => {
 
   // Scroll to top on route change
   useScrollToTop();
+
+  // Get enabled seating types from Settings
+  const enabledSeatingTypes = getEnabledSeatingTypes();
+  const defaultSeatingType =
+    enabledSeatingTypes.length > 0 ? enabledSeatingTypes[0].key : "sleeper";
+
   const [booking, setBooking] = useState<BookingDetailsData | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -70,7 +79,7 @@ const BookingDetails = () => {
     guestName: "",
     phoneNumber: "",
     numberOfPersons: "",
-    bookingType: "sleeper",
+    bookingType: defaultSeatingType,
     bookingDate: "",
     inTime: "",
     outTime: "",
@@ -367,8 +376,14 @@ const BookingDetails = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="sleeper">{formatSeatingTypeLabel('sleeper')}</SelectItem>
-                      <SelectItem value="sitting">{formatSeatingTypeLabel('sitting')}</SelectItem>
+                      {enabledSeatingTypes.map((seatingType) => (
+                        <SelectItem
+                          key={seatingType.key}
+                          value={seatingType.key}
+                        >
+                          {seatingType.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

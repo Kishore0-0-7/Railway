@@ -20,10 +20,11 @@
   },
   "homepage": "https://github.com/ratheesh-12/final-railway#readme",
   "dependencies": {
-    "express": "^4.18.2",
+    "bcrypt": "^5.1.1",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
-    "bcrypt": "^5.1.1",
+    "express": "^4.18.2",
+    "multer": "^2.0.2",
     "pg": "^8.11.3"
   },
   "devDependencies": {

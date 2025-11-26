@@ -5,6 +5,7 @@ import { getAdminId } from "./cookieUtils";
 type AppSettings = {
   type1?: string;
   type2?: string;
+  type3?: string;
   [key: string]: any;
 } | null;
 
@@ -47,17 +48,23 @@ export default function useAppSettings() {
     await fetch();
   };
 
-  const getTypeName = (index: 1 | 2) => {
-    if (!settings) return index === 1 ? "Sitting" : "Sleeper";
+  const getTypeName = (index: 1 | 2 | 3) => {
+    if (!settings) {
+      if (index === 1) return "Sitting";
+      if (index === 2) return "Sleeper";
+      return "Type 3";
+    }
     if (index === 1) return settings.type1 || "Sitting";
-    return settings.type2 || "Sleeper";
+    if (index === 2) return settings.type2 || "Sleeper";
+    return settings.type3 || "Type 3";
   };
 
-  const isTypeEnabled = (index: 1 | 2) => {
+  const isTypeEnabled = (index: 1 | 2 | 3) => {
     // While settings are loading or absent, assume enabled so UI doesn't jump
     if (!settings) return true;
     if (index === 1) return !!settings.type1;
-    return !!settings.type2;
+    if (index === 2) return !!settings.type2;
+    return !!settings.type3;
   };
 
   return { settings, loading, getTypeName, isTypeEnabled, refresh } as const;

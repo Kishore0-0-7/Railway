@@ -12,6 +12,10 @@ dist/
 build/
 *.log
 
+# Uploaded files
+Backend/uploads/*
+!Backend/uploads/.gitkeep
+
 # IDE
 .vscode/
 .idea/

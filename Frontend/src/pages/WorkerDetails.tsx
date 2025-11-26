@@ -309,7 +309,7 @@ const WorkerDetails = () => {
               >
                 {(worker.status || "active").toString().toLowerCase() ===
                 "active"
-                  ? "Remove Worker"
+                  ? "Inactive Worker"
                   : "Re-Join"}
               </Button>
               <Button
@@ -372,9 +372,6 @@ const WorkerDetails = () => {
                         : stats.seatingTypeStats[seatingType.key] || 0}
                     </h2>
                     <p className="text-xs text-gray-500">{seatingType.label}</p>
-                    <p className="text-xs text-blue-600 font-medium">
-                      ₹{seatingType.amount}/hr
-                    </p>
                   </div>
                 ))}
               </div>

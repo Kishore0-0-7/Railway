@@ -41,7 +41,7 @@ const Navigation = () => {
   const navItems = [
     { label: "Dashboard", path: "/dashboard", icon: Home },
     { label: "Workers", path: "/workerlist", icon: Users },
-    { label: "Manage Login", path: "/manage-login", icon: Settings },
+    // { label: "Manage Login", path: "/manage-login", icon: Settings },
     { label: "Report", path: "/report", icon: BarChart3 },
   ];
 

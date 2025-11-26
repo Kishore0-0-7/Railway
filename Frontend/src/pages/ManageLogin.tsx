@@ -4,6 +4,8 @@ import Navigation from "@/components/Navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -11,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { workerAPI } from "@/services/api";
+import { workerAPI, settingsAPI } from "@/services/api";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
 import { useScrollToTop } from "@/hooks/useScrollToTop";
@@ -32,6 +34,7 @@ const ManageLogin = () => {
     confirmPassword: "",
     role: "worker",
     currentPassword: "",
+    seatingTypes: [] as string[],
   });
 
   interface Worker {
@@ -57,10 +60,48 @@ const ManageLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
 
-  // Fetch workers on component mount
+  // Available seating types from settings
+  interface SeatingType {
+    name: string;
+    enabled: boolean;
+  }
+  const [availableSeatingTypes, setAvailableSeatingTypes] = useState<
+    SeatingType[]
+  >([]);
+
+  // Fetch workers and settings on component mount
   useEffect(() => {
     fetchWorkers();
+    fetchSettings();
   }, []);
+
+  // Fetch settings to get available seating types
+  const fetchSettings = async () => {
+    try {
+      const adminId = getAdminId();
+      if (!adminId) return;
+
+      const response = await settingsAPI.getSettings(adminId);
+      if (response.data && response.data.data) {
+        const data = response.data.data;
+        const types: SeatingType[] = [];
+
+        if (data.type1) {
+          types.push({ name: data.type1, enabled: true });
+        }
+        if (data.type2) {
+          types.push({ name: data.type2, enabled: true });
+        }
+        if (data.type3) {
+          types.push({ name: data.type3, enabled: true });
+        }
+
+        setAvailableSeatingTypes(types);
+      }
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+    }
+  };
 
   // Check for incoming worker data from navigation
   useEffect(() => {
@@ -83,6 +124,7 @@ const ManageLogin = () => {
         confirmPassword: "",
         role: "worker",
         currentPassword: "",
+        seatingTypes: incomingWorker.seating_types || [],
       });
     }
   }, [location.state]);
@@ -101,11 +143,17 @@ const ManageLogin = () => {
       const response = await workerAPI.getAllWorkers({ admin_id: adminId });
 
       if (response.data && response.data.workers) {
+        // Load seating types from localStorage
+        const storedSeatingTypes = JSON.parse(
+          localStorage.getItem("workerSeatingTypes") || "{}"
+        );
+
         // normalize fields so ManageLogin table can safely read status and total_bookings
         const normalized: Worker[] = response.data.workers.map((w: any) => ({
           ...w,
           status: w.status || w.worker_status || w.workerStatus || "active",
           total_bookings: w.total_bookings ?? w.totalBookings ?? 0,
+          seating_types: storedSeatingTypes[w.worker_id] || [],
         }));
         setAccounts(normalized);
       }
@@ -210,12 +258,33 @@ const ManageLogin = () => {
         gender: formData.gender || null,
         user_name: formData.username,
         password: formData.password,
+        // Note: seating_types will be added when backend support is ready
+        // seating_types: formData.seatingTypes,
       };
 
       const response = await workerAPI.createWorker(workerData);
 
       if (response.data) {
-        toast.success("Worker account created successfully!");
+        // Store seating types in localStorage temporarily until backend is updated
+        if (formData.seatingTypes.length > 0) {
+          const workerId = response.data.worker?.worker_id;
+          if (workerId) {
+            const existingTypes = JSON.parse(
+              localStorage.getItem("workerSeatingTypes") || "{}"
+            );
+            existingTypes[workerId] = formData.seatingTypes;
+            localStorage.setItem(
+              "workerSeatingTypes",
+              JSON.stringify(existingTypes)
+            );
+          }
+        }
+
+        const seatingTypesMsg =
+          formData.seatingTypes.length > 0
+            ? ` (Seating types: ${formData.seatingTypes.join(", ")})`
+            : "";
+        toast.success(`Worker account created successfully!${seatingTypesMsg}`);
         await fetchWorkers(); // Refresh the list
         handleCancel();
       }
@@ -242,6 +311,7 @@ const ManageLogin = () => {
       confirmPassword: "",
       role: "worker",
       currentPassword: "",
+      seatingTypes: [],
     });
     setEditingAccount(null);
     setEditingWorkerId("");
@@ -263,6 +333,7 @@ const ManageLogin = () => {
       confirmPassword: "",
       role: "worker",
       currentPassword: "",
+      seatingTypes: (account as any).seating_types || [],
     });
     setShowResetPassword(false);
     setShowNewPassword(false);
@@ -304,9 +375,22 @@ const ManageLogin = () => {
         mobile_number: formData.mobileNumber,
         joining_date: formData.joiningDate,
         gender: formData.gender || null,
+        // Note: seating_types will be added when backend support is ready
       };
 
       await workerAPI.updateWorker(editingWorkerId, workerData);
+
+      // Store seating types in localStorage temporarily until backend is updated
+      if (formData.seatingTypes.length >= 0) {
+        const existingTypes = JSON.parse(
+          localStorage.getItem("workerSeatingTypes") || "{}"
+        );
+        existingTypes[editingWorkerId] = formData.seatingTypes;
+        localStorage.setItem(
+          "workerSeatingTypes",
+          JSON.stringify(existingTypes)
+        );
+      }
 
       // Handle password reset if requested
       if (showResetPassword && formData.password.trim()) {
@@ -314,9 +398,20 @@ const ManageLogin = () => {
           new_password: formData.password,
           admin_reset: true, // Indicate this is an admin-initiated reset
         });
-        toast.success("Worker account and password updated successfully!");
+
+        const seatingTypesMsg =
+          formData.seatingTypes.length > 0
+            ? ` (Seating types: ${formData.seatingTypes.join(", ")})`
+            : "";
+        toast.success(
+          `Worker account and password updated successfully!${seatingTypesMsg}`
+        );
       } else {
-        toast.success("Worker account updated successfully!");
+        const seatingTypesMsg =
+          formData.seatingTypes.length > 0
+            ? ` (Seating types: ${formData.seatingTypes.join(", ")})`
+            : "";
+        toast.success(`Worker account updated successfully!${seatingTypesMsg}`);
       }
 
       await fetchWorkers(); // Refresh the list
@@ -411,6 +506,55 @@ const ManageLogin = () => {
                     <SelectItem value="Other">Other</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              {/* Seating Types */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Seating Types
+                </label>
+                <div className="border rounded-md p-4 space-y-3 bg-background">
+                  {availableSeatingTypes.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No seating types configured in settings
+                    </p>
+                  ) : (
+                    availableSeatingTypes.map((type) => (
+                      <div
+                        key={type.name}
+                        className="flex items-center space-x-2"
+                      >
+                        <Checkbox
+                          id={`seating-${type.name}`}
+                          checked={formData.seatingTypes.includes(type.name)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setFormData({
+                                ...formData,
+                                seatingTypes: [
+                                  ...formData.seatingTypes,
+                                  type.name,
+                                ],
+                              });
+                            } else {
+                              setFormData({
+                                ...formData,
+                                seatingTypes: formData.seatingTypes.filter(
+                                  (t) => t !== type.name
+                                ),
+                              });
+                            }
+                          }}
+                        />
+                        <Label
+                          htmlFor={`seating-${type.name}`}
+                          className="text-sm font-normal cursor-pointer capitalize"
+                        >
+                          {type.name}
+                        </Label>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
               {/* Username */}
               <div>

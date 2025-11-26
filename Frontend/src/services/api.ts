@@ -162,6 +162,16 @@ export const settingsAPI = {
   upsertSettings: (adminId: string, data: any) =>
     apiClient.post(`/settings/upsert-settings/${adminId}`, data),
 
+  uploadLogo: (adminId: string, file: File) => {
+    const formData = new FormData();
+    formData.append("logo", file);
+    return apiClient.post(`/settings/upload-logo/${adminId}`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  },
+
   deleteSettings: (adminId: string) =>
     apiClient.delete(`/settings/delete-settings/${adminId}`),
 };

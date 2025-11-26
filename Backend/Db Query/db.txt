@@ -83,3 +83,39 @@ CREATE TABLE IF NOT EXISTS bookings (
 select * from admin_accounts;
 select * from worker_accounts;
 select * from bookings;
+
+
+
+-- Settings table (FIXED - added missing commas)
+CREATE TABLE settings (
+    id SERIAL PRIMARY KEY,
+    admin_id VARCHAR(50) NOT NULL,
+    type_1 VARCHAR(50),
+    type_1_amount INT,
+    type_2 VARCHAR(50),
+    grace_amount INT,
+    advance_payment_enabled BOOLEAN DEFAULT FALSE,
+    advanced_payment DECIMAL(10,2),
+    grace_amount_type2 INT
+);
+
+-- type2_amount table
+CREATE TABLE type2_amount (
+    id SERIAL PRIMARY KEY,
+    setting_id INT NOT NULL REFERENCES settings(id) ON DELETE CASCADE,
+    min_duration INT NOT NULL,
+    max_duration INT NOT NULL,
+    amount INT NOT NULL
+);
+
+-- Printer table (FIXED - changed COLUMN to comma)
+CREATE TABLE printer (
+    id SERIAL PRIMARY KEY,
+    admin_id VARCHAR(50) NOT NULL,
+    heading1 VARCHAR(100),
+    heading2 VARCHAR(100),
+    info1 VARCHAR(255),
+    info2 VARCHAR(255),
+    note TEXT,
+    hall_name TEXT
+);
