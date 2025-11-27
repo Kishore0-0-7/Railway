@@ -974,7 +974,7 @@ const Settings = () => {
                               }
                             }}
                             placeholder="e.g., Thank you!"
-                            maxLength={20}
+                            
                             className="flex-1 transition-all duration-200 focus:ring-2 focus:ring-blue-500"
                           />
                           <Button
