@@ -720,16 +720,16 @@ const Settings = () => {
                     <div className="space-y-2">
                       <Label className="flex items-center justify-between text-xs font-medium text-gray-700">
                         <span>Heading 1</span>
-                        <span className="text-gray-400">
+                        {/* <span className="text-gray-400">
                           (Max 10-12 characters)
-                        </span>
+                        </span> */}
                       </Label>
                       {editing === "heading1" ? (
                         <div className="flex gap-2">
                           <Input
                             value={editValue}
                             onChange={(e) =>
-                              setEditValue(e.target.value.slice(0, 12))
+                              setEditValue(e.target.value)
                             }
                             onKeyDown={(e) => {
                               if (e.key === "Enter") {
@@ -738,7 +738,7 @@ const Settings = () => {
                               }
                             }}
                             placeholder="e.g., RAILWAY"
-                            maxLength={12}
+                            
                             className="flex-1 transition-all duration-200 focus:ring-2 focus:ring-blue-500"
                           />
                           <Button
@@ -779,16 +779,16 @@ const Settings = () => {
                     <div className="space-y-2">
                       <Label className="flex items-center justify-between text-xs font-medium text-gray-700">
                         <span>Heading 2</span>
-                        <span className="text-gray-400">
+                        {/* <span className="text-gray-400">
                           (Max 12-14 characters)
-                        </span>
+                        </span> */}
                       </Label>
                       {editing === "heading2" ? (
                         <div className="flex gap-2">
                           <Input
                             value={editValue}
                             onChange={(e) =>
-                              setEditValue(e.target.value.slice(0, 14))
+                              setEditValue(e.target.value)
                             }
                             onKeyDown={(e) => {
                               if (e.key === "Enter") {
@@ -797,7 +797,7 @@ const Settings = () => {
                               }
                             }}
                             placeholder="e.g., STATION"
-                            maxLength={14}
+                            
                             className="flex-1 transition-all duration-200 focus:ring-2 focus:ring-blue-500"
                           />
                           <Button
@@ -838,16 +838,16 @@ const Settings = () => {
                     <div className="space-y-2">
                       <Label className="flex items-center justify-between text-xs font-medium text-gray-700">
                         <span>Info 1</span>
-                        <span className="text-gray-400">
+                        {/* <span className="text-gray-400">
                           (Max 14-16 characters)
-                        </span>
+                        </span> */}
                       </Label>
                       {editing === "info1" ? (
                         <div className="flex gap-2">
                           <Input
                             value={editValue}
                             onChange={(e) =>
-                              setEditValue(e.target.value.slice(0, 16))
+                              setEditValue(e.target.value)
                             }
                             onKeyDown={(e) => {
                               if (e.key === "Enter") {
@@ -856,7 +856,7 @@ const Settings = () => {
                               }
                             }}
                             placeholder="e.g., Platform 1"
-                            maxLength={16}
+                            
                             className="flex-1 transition-all duration-200 focus:ring-2 focus:ring-blue-500"
                           />
                           <Button
@@ -897,16 +897,16 @@ const Settings = () => {
                     <div className="space-y-2">
                       <Label className="flex items-center justify-between text-xs font-medium text-gray-700">
                         <span>Info 2</span>
-                        <span className="text-gray-400">
+                        {/* {/* <span className="text-gray-400">
                           (Max 14-16 characters)
-                        </span>
+                        </span> */}
                       </Label>
                       {editing === "info2" ? (
                         <div className="flex gap-2">
                           <Input
                             value={editValue}
                             onChange={(e) =>
-                              setEditValue(e.target.value.slice(0, 16))
+                              setEditValue(e.target.value)
                             }
                             onKeyDown={(e) => {
                               if (e.key === "Enter") {
@@ -915,7 +915,7 @@ const Settings = () => {
                               }
                             }}
                             placeholder="e.g., Gate 2"
-                            maxLength={16}
+                            
                             className="flex-1 transition-all duration-200 focus:ring-2 focus:ring-blue-500"
                           />
                           <Button
@@ -956,16 +956,16 @@ const Settings = () => {
                     <div className="space-y-2">
                       <Label className="flex items-center justify-between text-xs font-medium text-gray-700">
                         <span>Note (Footer)</span>
-                        <span className="text-gray-400">
+                        {/* <span className="text-gray-400">
                           (Max 16-20 characters)
-                        </span>
+                        </span> */}
                       </Label>
                       {editing === "note" ? (
                         <div className="flex gap-2">
                           <Input
                             value={editValue}
                             onChange={(e) =>
-                              setEditValue(e.target.value.slice(0, 20))
+                              setEditValue(e.target.value)
                             }
                             onKeyDown={(e) => {
                               if (e.key === "Enter") {
