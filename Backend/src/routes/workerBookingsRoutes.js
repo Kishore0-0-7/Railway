@@ -22,6 +22,8 @@ const router = express.Router();
 // Create New Booking (Page 1 - Add New Booking)
 router.post("/create-booking", createBooking);
 
+router.get("/get-bookings-worker/:id")
+
 // ==================== GET Routes ====================
 
 // Get All Bookings (with optional filters: status, admin_id, worker_id, booking_date)

@@ -64,8 +64,33 @@ const Navigation = () => {
     navigate(path);
     if (isMobile) {
       setMenuOpen(false);
+      // menuOpen effect will remove classes; explicit removals are redundant but safe:
+      document.documentElement.classList.remove("no-scroll");
+      document.body.classList.remove("no-scroll");
     }
   };
+
+  // Ensure background scroll is blocked only when mobile menu is open,
+  // and allow scrolling inside the sidebar itself (so its scrollbar works).
+  useEffect(() => {
+    const sidebar = document.querySelector(".mobile-sidebar") as HTMLElement | null;
+    if (menuOpen) {
+      document.documentElement.classList.add("no-scroll");
+      document.body.classList.add("no-scroll");
+      if (sidebar) sidebar.classList.add("allow-scroll");
+    } else {
+      document.documentElement.classList.remove("no-scroll");
+      document.body.classList.remove("no-scroll");
+      if (sidebar) sidebar.classList.remove("allow-scroll");
+    }
+
+    // cleanup on unmount
+    return () => {
+      document.documentElement.classList.remove("no-scroll");
+      document.body.classList.remove("no-scroll");
+      if (sidebar) sidebar.classList.remove("allow-scroll");
+    };
+  }, [menuOpen]);
 
   // Close sidebar when clicking outside on mobile
   useEffect(() => {
@@ -109,11 +134,10 @@ const Navigation = () => {
                 <button
                   key={item.path}
                   onClick={() => navigate(item.path)}
-                  className={`transition-colors ${
-                    location.pathname === item.path
+                  className={`transition-colors ${location.pathname === item.path
                       ? "text-white font-medium"
                       : "hover:text-white"
-                  }`}
+                    }`}
                 >
                   {item.label}
                 </button>
@@ -155,12 +179,19 @@ const Navigation = () => {
       {/* Mobile Sidebar Overlay - Only for mobile */}
       {isMobile && menuOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden">
-          <div className="mobile-sidebar fixed left-0 top-0 h-full w-64 bg-black text-gray-300 z-50 transform transition-transform duration-300 ease-in-out">
+          <div
+            className="mobile-sidebar fixed left-0 top-0 h-full w-64 bg-black text-gray-300 z-50 transform transition-transform duration-300 ease-in-out allow-scroll"
+          // note: allow-scroll class is present initially; effect keeps it in sync
+          >
             {/* Sidebar Header */}
             <div className="flex items-center justify-between p-4 border-b border-gray-700">
               <div className="text-white font-bold text-lg">Admin Panel</div>
               <button
-                onClick={() => setMenuOpen(false)}
+                onClick={() => {
+                  setMenuOpen(false);
+                  document.documentElement.classList.remove("no-scroll");
+                  document.body.classList.remove("no-scroll");
+                }}
                 className="text-gray-300 hover:text-white focus:outline-none"
               >
                 <X className="w-6 h-6" />
@@ -175,11 +206,10 @@ const Navigation = () => {
                   <button
                     key={item.path}
                     onClick={() => handleNavClick(item.path)}
-                    className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg transition-all ${
-                      location.pathname === item.path
+                    className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg transition-all ${location.pathname === item.path
                         ? "bg-gray-800 text-white font-medium"
                         : "hover:bg-gray-800 hover:text-white"
-                    }`}
+                      }`}
                   >
                     <IconComponent className="w-5 h-5" />
                     <span className="text-sm">{item.label}</span>
@@ -227,7 +257,13 @@ const Navigation = () => {
               </div>
 
               <button
-                onClick={handleLogout}
+                onClick={() => {
+                  handleLogout();
+                  // ensure classes removed on logout
+                  setMenuOpen(false);
+                  document.documentElement.classList.remove("no-scroll");
+                  document.body.classList.remove("no-scroll");
+                }}
                 className="w-full flex items-center space-x-3 px-3 py-3 rounded-lg hover:bg-gray-800 hover:text-white transition-all border-t border-gray-700 pt-3"
               >
                 <LogOut className="w-5 h-5" />

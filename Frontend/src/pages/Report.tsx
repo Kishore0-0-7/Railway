@@ -216,11 +216,11 @@ const Report = () => {
   const data =
     monthlyRevenueData.length > 0
       ? monthlyRevenueData.map((item, index) => ({
-          month: item.month || `Month ${index + 1}`, // Backend returns 'month' not 'month_name'
-          year: selectedYear,
-          revenue: parseFloat(item.total_revenue || 0),
-          change: 0, // Growth percentage not provided by this endpoint
-        }))
+        month: item.month || `Month ${index + 1}`, // Backend returns 'month' not 'month_name'
+        year: selectedYear,
+        revenue: parseFloat(item.total_revenue || 0),
+        change: 0, // Growth percentage not provided by this endpoint
+      }))
       : [];
 
   const current = data[currentIndex] || {
@@ -231,11 +231,25 @@ const Report = () => {
   };
 
   const handlePrev = () => {
-    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : data.length - 1));
+    setCurrentIndex((prev) => {
+      const newIndex = prev > 0 ? prev - 1 : data.length - 1;
+      // Update selectedMonth when in month view so daily data refetches
+      if (timePeriod === "month") {
+        setSelectedMonth(months[newIndex]);
+      }
+      return newIndex;
+    });
   };
 
   const handleNext = () => {
-    setCurrentIndex((prev) => (prev < data.length - 1 ? prev + 1 : 0));
+    setCurrentIndex((prev) => {
+      const newIndex = prev < data.length - 1 ? prev + 1 : 0;
+      // Update selectedMonth when in month view so daily data refetches
+      if (timePeriod === "month") {
+        setSelectedMonth(months[newIndex]);
+      }
+      return newIndex;
+    });
   };
 
   // Get enabled seating types from Settings
@@ -279,20 +293,26 @@ const Report = () => {
     // Year view: Show all 12 months
     revenueData =
       monthlyRevenueData.length > 0
-        ? monthlyRevenueData.map(
-            (item) => parseFloat(item.total_revenue || 0) / 1000
-          )
+        ? monthlyRevenueData.map((item) =>
+          showRevenue
+            ? parseFloat(item.total_revenue || 0)
+            : parseInt(item.total_bookings || 0)
+        )
         : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
     // Process seating type data dynamically based on Settings
     enabledSeatingTypes.forEach((seatingType) => {
       const backendKey = getBackendColumnName(seatingType.key);
-      const columnName = `${backendKey}_revenue`;
+      const columnName = showRevenue
+        ? `${backendKey}_revenue`
+        : `${backendKey}_bookings`;
       seatingTypeData[seatingType.key] =
         monthlyRevenueData.length > 0
-          ? monthlyRevenueData.map(
-              (item) => parseFloat(item[columnName] || 0) / 1000
-            )
+          ? monthlyRevenueData.map((item) =>
+            showRevenue
+              ? parseFloat(item[columnName] || 0)
+              : parseInt(item[columnName] || 0)
+          )
           : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     });
 
@@ -306,16 +326,22 @@ const Report = () => {
   } else {
     // Month view: Show daily data for the selected month
     if (dailyRevenueData.length > 0) {
-      revenueData = dailyRevenueData.map(
-        (item) => parseFloat(item.total_revenue || 0) / 1000
+      revenueData = dailyRevenueData.map((item) =>
+        showRevenue
+          ? parseFloat(item.total_revenue || 0)
+          : parseInt(item.total_bookings || 0)
       );
 
       // Process daily seating type data dynamically
       enabledSeatingTypes.forEach((seatingType) => {
         const backendKey = getBackendColumnName(seatingType.key);
-        const columnName = `${backendKey}_revenue`;
-        seatingTypeData[seatingType.key] = dailyRevenueData.map(
-          (item) => parseFloat(item[columnName] || 0) / 1000
+        const columnName = showRevenue
+          ? `${backendKey}_revenue`
+          : `${backendKey}_bookings`;
+        seatingTypeData[seatingType.key] = dailyRevenueData.map((item) =>
+          showRevenue
+            ? parseFloat(item[columnName] || 0)
+            : parseInt(item[columnName] || 0)
         );
       });
 
@@ -353,18 +379,26 @@ const Report = () => {
     const todayBookings = dashboardStats?.todayBookings || 0; // backend may not provide
 
     if (period === "year") {
+      // Get the current month's data based on currentIndex for the first card
+      const currentMonthData = monthlyRevenueData[currentIndex] || {
+        total_revenue: 0,
+        total_bookings: 0,
+      };
+      const currentMonthRevenue = parseFloat(currentMonthData.total_revenue || 0);
+      const currentMonthBookings = parseInt(currentMonthData.total_bookings || 0);
+
       return [
         {
           title: "Total Revenue",
-          amount: formatCurrency(totalRevenueYear),
-          change: `${totalBookingsYear} bookings`,
+          amount: formatCurrency(currentMonthRevenue),
+          change: `${currentMonthBookings} bookings`,
           period: selectedYear,
           trending: true,
         },
         {
           title: "Total Bookings",
-          amount: totalBookingsYear.toString(),
-          change: `${dashboardStats?.completedBookings || 0} completed`,
+          amount: currentMonthBookings.toString(),
+          change: `${current.month.substring(0, 3)} bookings`,
           period: selectedYear,
           trending: true,
         },
@@ -384,25 +418,49 @@ const Report = () => {
         },
       ];
     } else {
-      // Month view - derive values from monthlyRevenueData (fallback to dashboardStats)
-      const monthIndex = months.indexOf(selectedMonth);
-      const selectedMonthKey = selectedMonth.toLowerCase();
-      const normalizeLabel = (value?: string) =>
-        value ? value.slice(0, 3).toLowerCase() : "";
-      const currentMonthData = monthlyRevenueData.find((m) => {
-        if (typeof m?.month_number === "number" && monthIndex >= 0) {
-          return m.month_number === monthIndex + 1;
-        }
-        const label =
-          normalizeLabel(m?.month?.toString()) ||
-          normalizeLabel(m?.month_name?.toString());
-        return label === selectedMonthKey;
-      });
-      const monthRevenue =
-        parseFloat(currentMonthData?.total_revenue || "0") || 0;
-      const monthBookings = currentMonthData?.total_bookings || 0;
-      const avgBookingHourMonth =
-        currentMonthData?.avg_booking_hour || avgBookingHourYear || 0;
+      // Month view - calculate stats from daily data for the selected month
+      let monthRevenue = 0;
+      let monthBookings = 0;
+      let monthTotalHours = 0;
+
+      // If we have daily data, sum it up for accurate month stats
+      if (dailyRevenueData.length > 0) {
+        monthRevenue = dailyRevenueData.reduce(
+          (sum, day) => sum + parseFloat(day.total_revenue || 0),
+          0
+        );
+        monthBookings = dailyRevenueData.reduce(
+          (sum, day) => sum + parseInt(day.total_bookings || 0),
+          0
+        );
+        // Sum total hours from daily data
+        monthTotalHours = dailyRevenueData.reduce(
+          (sum, day) => sum + parseFloat(day.total_hours || 0),
+          0
+        );
+      } else {
+        // Fallback to monthlyRevenueData if daily data not available
+        const monthIndex = months.indexOf(selectedMonth);
+        const selectedMonthKey = selectedMonth.toLowerCase();
+        const normalizeLabel = (value?: string) =>
+          value ? value.slice(0, 3).toLowerCase() : "";
+        const currentMonthData = monthlyRevenueData.find((m) => {
+          if (typeof m?.month_number === "number" && monthIndex >= 0) {
+            return m.month_number === monthIndex + 1;
+          }
+          const label =
+            normalizeLabel(m?.month?.toString()) ||
+            normalizeLabel(m?.month_name?.toString());
+          return label === selectedMonthKey;
+        });
+        monthRevenue = parseFloat(currentMonthData?.total_revenue || "0") || 0;
+        monthBookings = currentMonthData?.total_bookings || 0;
+        monthTotalHours = parseFloat(currentMonthData?.total_hours || "0") || 0;
+      }
+
+      // Calculate average booking hour: use dashboardStats.avgBookingHour (consistent with year view)
+      // Backend doesn't provide per-day hours, so use the global average
+      const avgBookingHourMonth = dashboardStats?.avgBookingHour || 0;
 
       return [
         {
@@ -448,33 +506,20 @@ const Report = () => {
   const xLabels =
     timePeriod === "year"
       ? [
-          "Jan",
-          "Feb",
-          "Mar",
-          "Apr",
-          "May",
-          "Jun",
-          "Jul",
-          "Aug",
-          "Sep",
-          "Oct",
-          "Nov",
-          "Dec",
-        ]
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ]
       : Array.from({ length: 31 }, (_, i) => (i + 1).toString());
-
-  // Calculate graph width based on data points for horizontal scrolling
-  const graphWidth = isMobile
-    ? Math.max(800, revenueData.length * 60) // Minimum 800px, or data points * 60px
-    : "100%";
-
-  // Responsive chart height
-  const chartHeight = isMobile ? 320 : 480;
-
-  // Calculate Y position for data points (inverted for SVG coordinate system)
-  const calculateYPosition = (value: number, maxValue: number = 1200) => {
-    return 220 - (value / maxValue) * 220;
-  };
 
   // Make chart responsive: compute total points and helper to map index -> X coordinate
   const totalPoints = Math.max(
@@ -485,8 +530,19 @@ const Report = () => {
   const leftPadding = isMobile ? 40 : 50;
   const rightPadding = isMobile ? 40 : 50;
 
-  // For mobile scrolling, we need to calculate the actual width
+  // Unified width for mobile so Chrome renders like Firefox (labels spaced, scrollable)
   const mobileChartWidth = Math.max(1000, totalPoints * 80); // Dynamic width based on data points
+
+  // Calculate graph width based on data points for horizontal scrolling
+  const graphWidth = isMobile ? mobileChartWidth : "100%";
+
+  // Responsive chart height
+  const chartHeight = isMobile ? 320 : 480;
+
+  // Calculate Y position for data points (inverted for SVG coordinate system)
+  const calculateYPosition = (value: number, maxValue: number = 1200) => {
+    return 220 - (value / maxValue) * 220;
+  };
 
   const getX = (index: number) => {
     if (totalPoints <= 1) return leftPadding;
@@ -535,14 +591,14 @@ const Report = () => {
     // Get data for the point
     const currentData = !showRevenue
       ? {
-          sleeper: sleeperData[clampedIndex],
-          sitting: sittingData[clampedIndex],
-          point: clampedIndex,
-        }
+        sleeper: sleeperData[clampedIndex],
+        sitting: sittingData[clampedIndex],
+        point: clampedIndex,
+      }
       : {
-          revenue: revenueData[clampedIndex],
-          point: clampedIndex,
-        };
+        revenue: revenueData[clampedIndex],
+        point: clampedIndex,
+      };
 
     return {
       data: currentData,
@@ -573,7 +629,7 @@ const Report = () => {
 
   // Handle touch move (for mobile)
   const handleTouchMove = (event: React.TouchEvent) => {
-    event.preventDefault();
+    // Do not preventDefault here so horizontal scroll/pan works on mobile (Chrome)
     const touch = event.touches[0];
     const result = getDataFromCoordinates(touch.clientX, touch.clientY);
 
@@ -685,19 +741,17 @@ const Report = () => {
 
                           <div className="mt-3">
                             <div
-                              className={`${
-                                isMobile ? "text-2xl" : "text-3xl"
-                              } font-bold text-white`}
+                              className={`${isMobile ? "text-2xl" : "text-3xl"
+                                } font-bold text-white`}
                             >
                               {stat.amount}
                             </div>
                             <div
-                              className={`mt-2 text-xs md:text-sm font-medium ${
-                                stat.change &&
+                              className={`mt-2 text-xs md:text-sm font-medium ${stat.change &&
                                 stat.change.toString().includes("-")
-                                  ? "text-red-400"
-                                  : "text-green-400"
-                              }`}
+                                ? "text-red-400"
+                                : "text-green-400"
+                                }`}
                             >
                               {stat.change}
                             </div>
@@ -722,9 +776,8 @@ const Report = () => {
                             </button>
 
                             <div
-                              className={`${
-                                isMobile ? "text-base" : "text-lg"
-                              } font-medium text-gray-400`}
+                              className={`${isMobile ? "text-base" : "text-lg"
+                                } font-medium text-gray-400`}
                             >
                               {current.month.substring(0, 3)}
                             </div>
@@ -772,9 +825,8 @@ const Report = () => {
 
                       <div className="flex items-end justify-between mb-3 md:mb-2">
                         <div
-                          className={`${
-                            isMobile ? "text-2xl" : "text-3xl"
-                          } font-bold text-gray-900`}
+                          className={`${isMobile ? "text-2xl" : "text-3xl"
+                            } font-bold text-gray-900`}
                         >
                           {stat.amount}
                         </div>
@@ -782,9 +834,8 @@ const Report = () => {
 
                       <div className="flex items-center justify-between">
                         <span
-                          className={`text-xs md:text-sm font-medium flex align ${
-                            stat.trending ? "text-green-500" : "text-red-500"
-                          }`}
+                          className={`text-xs md:text-sm font-medium flex align ${stat.trending ? "text-green-500" : "text-red-500"
+                            }`}
                         >
                           {stat.change}
                         </span>
@@ -856,21 +907,19 @@ const Report = () => {
                   <div className="flex bg-black rounded-full p-1 w-full sm:w-48 relative shrink-0">
                     <button
                       onClick={() => setShowRevenue(false)}
-                      className={`flex-1 py-2 px-3 text-xs md:text-sm rounded-full transition-all ${
-                        !showRevenue
-                          ? "bg-white text-black font-semibold shadow"
-                          : "text-white"
-                      }`}
+                      className={`flex-1 py-2 px-3 text-xs md:text-sm rounded-full transition-all ${!showRevenue
+                        ? "bg-white text-black font-semibold shadow"
+                        : "text-white"
+                        }`}
                     >
                       Bookings
                     </button>
                     <button
                       onClick={() => setShowRevenue(true)}
-                      className={`flex-1 py-2 px-3 text-xs md:text-sm rounded-full transition-all ${
-                        showRevenue
-                          ? "bg-white text-black font-semibold shadow"
-                          : "text-white"
-                      }`}
+                      className={`flex-1 py-2 px-3 text-xs md:text-sm rounded-full transition-all ${showRevenue
+                        ? "bg-white text-black font-semibold shadow"
+                        : "text-white"
+                        }`}
                     >
                       Revenue
                     </button>
@@ -892,11 +941,13 @@ const Report = () => {
               {/* Scrollable Chart Area for Mobile */}
               <div
                 ref={graphContainerRef}
-                className="relative w-full bg-white"
+                className="relative w-full bg-white scrollable-graph"
                 style={{
                   height: `${chartHeight}px`,
                   overflowX: isMobile ? "auto" : "hidden",
                   overflowY: "hidden",
+                  touchAction: "pan-x pan-y",
+                  WebkitOverflowScrolling: "touch",
                 }}
               >
                 {/* Chart Content with Dynamic Width */}
@@ -905,7 +956,8 @@ const Report = () => {
                     width: isMobile ? graphWidth : "100%",
                     height: "100%",
                     position: "relative",
-                    minWidth: isMobile ? "800px" : "auto",
+                    /* removed rigid minWidth that caused horizontal overflow on zoomed mobile views */
+                    // minWidth: isMobile ? "800px" : "auto",
                   }}
                 >
                   {/* Grid Lines */}
@@ -992,9 +1044,8 @@ const Report = () => {
                                 style={{
                                   strokeDasharray: 4000,
                                   strokeDashoffset: graphAnimation ? 0 : 4000,
-                                  transition: `stroke-dashoffset 1.5s ease-in-out ${
-                                    index * 0.3
-                                  }s`,
+                                  transition: `stroke-dashoffset 1.5s ease-in-out ${index * 0.3
+                                    }s`,
                                 }}
                               />
                             );
@@ -1084,31 +1135,31 @@ const Report = () => {
                     >
                       {timePeriod === "year"
                         ? xLabels.map((label, index) => (
-                            <div
-                              key={label}
-                              className="text-center flex-1"
-                              style={{
-                                fontSize: isMobile ? "8px" : "11px",
-                                lineHeight: "1.2",
-                                padding: "0 1px",
-                              }}
-                            >
-                              {label}
-                            </div>
-                          ))
+                          <div
+                            key={label}
+                            className="text-center flex-1"
+                            style={{
+                              fontSize: isMobile ? "8px" : "11px",
+                              lineHeight: "1.2",
+                              padding: "0 1px",
+                            }}
+                          >
+                            {label}
+                          </div>
+                        ))
                         : xLabels.map((label, index) => (
-                            <div
-                              key={label}
-                              className="text-center flex-1"
-                              style={{
-                                fontSize: isMobile ? "7px" : "10px",
-                                lineHeight: "1.2",
-                                padding: "0 0.5px",
-                              }}
-                            >
-                              {label}
-                            </div>
-                          ))}
+                          <div
+                            key={label}
+                            className="text-center flex-1"
+                            style={{
+                              fontSize: isMobile ? "7px" : "10px",
+                              lineHeight: "1.2",
+                              padding: "0 0.5px",
+                            }}
+                          >
+                            {label}
+                          </div>
+                        ))}
                     </div>
                   </div>
                 </div>
@@ -1172,7 +1223,7 @@ const Report = () => {
                         <span className="text-xs text-gray-600">Revenue:</span>
                       </div>
                       <span className="text-xs font-semibold text-gray-800">
-                        ₹ {(tooltip.data.revenue * 1000).toLocaleString()}
+                        ₹ {Number(tooltip.data.revenue || 0).toLocaleString()}
                       </span>
                     </div>
                   )}

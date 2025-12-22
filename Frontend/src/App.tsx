@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import { useEffect } from "react";
 
 import Login from "./pages/Login";
@@ -31,70 +31,72 @@ const App = () => {
     initializeSettings();
   }, []);
 
+  // NOTE: previous global MutationObserver-based scroll-lock removed.
+  // Navigation now toggles `no-scroll` on <html>/<body> and applies `allow-scroll`
+  // to the open sidebar so overlay scrolling works while background is locked.
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Public route */}
-            <Route path="/" element={<Login />} />
+        <Routes>
+          {/* Public route */}
+          <Route path="/" element={<Login />} />
 
-            {/* Catch-all route */}
-            <Route path="*" element={<NotFound />} />
+          {/* Catch-all route */}
+          <Route path="*" element={<NotFound />} />
 
-            {/* Protected Routes with Footer */}
-            <Route element={<MainLayout />}>
-              <Route
-                path="/dashboard"
-                element={<ProtectedRoute element={<Dashboard />} />}
-              />
-              <Route
-                path="/workerlist"
-                element={<ProtectedRoute element={<WorkerList />} />}
-              />
-              <Route
-                path="/booking-details-active/:id"
-                element={<ProtectedRoute element={<BookingDetailsActive />} />}
-              />
-              <Route
-                path="/booking-details-completed/:id"
-                element={
-                  <ProtectedRoute element={<BookingDetailsCompleted />} />
-                }
-              />
-              <Route
-                path="/worker-details/:id"
-                element={<ProtectedRoute element={<WorkerDetails />} />}
-              />
-              <Route
-                path="/submit-booking/:id"
-                element={<ProtectedRoute element={<SubmitBooking />} />}
-              />
-              <Route
-                path="/add-login"
-                element={<ProtectedRoute element={<AddLogin />} />}
-              />
-              <Route
-                path="/manage-login"
-                element={<ProtectedRoute element={<ManageLogin />} />}
-              />
-              <Route
-                path="/report"
-                element={<ProtectedRoute element={<Report />} />}
-              />
-              <Route
-                path="/profile"
-                element={<ProtectedRoute element={<Profile />} />}
-              />
-              <Route
-                path="/settings"
-                element={<ProtectedRoute element={<Settings />} />}
-              />
-            </Route>
-          </Routes>
-        </BrowserRouter>
+          {/* Protected Routes with Footer */}
+          <Route element={<MainLayout />}>
+            <Route
+              path="/dashboard"
+              element={<ProtectedRoute element={<Dashboard />} />}
+            />
+            <Route
+              path="/workerlist"
+              element={<ProtectedRoute element={<WorkerList />} />}
+            />
+            <Route
+              path="/booking-details-active/:id"
+              element={<ProtectedRoute element={<BookingDetailsActive />} />}
+            />
+            <Route
+              path="/booking-details-completed/:id"
+              element={
+                <ProtectedRoute element={<BookingDetailsCompleted />} />
+              }
+            />
+            <Route
+              path="/worker-details/:id"
+              element={<ProtectedRoute element={<WorkerDetails />} />}
+            />
+            <Route
+              path="/submit-booking/:id"
+              element={<ProtectedRoute element={<SubmitBooking />} />}
+            />
+            <Route
+              path="/add-login"
+              element={<ProtectedRoute element={<AddLogin />} />}
+            />
+            <Route
+              path="/manage-login"
+              element={<ProtectedRoute element={<ManageLogin />} />}
+            />
+            <Route
+              path="/report"
+              element={<ProtectedRoute element={<Report />} />}
+            />
+            <Route
+              path="/profile"
+              element={<ProtectedRoute element={<Profile />} />}
+            />
+            <Route
+              path="/settings"
+              element={<ProtectedRoute element={<Settings />} />}
+            />
+          </Route>
+        </Routes>
       </TooltipProvider>
     </QueryClientProvider>
   );

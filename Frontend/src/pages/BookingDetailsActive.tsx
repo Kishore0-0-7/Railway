@@ -255,7 +255,7 @@ const BookingDetails = () => {
   };
 
   const handleBack = () => {
-    navigate(-1);
+    navigate("/");
   };
 
   // keep legacy booking-based balance for display fallback if needed

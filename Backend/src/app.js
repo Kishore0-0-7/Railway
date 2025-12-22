@@ -2,7 +2,7 @@ const express = require("express");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const path = require("path");
-
+const closebook = require("./routes/closeBooking.js");
 const adminRoutes = require("./routes/adminRoutes.js");
 const workerRoutes = require("./routes/workerRoutes.js");
 const workerBookingsRoutes = require("./routes/workerBookingsRoutes.js");
@@ -42,5 +42,5 @@ app.use("/api/analytics", bookingRoutes);
 //app.use("/api/settings", settingsRoutes);
 app.use("/api/setting", settingRoutes);
 app.use("/api/settings", settingRoutes);
-
+app.use("/api/closebook", closebook);
 module.exports = app;

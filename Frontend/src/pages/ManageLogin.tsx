@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ import { getAdminId } from "@/lib/cookieUtils";
 
 const ManageLogin = () => {
   const location = useLocation();
+  const navigate = useNavigate();
 
   // Scroll to top on route change
   useScrollToTop();
@@ -318,6 +319,11 @@ const ManageLogin = () => {
     setShowResetPassword(false);
     setShowPassword(false);
     setShowNewPassword(false);
+  };
+
+  // For Cancel button: go back to previous page
+  const handleCancelAndGoBack = () => {
+    navigate(-1);
   };
 
   const handleRowClick = (account: Worker) => {
@@ -654,7 +660,7 @@ const ManageLogin = () => {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={handleCancel}
+                  onClick={handleCancelAndGoBack}
                   disabled={submitting}
                   className="w-full lg:w-[300px] px-12 py-3 border border-muted-foreground/30 hover:bg-muted/30 rounded-md"
                 >
@@ -683,90 +689,6 @@ const ManageLogin = () => {
               </div>
             </div>
           </form>
-        </div>
-
-        {/* Table Section */}
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-card border rounded-lg overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="text-left p-4 font-medium">s.no</th>
-                    <th className="text-left p-4 font-medium">Name</th>
-                    <th className="text-left p-4 font-medium">Login ID</th>
-                    <th className="text-left p-4 font-medium">Phone No.</th>
-                    <th className="text-left p-4 font-medium">Gender</th>
-                    <th className="text-left p-4 font-medium">Joining Date</th>
-                    <th className="text-left p-4 font-medium">
-                      Total Bookings
-                    </th>
-                    <th className="text-left p-4 font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr>
-                      <td
-                        colSpan={8}
-                        className="p-4 text-center text-muted-foreground"
-                      >
-                        Loading workers...
-                      </td>
-                    </tr>
-                  ) : accounts.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={8}
-                        className="p-4 text-center text-muted-foreground"
-                      >
-                        No workers found. Create one using the form above.
-                      </td>
-                    </tr>
-                  ) : (
-                    accounts.map((account, index) => (
-                      <tr
-                        key={account.worker_id}
-                        className="border-b hover:bg-muted/30 cursor-pointer"
-                        onClick={() => handleRowClick(account)}
-                      >
-                        <td className="p-4">{index + 1}</td>
-                        <td className="p-4">{account.full_name}</td>
-                        <td className="p-4">{account.worker_id}</td>
-                        <td className="p-4">{account.mobile_number}</td>
-                        <td className="p-4">{account.gender || "N/A"}</td>
-                        <td className="p-4">
-                          {formatDateForDisplay(account.joining_date)}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {account.total_bookings || 0}
-                        </td>
-                        <td className="p-4">
-                          <Badge
-                            variant={
-                              account.status === "active"
-                                ? "default"
-                                : "secondary"
-                            }
-                            className={
-                              account.status === "active"
-                                ? "bg-green-500 text-white"
-                                : "bg-red-400 text-white"
-                            }
-                          >
-                            {account.status}
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-              <p className="text-sm text-center text-gray-500 p-3">
-                Click to View and Edit Details
-              </p>
-            </div>
-          </div>
         </div>
       </main>
     </div>

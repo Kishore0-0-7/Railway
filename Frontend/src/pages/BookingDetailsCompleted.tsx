@@ -78,7 +78,7 @@ const BookingDetails = () => {
     return Math.max(balance, 0);
   }, [booking]);
 
-  const handleBack = () => navigate(-1);
+  const handleBack = () => navigate("/");
 
   return (
     <div className="min-h-screen bg-muted">

@@ -1,4 +1,8 @@
-import { useState, useEffect } from "react";
+// Hooks
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useScrollToTop } from "@/hooks/useScrollToTop";
+
+// Components & UI
 import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,18 +32,20 @@ import {
   Image as ImageIcon,
   Clock,
 } from "lucide-react";
-import { useScrollToTop } from "@/hooks/useScrollToTop";
-import { settingsAPI } from "@/services/api";
-import { clearSettingsCache } from "@/lib/settingsUtils";
-import { getAdminId, getAdminName, getEmail } from "@/lib/cookieUtils";
-import { Textarea } from "@/components/ui/textarea";
 
+// API
+import { settingsAPI } from "@/services/api";
+
+// Cookies
+import { getAdminId, getAdminName, getEmail } from "@/lib/cookieUtils";
+
+// Interfaces
 interface SeatingType {
   name: string;
   amount: string;
   enabled: boolean;
   breakdown?: Record<string, string>;
-  grace_time?: string; // in minutes
+  grace_time?: string; 
 }
 
 interface SettingsData {
@@ -59,9 +65,9 @@ interface SettingsData {
   default_advance_percentage: string;
 }
 
+// Fixed Datas
 const FIXED_SEATING_NAMES = ["Sitting", "Sleeping"];
 
-// add an easily reusable default settings object for reset
 const INITIAL_SETTINGS: SettingsData = {
   admin_id: "",
   admin_name: "",
@@ -93,13 +99,360 @@ const INITIAL_SETTINGS: SettingsData = {
   default_advance_percentage: "20",
 };
 
-const Settings = () => {
-  // Scroll to top on route change
+// Memoized Components for Better Performance
+interface EditableFieldProps {
+  fieldKey: string;
+  label: string;
+  value: string;
+  placeholder: string;
+  icon?: React.ReactNode;
+  editing: string | null;
+  editValue: string;
+  maxLength?: number;
+  onStartEdit: (key: string, value: string) => void;
+  onSaveEdit: (key: string) => void;
+  onCancelEdit: () => void;
+  onEditValueChange: (value: string) => void;
+}
+
+const EditableField = React.memo<EditableFieldProps>((
+  {
+    fieldKey,
+    label,
+    value,
+    placeholder,
+    icon,
+    editing,
+    editValue,
+    maxLength,
+    onStartEdit,
+    onSaveEdit,
+    onCancelEdit,
+    onEditValueChange,
+  }
+) => {
+  const isEditing = editing === fieldKey;
+
+  return (
+    <div className="space-y-2">
+      <Label className="flex items-center justify-between text-xs font-medium text-gray-700">
+        <span className="flex items-center">
+          {icon}
+          {label}
+        </span>
+      </Label>
+      {isEditing ? (
+        <div className="flex gap-2">
+          <Input
+            value={editValue}
+            onChange={(e) => onEditValueChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                onSaveEdit(fieldKey);
+              }
+            }}
+            placeholder={placeholder}
+            maxLength={maxLength}
+            className="flex-1 transition-all duration-200 focus:ring-2 focus:ring-blue-500"
+          />
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => onSaveEdit(fieldKey)}
+            className="bg-green-600 hover:bg-green-700 shadow-md"
+          >
+            <Check className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={onCancelEdit}
+            className="shadow-md"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      ) : (
+        <div className="relative">
+          <Input
+            value={value}
+            placeholder={placeholder}
+            readOnly
+            onClick={() => onStartEdit(fieldKey, value)}
+            className="cursor-pointer pr-10 hover:bg-gray-50 transition-colors text-sm"
+          />
+          <Edit className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+        </div>
+      )}
+    </div>
+  );
+});
+
+EditableField.displayName = "EditableField";
+
+interface SeatingCardProps {
+  seatType: SeatingType;
+  index: number;
+  color: { bg: string; label: string };
+  editing: string | null;
+  editValue: string;
+  onStartEdit: (key: string, value: string) => void;
+  onSaveSeatingEdit: (index: number, field: string) => void;
+  onCancelEdit: () => void;
+  onEditValueChange: (value: string) => void;
+  onBreakdownChange: (index: number, slot: string, value: string) => void;
+}
+
+const SeatingCard = React.memo<SeatingCardProps>((
+  {
+    seatType,
+    index,
+    color,
+    editing,
+    editValue,
+    onStartEdit,
+    onSaveSeatingEdit,
+    onCancelEdit,
+    onEditValueChange,
+    onBreakdownChange,
+  }
+) => {
+  return (
+    <Card className="border-2 hover:border-blue-300 transition-colors">
+      <CardContent className="p-4">
+        <div className="space-y-4">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className={`w-3 h-3 rounded-full ${color.bg}`}></div>
+              <span className="font-semibold text-gray-700">{color.label}</span>
+            </div>
+            <Badge className="text-xs bg-green-100 text-green-800">Active</Badge>
+          </div>
+
+          {/* Grace Time */}
+          <div className="space-y-2">
+            <Label className="flex items-center text-xs text-gray-600">
+              <Clock className="w-3 h-3 mr-1" />
+              Grace Time (minutes)
+            </Label>
+            {editing === `grace_${index}` ? (
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  min="0"
+                  value={editValue}
+                  onChange={(e) => onEditValueChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      onSaveSeatingEdit(index, "grace_time");
+                    }
+                  }}
+                  placeholder="0"
+                  className="flex-1 text-sm"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => onSaveSeatingEdit(index, "grace_time")}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <Check className="h-3 w-3" />
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={onCancelEdit}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            ) : (
+              <div className="relative">
+                <Input
+                  value={seatType.grace_time || "0"}
+                  placeholder="0"
+                  readOnly
+                  onClick={() => onStartEdit(`grace_${index}`, seatType.grace_time || "0")}
+                  className="cursor-pointer pr-8 text-sm hover:bg-gray-50"
+                />
+                <Edit className="absolute right-2 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400" />
+              </div>
+            )}
+          </div>
+
+          {/* Price Section */}
+          <div className="space-y-2">
+            <Label className="text-xs text-gray-600">Price for Hours (₹)</Label>
+            {index === 1 ? (
+              // Sleeping breakdown: four editable inputs
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {["1-3", "1-6", "1-12", "1-24"].map((slot) => (
+                  <div key={slot} className="flex items-center gap-2">
+                    <span className="w-20 text-sm text-gray-700">{slot}</span>
+                    <div className="relative flex-1">
+                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                        ₹
+                      </span>
+                      <Input
+                        type="number"
+                        value={seatType.breakdown?.[slot] || ""}
+                        onChange={(e) => onBreakdownChange(index, slot, e.target.value)}
+                        placeholder="0"
+                        className="pl-7 text-sm"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              // Sitting: single amount input
+              <>
+                {editing === `amount_${index}` ? (
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                        ₹
+                      </span>
+                      <Input
+                        value={editValue}
+                        onChange={(e) => onEditValueChange(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            onSaveSeatingEdit(index, "amount");
+                          }
+                        }}
+                        placeholder="0"
+                        type="number"
+                        className="pl-7 text-sm"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => onSaveSeatingEdit(index, "amount")}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <Check className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={onCancelEdit}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
+                      ₹
+                    </span>
+                    <Input
+                      value={seatType.amount}
+                      placeholder="0"
+                      readOnly
+                      onClick={() => onStartEdit(`amount_${index}`, seatType.amount)}
+                      className="cursor-pointer pl-7 pr-8 text-sm hover:bg-gray-50"
+                    />
+                    <Edit className="absolute right-2 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400" />
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+});
+
+SeatingCard.displayName = "SeatingCard";
+
+interface LogoUploadSectionProps {
+  imagePreview: string;
+  uploadingImage: boolean;
+  onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onRemoveImage: () => void;
+}
+
+const LogoUploadSection = React.memo<LogoUploadSectionProps>((
+  { imagePreview, uploadingImage, onImageUpload, onRemoveImage }
+) => {
+  return (
+    <div className="space-y-2">
+      <Label className="flex items-center text-sm font-medium text-gray-700">
+        <ImageIcon className="w-4 h-4 mr-2 text-purple-500" />
+        Logo / Header Image
+      </Label>
+      <div className="flex flex-col sm:flex-row gap-4 items-start">
+        {/* Image Preview */}
+        {imagePreview ? (
+          <div className="relative">
+            <img
+              src={imagePreview}
+              alt="Logo preview"
+              className="w-20 h-20 object-contain border-2 border-gray-200 rounded-lg"
+            />
+            <button
+              type="button"
+              onClick={onRemoveImage}
+              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+            >
+              <X className="w-2 h-2" />
+            </button>
+          </div>
+        ) : (
+          <div className="w-20 h-20 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
+            <ImageIcon className="w-6 h-6 text-gray-400" />
+          </div>
+        )}
+
+        {/* Upload Button */}
+        <div className="flex-1">
+          <label htmlFor="logo-upload" className="cursor-pointer">
+            <div className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors w-fit">
+              {uploadingImage ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Upload className="w-4 h-4" />
+              )}
+              <span className="text-sm">
+                {uploadingImage ? "Uploading..." : "Upload Image"}
+              </span>
+            </div>
+            <input
+              id="logo-upload"
+              type="file"
+              accept="image/*"
+              onChange={onImageUpload}
+              className="hidden"
+              disabled={uploadingImage}
+            />
+          </label>
+          <p className="text-xs text-gray-500 mt-2">
+            Recommended: PNG or JPG, max 2MB
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+LogoUploadSection.displayName = "LogoUploadSection";
+
+// Function Component
+function Settings() {
   useScrollToTop();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  // initial state: ensure fixed names
   const [settings, setSettings] = useState<SettingsData>(
     JSON.parse(JSON.stringify(INITIAL_SETTINGS))
   );
@@ -109,14 +462,13 @@ const Settings = () => {
   const [editValue, setEditValue] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState<string>("");
-
-  // Get admin_id from cookies
   const adminId = getAdminId() || "";
-
-  // Persist unsaved seating type names/amounts locally so toggling off/on
-  // doesn't permanently lose previously entered values even if the server
-  // clears them when a type is disabled.
   const DRAFTS_KEY = "seatingTypeDrafts";
+
+  // Calling the api to fetch the settings 
+  useEffect(() => {
+    fetchSettings();
+  }, []);
 
   const loadDrafts = (): Array<{
     name?: string;
@@ -132,113 +484,134 @@ const Settings = () => {
     }
   };
 
-  const saveDrafts = (
-    drafts: Array<{
-      name?: string;
-      amount?: string;
-      breakdown?: Record<string, string>;
-    }>
-  ) => {
-    try {
-      localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts));
-    } catch {
-      // ignore localStorage errors
-    }
-  };
-
-  useEffect(() => {
-    fetchSettings();
-  }, []);
-
   const fetchSettings = async () => {
     try {
       setLoading(true);
-      const response = await settingsAPI.getSettings(adminId);
 
-      if (response.data && response.data.data) {
-        const data = response.data.data;
-        // Map database structure to component structure
-        const drafts = loadDrafts();
-        const serverBreakdown = data.type2_breakdown || {};
-        const resolveValue = (value: any, fallback = "") =>
-          value !== undefined && value !== null && value !== ""
-            ? value.toString()
-            : fallback;
-        const sleeperAmount = resolveValue(
-          serverBreakdown["1-24"] ?? data.type2_amount,
-          drafts[1]?.amount || ""
-        );
-        const breakdownWithFallback: Record<string, string> = {
-          "1-3": resolveValue(
-            serverBreakdown["1-3"],
-            drafts[1]?.breakdown?.["1-3"] || ""
-          ),
-          "1-6": resolveValue(
-            serverBreakdown["1-6"],
-            drafts[1]?.breakdown?.["1-6"] || ""
-          ),
-          "1-12": resolveValue(
-            serverBreakdown["1-12"],
-            drafts[1]?.breakdown?.["1-12"] || ""
-          ),
-          "1-24": resolveValue(
-            serverBreakdown["1-24"] ?? data.type2_amount,
-            drafts[1]?.breakdown?.["1-24"] || ""
-          ),
-        };
-        const seatingTypes: SeatingType[] = [
-          {
-            // enforce fixed name, keep server amount if present or draft
-            name: FIXED_SEATING_NAMES[0],
-            amount: data.type1_amount?.toString() || drafts[0]?.amount || "",
-            enabled: !!data.type1, // use server enabled flag
-            grace_time: data.type1_grace_time?.toString() || "0",
-          },
-          {
-            name: FIXED_SEATING_NAMES[1],
-            amount: sleeperAmount,
-            breakdown: breakdownWithFallback,
-            enabled: !!data.type2,
-            grace_time: data.type2_grace_time?.toString() || "0",
-          },
-        ];
+      const [settingsResponse] = await Promise.all([
+        settingsAPI.getSettings(adminId).catch(() => ({ data: { data: {} } })),
+      ]);
 
-        setSettings({
-          admin_id: data.admin_id,
-          admin_name: data.admin_name,
-          hall_name: data.hall_name || "",
-          heading1: data.heading1 || "",
-          heading2: data.heading2 || "",
-          info1: data.info1 || "",
-          info2: data.info2 || "",
-          note: data.note || "",
-          logo_url: data.logo_url || "",
-          seating_types: seatingTypes,
-          advance_payment_enabled: data.advance_payment_enabled ?? true,
-          discount_enabled: data.discount_enabled ?? false,
-          discount_percentage: data.discount_percentage ?? 0,
-          default_advance_percentage:
-            data.default_advance_percentage?.toString() || "20",
+      const settingsData = settingsResponse.data?.data || {};
+      const breakdown: Record<string, string> = {
+        "1-3": "",
+        "1-6": "",
+        "1-12": "",
+        "1-24": ""
+      };
+
+      if (settingsData.type2_breakdown) {
+        Object.assign(breakdown, {
+          "1-3": settingsData.type2_breakdown["1-3"]?.toString() || breakdown["1-3"],
+          "1-6": settingsData.type2_breakdown["1-6"]?.toString() || breakdown["1-6"],
+          "1-12": settingsData.type2_breakdown["1-12"]?.toString() || breakdown["1-12"],
+          "1-24": settingsData.type2_breakdown["1-24"]?.toString() || breakdown["1-24"],
         });
+      }
 
-        if (data.logo_url) {
-          // If logo_url is a server path (starts with /uploads), prepend API base URL
-          const apiBaseUrl =
-            import.meta.env.VITE_API_URL ||
-            "https://railway-api.artechnology.pro";
-          const logoUrl = data.logo_url.startsWith("/uploads")
-            ? `${apiBaseUrl.replace("/api", "")}${data.logo_url}`
-            : data.logo_url;
-          setImagePreview(logoUrl);
-        }
+      const drafts = loadDrafts();
+
+      const resolveOrDraft = (serverVal: any, draftVal?: any) =>
+        serverVal !== undefined && serverVal !== null && serverVal !== ""
+          ? serverVal.toString()
+          : draftVal || "";
+
+      const seatingTypes: SeatingType[] = [
+        {
+          name: FIXED_SEATING_NAMES[0],
+          amount: resolveOrDraft(
+            settingsData.type1_amount ?? settingsData.type_1_amount,
+            drafts[0]?.amount
+          ),
+          enabled: true,
+          grace_time: resolveOrDraft(
+            settingsData.type1_grace_time ?? settingsData.grace_amount ?? settingsData.grace_amount_type1 ?? "0",
+            "0"
+          ),
+        },
+        {
+          name: FIXED_SEATING_NAMES[1],
+          amount: resolveOrDraft(
+            breakdown["1-24"] || settingsData.type2_amount,
+            drafts[1]?.amount
+          ),
+          breakdown: {
+            "1-3": resolveOrDraft(breakdown["1-3"], drafts[1]?.breakdown?.["1-3"]),
+            "1-6": resolveOrDraft(breakdown["1-6"], drafts[1]?.breakdown?.["1-6"]),
+            "1-12": resolveOrDraft(breakdown["1-12"], drafts[1]?.breakdown?.["1-12"]),
+            "1-24": resolveOrDraft(breakdown["1-24"] || settingsData.type2_amount, drafts[1]?.breakdown?.["1-24"]),
+          },
+          enabled: true,
+          grace_time: resolveOrDraft(
+            settingsData.type2_grace_time ?? settingsData.grace_amount_type2 ?? "0",
+            "0"
+          ),
+        },
+      ];
+
+      setSettings({
+        admin_id: settingsData.admin_id || adminId,
+        admin_name: settingsData.full_name || settingsData.admin_name || "",
+        hall_name: settingsData.hall_name || "",
+        heading1: settingsData.heading1 || "",
+        heading2: settingsData.heading2 || "",
+        info1: settingsData.info1 || "",
+        info2: settingsData.info2 || "",
+        note: settingsData.note || "",
+        logo_url: settingsData.logo_url || "",
+        seating_types: seatingTypes,
+        advance_payment_enabled: settingsData.advance_payment_enabled ?? true,
+        discount_enabled: settingsData.discount_enabled ?? false,
+        discount_percentage: settingsData.discount_percentage ?? 0,
+        default_advance_percentage: (settingsData.advanced_payment ?? settingsData.default_advance_percentage ?? "20").toString(),
+      });
+
+      // set image preview if available (printer has priority)
+      const logoCandidate = settingsData.logo_url || "";
+      if (logoCandidate) {
+        const logoUrl = logoCandidate.startsWith("http")
+          ? logoCandidate
+          : `${import.meta.env.VITE_API_URL?.replace(/\/+$/, "") || "https://railway-api.artechnology.pro"}${logoCandidate}`;
+        setImagePreview(logoUrl);
       }
     } catch (error: any) {
-      if (error.response?.status === 404) {
-        // Settings not found, use default empty values
-        toast.info("No settings found. Please configure your settings.");
-      } else {
-        console.error("Error fetching settings:", error);
-        toast.error("Failed to load settings");
+      console.error("Error fetching settings:", error);
+      toast.error("Failed to load settings");
+      // fallback: try localStorage
+      const railwaySettings = localStorage.getItem("railwaySettings");
+      if (railwaySettings) {
+        try {
+          const parsed = JSON.parse(railwaySettings);
+          setSettings((prev) => ({
+            ...prev,
+            admin_name: parsed.admin_name || prev.admin_name,
+            hall_name: parsed.hall_name || prev.hall_name,
+            heading1: parsed.heading1 || prev.heading1,
+            heading2: parsed.heading2 || prev.heading2,
+            info1: parsed.info1 || prev.info1,
+            info2: parsed.info2 || prev.info2,
+            note: parsed.note || prev.note,
+            logo_url: parsed.logo_url || prev.logo_url,
+            seating_types: [
+              {
+                name: FIXED_SEATING_NAMES[0],
+                amount: parsed.seating_types?.sitting?.amount || prev.seating_types[0].amount,
+                enabled: parsed.seating_types?.sitting?.enabled ?? true,
+                grace_time: parsed.seating_types?.sitting?.grace_time || prev.seating_types[0].grace_time,
+              },
+              {
+                name: FIXED_SEATING_NAMES[1],
+                amount: parsed.seating_types?.sleeper?.amount || prev.seating_types[1].amount,
+                breakdown: parsed.seating_types?.sleeper?.breakdown || prev.seating_types[1].breakdown,
+                enabled: parsed.seating_types?.sleeper?.enabled ?? true,
+                grace_time: parsed.seating_types?.sleeper?.grace_time || prev.seating_types[1].grace_time,
+              },
+            ],
+          }));
+          toast.info("Loaded settings from local storage.");
+        } catch (e) {
+          // ignore parse errors
+        }
       }
     } finally {
       setLoading(false);
@@ -324,195 +697,157 @@ const Settings = () => {
       setSaving(true);
       const payloadAdminName =
         (settings.admin_name && settings.admin_name.trim()) ||
-        getAdminName() ||
-        getEmail() ||
+        getAdminName?.() ||
+        getEmail?.() ||
         adminId ||
         "Admin";
 
-      // Build a working copy to ensure the 1-24 sleeping breakdown is the canonical amount
-      const settingsToSave: SettingsData = JSON.parse(JSON.stringify(settings));
-      const sleeper = settingsToSave.seating_types[1];
-      if (sleeper?.breakdown?.["1-24"]) {
+      // Prepare payload for backend, consolidating seating info
+      const settingsToSave = JSON.parse(JSON.stringify(settings));
+      const sleeper = settingsToSave.seating_types[1] || { breakdown: {}, amount: "" };
+      // ensure canonical sleeping amount uses 1-24 slot if present
+      if (sleeper.breakdown && sleeper.breakdown["1-24"]) {
         sleeper.amount = sleeper.breakdown["1-24"];
       }
 
-      // Debug logging
-      console.log("=== SAVE DEBUG ===");
-      console.log("Settings to save:", settingsToSave);
-      console.log("Sitting amount:", settings.seating_types[0].amount);
-      console.log("Sleeping amount:", sleeper.amount);
-      console.log("Sleeping breakdown:", sleeper.breakdown);
-
-      const apiData = {
-        admin_name: payloadAdminName,
-        hall_name: settings.hall_name,
-        heading1: settings.heading1,
-        heading2: settings.heading2,
-        info1: settings.info1,
-        info2: settings.info2,
-        note: settings.note,
-        logo_url: settings.logo_url,
-        // Always send both types as enabled
-        type1: FIXED_SEATING_NAMES[0],
-        type1_amount: settings.seating_types[0].amount
-          ? parseFloat(settings.seating_types[0].amount)
-          : null,
-        type1_grace_time: settings.seating_types[0].grace_time
-          ? parseInt(settings.seating_types[0].grace_time)
-          : 0,
-        type2: FIXED_SEATING_NAMES[1],
-        // send the 1-24 breakdown value as the canonical type2_amount
-        type2_amount: settingsToSave.seating_types[1].amount
-          ? parseFloat(settingsToSave.seating_types[1].amount)
-          : null,
-        type2_grace_time: settings.seating_types[1].grace_time
-          ? parseInt(settings.seating_types[1].grace_time)
-          : 0,
-        type2_breakdown: settingsToSave.seating_types[1].breakdown || {},
-        type4: null,
-        type4_amount: null,
-        advance_payment_enabled: settings.advance_payment_enabled,
-        default_advance_percentage:
-          parseFloat(settings.default_advance_percentage) || 20,
+      const settingsApiData: any = {
+        full_name: payloadAdminName,
+        type_1: settingsToSave.seating_types[0].name || FIXED_SEATING_NAMES[0],
+        type_1_amount: settingsToSave.seating_types[0].amount ? parseInt(settingsToSave.seating_types[0].amount) : null,
+        grace_amount: settingsToSave.seating_types[0].grace_time ? parseInt(settingsToSave.seating_types[0].grace_time) : 0,
+        type_2: settingsToSave.seating_types[1].name || FIXED_SEATING_NAMES[1],
+        grace_amount_type2: settingsToSave.seating_types[1].grace_time ? parseInt(settingsToSave.seating_types[1].grace_time) : 0,
+        type2_breakdown: {
+          "1-3": parseInt(settingsToSave.seating_types[1].breakdown?.["1-3"] || "0"),
+          "1-6": parseInt(settingsToSave.seating_types[1].breakdown?.["1-6"] || "0"),
+          "1-12": parseInt(settingsToSave.seating_types[1].breakdown?.["1-12"] || "0"),
+          "1-24": parseInt(settingsToSave.seating_types[1].breakdown?.["1-24"] || settingsToSave.seating_types[1].amount || "0"),
+        },
+        advance_payment_enabled: !!settingsToSave.advance_payment_enabled,
+        default_advance_percentage: parseFloat(settingsToSave.default_advance_percentage) || 20,
+        // Printer-related fields
+        hall_name: settingsToSave.hall_name || "",
+        heading1: settingsToSave.heading1 || "",
+        heading2: settingsToSave.heading2 || "",
+        info1: settingsToSave.info1 || "",
+        info2: settingsToSave.info2 || "",
+        note: settingsToSave.note || "",
+        logo_url: settingsToSave.logo_url || "",
       };
 
-      console.log("API payload:", apiData);
-      console.log("Type1 amount (parsed):", apiData.type1_amount);
-      console.log("Type2 amount (parsed):", apiData.type2_amount);
-
-      const response = await settingsAPI.upsertSettings(adminId, apiData);
-      console.log("API response:", response);
-
-      // Update localStorage for settings utils
-      const seatingTypesObj: Record<string, any> = {};
-
-      // Use canonical storage keys expected by reports: 'sitting' and 'sleeper'
-      seatingTypesObj.sitting = {
-        amount: settingsToSave.seating_types[0].amount || "0",
-        enabled: true,
+      // Save to backend
+      const response = await settingsAPI.upsertSettings(adminId, settingsApiData);
+      // update localStorage mirror for other parts of app
+      const seatingTypesObj: Record<string, any> = {
+        sitting: {
+          amount: settingsToSave.seating_types[0].amount || "0",
+          enabled: true,
+          grace_time: settingsToSave.seating_types[0].grace_time || "0",
+        },
+        sleeper: {
+          amount: settingsToSave.seating_types[1].breakdown?.["1-24"] || settingsToSave.seating_types[1].amount || "0",
+          enabled: true,
+          breakdown: settingsToSave.seating_types[1].breakdown || {},
+          grace_time: settingsToSave.seating_types[1].grace_time || "0",
+        },
       };
-
-      seatingTypesObj.sleeper = {
-        amount:
-          settingsToSave.seating_types[1].breakdown?.["1-24"] ||
-          settingsToSave.seating_types[1].amount ||
-          "0",
-        enabled: true,
-        breakdown: settingsToSave.seating_types[1].breakdown || {},
-      };
-
-      // Legacy fallback for backwards compatibility (keeps previous behavior)
-      if (!seatingTypesObj.sitting && settings.seating_types[0].enabled) {
-        seatingTypesObj.sitting = {
-          amount: settings.seating_types[0].amount || "15",
-          enabled: settings.seating_types[0].enabled,
-        };
-      }
-      if (!seatingTypesObj.sleeper && settings.seating_types[1].enabled) {
-        seatingTypesObj.sleeper = {
-          amount: settings.seating_types[1].amount || "20",
-          enabled: settings.seating_types[1].enabled,
-        };
-      }
 
       const railwaySettings = {
         admin_name: payloadAdminName,
-        admin_email: getEmail() || "admin@railway.com",
-        admin_contact: localStorage.getItem("adminPhone") || "+91-9876543210",
-        hall_name: settings.hall_name,
-        heading1: settings.heading1,
-        heading2: settings.heading2,
-        info1: settings.info1,
-        info2: settings.info2,
-        note: settings.note,
-        logo_url: settings.logo_url,
+        admin_email: localStorage.getItem("email") || getEmail?.() || "admin@railway.com",
+        admin_contact: localStorage.getItem("adminPhone") || "",
+        hall_name: settingsToSave.hall_name,
+        heading1: settingsToSave.heading1,
+        heading2: settingsToSave.heading2,
+        info1: settingsToSave.info1,
+        info2: settingsToSave.info2,
+        note: settingsToSave.note,
+        logo_url: settingsToSave.logo_url,
         seating_types: seatingTypesObj,
-        // set revenue color for reports/graphs (multiple keys for compatibility)
-        revenue_color: "green",
-        revenueColor: "green",
-        revenue_color_hex: "#10B981",
-        revenueColorHex: "#10B981",
-        revenue_series_color: "#10B981",
-        revenueSeriesColor: "#10B981",
-        // extra aliases some charts may look for
-        chartColor: "#10B981",
-        seriesColor: "#10B981",
-        primaryColor: "#10B981",
-        advance_payment_enabled: settings.advance_payment_enabled,
-        default_advance_percentage: settings.default_advance_percentage,
+        advance_payment_enabled: settingsToSave.advance_payment_enabled,
+        default_advance_percentage: settingsToSave.default_advance_percentage,
       };
-      // Persist the current values (including breakdown) locally so UI remains consistent
+
       localStorage.setItem("railwaySettings", JSON.stringify(railwaySettings));
-      // Dispatch an event so other components/pages can react immediately (single-page apps)
       try {
-        window.dispatchEvent(
-          new CustomEvent("railwaySettingsChanged", { detail: railwaySettings })
-        );
+        window.dispatchEvent(new CustomEvent("railwaySettingsChanged", { detail: railwaySettings }));
       } catch (e) {
-        // ignore dispatch errors
+        // ignore
       }
 
       toast.success("Settings saved successfully");
-
-      // Update local React state from the saved copy so UI reflects saved values immediately.
       setSettings(settingsToSave);
     } catch (error) {
       console.error("Error saving settings:", error);
-      console.error("Error details:", error.response?.data);
       toast.error("Failed to save settings");
     } finally {
       setSaving(false);
     }
   };
 
-  const startEditing = (field: string, currentValue: string) => {
+  const startEditing = useCallback((field: string, currentValue: string) => {
     setEditing(field);
     setEditValue(currentValue);
-  };
+  }, []);
 
-  const saveEdit = (field: string) => {
+  const saveEdit = useCallback((field: string) => {
     if (editValue.trim() !== "") {
-      handleSettingChange(field, editValue.trim());
+      setSettings((prev) => ({
+        ...prev,
+        [field]: editValue.trim(),
+      }));
       setEditing(null);
       setEditValue("");
     }
-  };
+  }, [editValue]);
 
-  const saveSeatingEdit = (index: number, field: string) => {
+  const saveSeatingEdit = useCallback((index: number, field: string) => {
     if (editValue.trim() !== "") {
       const trimmedValue = editValue.trim();
       console.log(`Saving ${field} for seating type ${index}:`, trimmedValue);
-      handleSeatingTypeChange(index, field, trimmedValue);
+      setSettings((prev) => {
+        const updatedSeatingTypes = prev.seating_types.map((st, i) =>
+          i === index ? { ...st, [field]: trimmedValue } : st
+        );
+        return { ...prev, seating_types: updatedSeatingTypes } as SettingsData;
+      });
       setEditing(null);
       setEditValue("");
     }
-  };
+  }, [editValue]);
 
-  const cancelEdit = () => {
+  const cancelEdit = useCallback(() => {
     setEditing(null);
     setEditValue("");
-  };
+  }, []);
 
-  const handleSettingChange = (key: string, value: any) => {
-    setSettings((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
-  };
+  const handleEditValueChange = useCallback((value: string) => {
+    setEditValue(value);
+  }, []);
 
-  const handleSeatingTypeChange = (
-    index: number,
-    field: string,
-    value: any
-  ) => {
-    // Only update component state. Do NOT persist to localStorage or call API here.
+  const handleBreakdownChange = useCallback((index: number, slot: string, value: string) => {
     setSettings((prev) => {
-      const updatedSeatingTypes = prev.seating_types.map((st, i) =>
-        i === index ? { ...st, [field]: value } : st
-      );
+      const updatedSeatingTypes = prev.seating_types.map((st, i) => {
+        if (i === index) {
+          return {
+            ...st,
+            breakdown: {
+              ...(st.breakdown || {}),
+              [slot]: value,
+            },
+          };
+        }
+        return st;
+      });
       return { ...prev, seating_types: updatedSeatingTypes } as SettingsData;
     });
-  };
+  }, []);
+
+  // Memoize colors array at component level to avoid hook inside map
+  const seatingColors = useMemo(() => [
+    { bg: "bg-blue-500", label: "Sitting" },
+    { bg: "bg-orange-500", label: "Sleeper" },
+  ], []);
 
   const resetToDefaults = () => {
     try {
@@ -593,119 +928,27 @@ const Settings = () => {
               <CardContent className="p-4 sm:p-6">
                 <div className="space-y-6">
                   {/* Logo Upload Section */}
-                  <div className="space-y-2">
-                    <Label className="flex items-center text-sm font-medium text-gray-700">
-                      <ImageIcon className="w-4 h-4 mr-2 text-purple-500" />
-                      Logo / Header Image
-                    </Label>
-                    <div className="flex flex-col sm:flex-row gap-4 items-start">
-                      {/* Image Preview */}
-                      {imagePreview ? (
-                        <div className="relative">
-                          <img
-                            src={imagePreview}
-                            alt="Logo preview"
-                            className="w-20 h-20 object-contain border-2 border-gray-200 rounded-lg"
-                          />
-                          <button
-                            type="button"
-                            onClick={handleRemoveImage}
-                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
-                          >
-                            <X className="w-2 h-2" />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="w-20 h-20 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
-                          <ImageIcon className="w-6 h-6 text-gray-400" />
-                        </div>
-                      )}
-
-                      {/* Upload Button */}
-                      <div className="flex-1">
-                        <label htmlFor="logo-upload" className="cursor-pointer">
-                          <div className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors w-fit">
-                            {uploadingImage ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Upload className="w-4 h-4" />
-                            )}
-                            <span className="text-sm">
-                              {uploadingImage ? "Uploading..." : "Upload Image"}
-                            </span>
-                          </div>
-                          <input
-                            id="logo-upload"
-                            type="file"
-                            accept="image/*"
-                            onChange={handleImageUpload}
-                            className="hidden"
-                            disabled={uploadingImage}
-                          />
-                        </label>
-                        <p className="text-xs text-gray-500 mt-2">
-                          Recommended: PNG or JPG, max 2MB
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                  <LogoUploadSection
+                    imagePreview={imagePreview}
+                    uploadingImage={uploadingImage}
+                    onImageUpload={handleImageUpload}
+                    onRemoveImage={handleRemoveImage}
+                  />
 
                   {/* Hall Name */}
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="hall_name"
-                      className="flex items-center text-sm font-medium text-gray-700"
-                    >
-                      <Building className="w-4 h-4 mr-2 text-purple-500" />
-                      Hall Name (Legacy)
-                    </Label>
-                    {editing === "hall_name" ? (
-                      <div className="flex gap-2">
-                        <Input
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              saveEdit("hall_name");
-                            }
-                          }}
-                          placeholder="Enter hall name"
-                          className="flex-1 transition-all duration-200 focus:ring-2 focus:ring-blue-500"
-                        />
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={() => saveEdit("hall_name")}
-                          className="bg-green-600 hover:bg-green-700 shadow-md"
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={cancelEdit}
-                          className="shadow-md"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="relative">
-                        <Input
-                          value={settings.hall_name}
-                          placeholder="Enter hall name"
-                          readOnly
-                          onClick={() =>
-                            startEditing("hall_name", settings.hall_name)
-                          }
-                          className="cursor-pointer pr-10 hover:bg-gray-50 transition-colors"
-                        />
-                        <Edit className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      </div>
-                    )}
-                  </div>
+                  <EditableField
+                    fieldKey="hall_name"
+                    label="Hall Name (Legacy)"
+                    value={settings.hall_name}
+                    placeholder="Enter hall name"
+                    icon={<Building className="w-4 h-4 mr-2 text-purple-500" />}
+                    editing={editing}
+                    editValue={editValue}
+                    onStartEdit={startEditing}
+                    onSaveEdit={saveEdit}
+                    onCancelEdit={cancelEdit}
+                    onEditValueChange={handleEditValueChange}
+                  />
 
                   {/* Ticket Header Customization */}
                   <div className="space-y-4 pt-4 border-t">
@@ -717,330 +960,79 @@ const Settings = () => {
                     </div>
 
                     {/* Heading 1 */}
-                    <div className="space-y-2">
-                      <Label className="flex items-center justify-between text-xs font-medium text-gray-700">
-                        <span>Heading 1</span>
-                        {/* <span className="text-gray-400">
-                          (Max 10-12 characters)
-                        </span> */}
-                      </Label>
-                      {editing === "heading1" ? (
-                        <div className="flex gap-2">
-                          <Input
-                            value={editValue}
-                            onChange={(e) =>
-                              setEditValue(e.target.value)
-                            }
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                saveEdit("heading1");
-                              }
-                            }}
-                            placeholder="e.g., RAILWAY"
-                            
-                            className="flex-1 transition-all duration-200 focus:ring-2 focus:ring-blue-500"
-                          />
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() => saveEdit("heading1")}
-                            className="bg-green-600 hover:bg-green-700 shadow-md"
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={cancelEdit}
-                            className="shadow-md"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="relative">
-                          <Input
-                            value={settings.heading1}
-                            placeholder="e.g., RAILWAY"
-                            readOnly
-                            onClick={() =>
-                              startEditing("heading1", settings.heading1)
-                            }
-                            className="cursor-pointer pr-10 hover:bg-gray-50 transition-colors text-sm"
-                          />
-                          <Edit className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        </div>
-                      )}
-                    </div>
+                    <EditableField
+                      fieldKey="heading1"
+                      label="Heading 1"
+                      value={settings.heading1}
+                      placeholder="e.g., RAILWAY"
+                      editing={editing}
+                      editValue={editValue}
+                      onStartEdit={startEditing}
+                      onSaveEdit={saveEdit}
+                      onCancelEdit={cancelEdit}
+                      onEditValueChange={handleEditValueChange}
+                    />
 
                     {/* Heading 2 */}
-                    <div className="space-y-2">
-                      <Label className="flex items-center justify-between text-xs font-medium text-gray-700">
-                        <span>Heading 2</span>
-                        {/* <span className="text-gray-400">
-                          (Max 12-14 characters)
-                        </span> */}
-                      </Label>
-                      {editing === "heading2" ? (
-                        <div className="flex gap-2">
-                          <Input
-                            value={editValue}
-                            onChange={(e) =>
-                              setEditValue(e.target.value)
-                            }
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                saveEdit("heading2");
-                              }
-                            }}
-                            placeholder="e.g., STATION"
-                            
-                            className="flex-1 transition-all duration-200 focus:ring-2 focus:ring-blue-500"
-                          />
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() => saveEdit("heading2")}
-                            className="bg-green-600 hover:bg-green-700 shadow-md"
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={cancelEdit}
-                            className="shadow-md"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="relative">
-                          <Input
-                            value={settings.heading2}
-                            placeholder="e.g., STATION"
-                            readOnly
-                            onClick={() =>
-                              startEditing("heading2", settings.heading2)
-                            }
-                            className="cursor-pointer pr-10 hover:bg-gray-50 transition-colors text-sm"
-                          />
-                          <Edit className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        </div>
-                      )}
-                    </div>
+                    <EditableField
+                      fieldKey="heading2"
+                      label="Heading 2"
+                      value={settings.heading2}
+                      placeholder="e.g., STATION"
+                      editing={editing}
+                      editValue={editValue}
+                      onStartEdit={startEditing}
+                      onSaveEdit={saveEdit}
+                      onCancelEdit={cancelEdit}
+                      onEditValueChange={handleEditValueChange}
+                    />
 
                     {/* Info 1 */}
-                    <div className="space-y-2">
-                      <Label className="flex items-center justify-between text-xs font-medium text-gray-700">
-                        <span>Info 1</span>
-                        {/* <span className="text-gray-400">
-                          (Max 14-16 characters)
-                        </span> */}
-                      </Label>
-                      {editing === "info1" ? (
-                        <div className="flex gap-2">
-                          <Input
-                            value={editValue}
-                            onChange={(e) =>
-                              setEditValue(e.target.value)
-                            }
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                saveEdit("info1");
-                              }
-                            }}
-                            placeholder="e.g., Platform 1"
-                            
-                            className="flex-1 transition-all duration-200 focus:ring-2 focus:ring-blue-500"
-                          />
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() => saveEdit("info1")}
-                            className="bg-green-600 hover:bg-green-700 shadow-md"
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={cancelEdit}
-                            className="shadow-md"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="relative">
-                          <Input
-                            value={settings.info1}
-                            placeholder="e.g., Platform 1"
-                            readOnly
-                            onClick={() =>
-                              startEditing("info1", settings.info1)
-                            }
-                            className="cursor-pointer pr-10 hover:bg-gray-50 transition-colors text-sm"
-                          />
-                          <Edit className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        </div>
-                      )}
-                    </div>
+                    <EditableField
+                      fieldKey="info1"
+                      label="Info 1"
+                      value={settings.info1}
+                      placeholder="e.g., Platform 1"
+                      editing={editing}
+                      editValue={editValue}
+                      onStartEdit={startEditing}
+                      onSaveEdit={saveEdit}
+                      onCancelEdit={cancelEdit}
+                      onEditValueChange={handleEditValueChange}
+                    />
 
                     {/* Info 2 */}
-                    <div className="space-y-2">
-                      <Label className="flex items-center justify-between text-xs font-medium text-gray-700">
-                        <span>Info 2</span>
-                        {/* {/* <span className="text-gray-400">
-                          (Max 14-16 characters)
-                        </span> */}
-                      </Label>
-                      {editing === "info2" ? (
-                        <div className="flex gap-2">
-                          <Input
-                            value={editValue}
-                            onChange={(e) =>
-                              setEditValue(e.target.value)
-                            }
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                saveEdit("info2");
-                              }
-                            }}
-                            placeholder="e.g., Gate 2"
-                            
-                            className="flex-1 transition-all duration-200 focus:ring-2 focus:ring-blue-500"
-                          />
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() => saveEdit("info2")}
-                            className="bg-green-600 hover:bg-green-700 shadow-md"
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={cancelEdit}
-                            className="shadow-md"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="relative">
-                          <Input
-                            value={settings.info2}
-                            placeholder="e.g., Gate 2"
-                            readOnly
-                            onClick={() =>
-                              startEditing("info2", settings.info2)
-                            }
-                            className="cursor-pointer pr-10 hover:bg-gray-50 transition-colors text-sm"
-                          />
-                          <Edit className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        </div>
-                      )}
-                    </div>
+                    <EditableField
+                      fieldKey="info2"
+                      label="Info 2"
+                      value={settings.info2}
+                      placeholder="e.g., Gate 2"
+                      editing={editing}
+                      editValue={editValue}
+                      onStartEdit={startEditing}
+                      onSaveEdit={saveEdit}
+                      onCancelEdit={cancelEdit}
+                      onEditValueChange={handleEditValueChange}
+                    />
 
                     {/* Note (Footer) */}
-                    <div className="space-y-2">
-                      <Label className="flex items-center justify-between text-xs font-medium text-gray-700">
-                        <span>Note (Footer)</span>
-                        {/* <span className="text-gray-400">
-                          (Max 16-20 characters)
-                        </span> */}
-                      </Label>
-                      {editing === "note" ? (
-                        <div className="flex gap-2">
-                          <Input
-                            value={editValue}
-                            onChange={(e) =>
-                              setEditValue(e.target.value)
-                            }
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                saveEdit("note");
-                              }
-                            }}
-                            placeholder="e.g., Thank you!"
-                            
-                            className="flex-1 transition-all duration-200 focus:ring-2 focus:ring-blue-500"
-                          />
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() => saveEdit("note")}
-                            className="bg-green-600 hover:bg-green-700 shadow-md"
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={cancelEdit}
-                            className="shadow-md"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="relative">
-                          <Input
-                            value={settings.note}
-                            placeholder="e.g., Thank you!"
-                            readOnly
-                            onClick={() => startEditing("note", settings.note)}
-                            className="cursor-pointer pr-10 hover:bg-gray-50 transition-colors text-sm"
-                          />
-                          <Edit className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        </div>
-                      )}
-                    </div>
+                    <EditableField
+                      fieldKey="note"
+                      label="Note (Footer)"
+                      value={settings.note}
+                      placeholder="e.g., Thank you!"
+                      editing={editing}
+                      editValue={editValue}
+                      maxLength={20}
+                      onStartEdit={startEditing}
+                      onSaveEdit={saveEdit}
+                      onCancelEdit={cancelEdit}
+                      onEditValueChange={handleEditValueChange}
+                    />
                   </div>
                 </div>
               </CardContent>
             </Card>
-
-            {/* Placeholder Card */}
-            {/* <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b p-4 sm:p-6">
-                <CardTitle className="flex items-center text-gray-800 text-lg sm:text-xl">
-                  <Train className="w-5 h-5 mr-2 text-green-600" />
-                  Quick Info
-                </CardTitle>
-                <CardDescription className="text-sm sm:text-base">
-                  System information and status
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-6">
-                <div className="space-y-4">
-                  <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg border border-blue-200">
-                    <p className="text-sm text-gray-600 mb-1">Admin ID</p>
-                    <p className="text-lg font-semibold text-gray-800">
-                      {adminId}
-                    </p>
-                  </div>
-                  <div className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
-                    <p className="text-sm text-gray-600 mb-1">System Status</p>
-                    <p className="text-lg font-semibold text-green-600">
-                      Active
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card> */}
           </div>
 
           {/* Seating Types Section - Full Width */}
@@ -1059,244 +1051,29 @@ const Settings = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Seating Type Cards */}
                   {settings.seating_types.map((seatType, index) => {
-                    const colors = [
-                      { bg: "bg-blue-500", label: "Sitting" },
-                      { bg: "bg-orange-500", label: "Sleeper" },
-                    ];
-                    const color = colors[index];
+                    const color = seatingColors[index];
 
                     return (
-                      <Card
+                      <SeatingCard
                         key={index}
-                        className="border-2 hover:border-blue-300 transition-colors"
-                      >
-                        <CardContent className="p-4">
-                          <div className="space-y-4">
-                            {/* Header */}
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-2">
-                                <div
-                                  className={`w-3 h-3 rounded-full ${color.bg}`}
-                                ></div>
-                                <span className="font-semibold text-gray-700">
-                                  {color.label}
-                                </span>
-                              </div>
-                              <Badge className="text-xs bg-green-100 text-green-800">
-                                Active
-                              </Badge>
-                            </div>
-
-                            {/* Grace Time */}
-                            <div className="space-y-2">
-                              <Label className="flex items-center text-xs text-gray-600">
-                                <Clock className="w-3 h-3 mr-1" />
-                                Grace Time (minutes)
-                              </Label>
-                              {editing === `grace_${index}` ? (
-                                <div className="flex gap-2">
-                                  <Input
-                                    type="number"
-                                    min="0"
-                                    value={editValue}
-                                    onChange={(e) =>
-                                      setEditValue(e.target.value)
-                                    }
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Enter") {
-                                        e.preventDefault();
-                                        saveSeatingEdit(index, "grace_time");
-                                      }
-                                    }}
-                                    placeholder="0"
-                                    className="flex-1 text-sm"
-                                  />
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    onClick={() =>
-                                      saveSeatingEdit(index, "grace_time")
-                                    }
-                                    className="bg-green-600 hover:bg-green-700"
-                                  >
-                                    <Check className="h-3 w-3" />
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={cancelEdit}
-                                  >
-                                    <X className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              ) : (
-                                <div className="relative">
-                                  <Input
-                                    value={seatType.grace_time || "0"}
-                                    placeholder="0"
-                                    readOnly
-                                    onClick={() =>
-                                      startEditing(
-                                        `grace_${index}`,
-                                        seatType.grace_time || "0"
-                                      )
-                                    }
-                                    className="cursor-pointer pr-8 text-sm hover:bg-gray-50"
-                                  />
-                                  <Edit className="absolute right-2 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400" />
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Price Section */}
-                            <div className="space-y-2">
-                              <Label className="text-xs text-gray-600">
-                                Price for Hours (₹)
-                              </Label>
-                              {index === 1 ? (
-                                // Sleeping breakdown: four editable inputs
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                  {["1-3", "1-6", "1-12", "1-24"].map(
-                                    (slot) => (
-                                      <div
-                                        key={slot}
-                                        className="flex items-center gap-2"
-                                      >
-                                        <span className="w-20 text-sm text-gray-700">
-                                          {slot}
-                                        </span>
-                                        <div className="relative flex-1">
-                                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
-                                            ₹
-                                          </span>
-                                          <Input
-                                            type="number"
-                                            value={
-                                              seatType.breakdown?.[slot] || ""
-                                            }
-                                            onChange={(e) => {
-                                              const newVal = e.target.value;
-                                              const updated = {
-                                                ...(seatType.breakdown || {}),
-                                                [slot]: newVal,
-                                              };
-                                              // update entire breakdown object
-                                              handleSeatingTypeChange(
-                                                index,
-                                                "breakdown",
-                                                updated
-                                              );
-                                            }}
-                                            placeholder="0"
-                                            className="pl-7 text-sm"
-                                          />
-                                        </div>
-                                      </div>
-                                    )
-                                  )}
-                                </div>
-                              ) : (
-                                // Sitting: single amount input
-                                <>
-                                  {editing === `amount_${index}` ? (
-                                    <div className="flex gap-2">
-                                      <div className="relative flex-1">
-                                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
-                                          ₹
-                                        </span>
-                                        <Input
-                                          value={editValue}
-                                          onChange={(e) =>
-                                            setEditValue(e.target.value)
-                                          }
-                                          onKeyDown={(e) => {
-                                            if (e.key === "Enter") {
-                                              e.preventDefault();
-                                              saveSeatingEdit(index, "amount");
-                                            }
-                                          }}
-                                          placeholder="0"
-                                          type="number"
-                                          className="pl-7 text-sm"
-                                        />
-                                      </div>
-                                      <Button
-                                        type="button"
-                                        size="sm"
-                                        onClick={() =>
-                                          saveSeatingEdit(index, "amount")
-                                        }
-                                        className="bg-green-600 hover:bg-green-700"
-                                      >
-                                        <Check className="h-3 w-3" />
-                                      </Button>
-                                      <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={cancelEdit}
-                                      >
-                                        <X className="h-3 w-3" />
-                                      </Button>
-                                    </div>
-                                  ) : (
-                                    <div className="relative">
-                                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
-                                        ₹
-                                      </span>
-                                      <Input
-                                        value={seatType.amount}
-                                        placeholder="0"
-                                        readOnly
-                                        onClick={() =>
-                                          startEditing(
-                                            `amount_${index}`,
-                                            seatType.amount
-                                          )
-                                        }
-                                        className="cursor-pointer pl-7 pr-8 text-sm hover:bg-gray-50"
-                                      />
-                                      <Edit className="absolute right-2 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400" />
-                                    </div>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+                        seatType={seatType}
+                        index={index}
+                        color={color}
+                        editing={editing}
+                        editValue={editValue}
+                        onStartEdit={startEditing}
+                        onSaveSeatingEdit={saveSeatingEdit}
+                        onCancelEdit={cancelEdit}
+                        onEditValueChange={handleEditValueChange}
+                        onBreakdownChange={handleBreakdownChange}
+                      />
                     );
                   })}
                 </div>
               </CardContent>
             </Card>
           </div>
-          {/* Enable/Disable Advance Payment */}
-          {/* <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
-            <div className="flex items-center space-x-3">
-              <Badge variant="secondary" className="bg-purple-100">
-                <span className="text-purple-700">%</span>
-              </Badge>
-              <div>
-                <Label className="text-sm font-medium text-gray-800">
-                  Enable Discount
-                </Label>
-                <p className="text-xs text-gray-600 mt-1">
-                  Allow discounts on bookings
-                </p>
-              </div>
-            </div>
-            <Switch
-              checked={settings.discount_enabled}
-              onCheckedChange={(checked) => {
-                // Only update local state until Save All is clicked
-                handleSettingChange("discount_enabled", checked);
-              }}
-              className="data-[state=checked]:bg-purple-600"
-            />
-          </div> */}
-          {/* Footer Actions */}
+
           <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 mt-6">
             <Button
               type="button"

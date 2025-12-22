@@ -300,19 +300,19 @@ const getMonthlyRevenue = async (req, res) => {
     const currentYear = year ? parseInt(year) : new Date().getFullYear();
     const numberOfMonths = months ? parseInt(months) : 6;
 
-    // Get monthly revenue for the specified period (using booking_date)
+    // Get monthly revenue for the specified period (using booking_date or created_at)
     const monthlyRevenueQuery = `
       SELECT 
-        EXTRACT(MONTH FROM booking_date) as month,
-        EXTRACT(YEAR FROM booking_date) as year,
+        EXTRACT(MONTH FROM COALESCE(booking_date, created_at)) as month,
+        EXTRACT(YEAR FROM COALESCE(booking_date, created_at)) as year,
         COALESCE(SUM(total_amount), 0) as revenue,
         COUNT(*) as booking_count,
         booking_type,
         COALESCE(SUM(paid_amount), 0) as paid_revenue
       FROM bookings
-      WHERE EXTRACT(YEAR FROM booking_date) = $1
+      WHERE EXTRACT(YEAR FROM COALESCE(booking_date, created_at)) = $1
       ${admin_id ? "AND admin_id = $2" : ""}
-      GROUP BY EXTRACT(MONTH FROM booking_date), EXTRACT(YEAR FROM booking_date), booking_type
+      GROUP BY EXTRACT(MONTH FROM COALESCE(booking_date, created_at)), EXTRACT(YEAR FROM COALESCE(booking_date, created_at)), booking_type
       ORDER BY year, month;
     `;
 
@@ -364,13 +364,10 @@ const getMonthlyRevenue = async (req, res) => {
       monthlyData[monthNum].total_bookings += bookingCount;
       monthlyData[monthNum].paid_amount += paidRevenue;
 
-      if (row.booking_type === "sitting") {
-        monthlyData[monthNum].sitting_revenue = revenue;
-        monthlyData[monthNum].sitting_bookings = bookingCount;
-      } else if (row.booking_type === "sleeper") {
-        monthlyData[monthNum].sleeper_revenue = revenue;
-        monthlyData[monthNum].sleeper_bookings = bookingCount;
-      }
+      // Store per-type data using lowercase keys
+      const typeKey = row.booking_type ? row.booking_type.toLowerCase() : "unknown";
+      monthlyData[monthNum][`${typeKey}_revenue`] = revenue;
+      monthlyData[monthNum][`${typeKey}_bookings`] = bookingCount;
     });
 
     // Convert to array - return all 12 months (not filtered by current month)
@@ -409,15 +406,15 @@ const getDailyRevenue = async (req, res) => {
 
     const dailyRevenueQuery = `
       SELECT 
-        EXTRACT(DAY FROM booking_date) as day,
+        EXTRACT(DAY FROM COALESCE(booking_date, created_at)) as day,
         COALESCE(SUM(total_amount), 0) as revenue,
         COUNT(*) as booking_count,
         booking_type
       FROM bookings
-      WHERE EXTRACT(MONTH FROM booking_date) = $1
-      AND EXTRACT(YEAR FROM booking_date) = $2
+      WHERE EXTRACT(MONTH FROM COALESCE(booking_date, created_at)) = $1
+      AND EXTRACT(YEAR FROM COALESCE(booking_date, created_at)) = $2
       ${admin_id ? "AND admin_id = $3" : ""}
-      GROUP BY EXTRACT(DAY FROM booking_date), booking_type
+      GROUP BY EXTRACT(DAY FROM COALESCE(booking_date, created_at)), booking_type
       ORDER BY day;
     `;
 
@@ -441,6 +438,8 @@ const getDailyRevenue = async (req, res) => {
         total_revenue: 0,
         sitting_revenue: 0,
         sleeper_revenue: 0,
+        sitting_bookings: 0,
+        sleeper_bookings: 0,
         total_bookings: 0,
       });
     }
@@ -454,11 +453,10 @@ const getDailyRevenue = async (req, res) => {
       dailyData[dayIndex].total_revenue += revenue;
       dailyData[dayIndex].total_bookings += bookingCount;
 
-      if (row.booking_type === "sitting") {
-        dailyData[dayIndex].sitting_revenue = revenue;
-      } else if (row.booking_type === "sleeper") {
-        dailyData[dayIndex].sleeper_revenue = revenue;
-      }
+      // Store per-type data using lowercase keys
+      const typeKey = row.booking_type ? row.booking_type.toLowerCase() : "unknown";
+      dailyData[dayIndex][`${typeKey}_revenue`] = revenue;
+      dailyData[dayIndex][`${typeKey}_bookings`] = bookingCount;
     });
 
     res.status(200).json({
@@ -499,9 +497,8 @@ const getTopWorkers = async (req, res) => {
 
     // Add date filters if provided
     if (month && year) {
-      query += ` WHERE EXTRACT(MONTH FROM b.created_at) = $${paramCount} AND EXTRACT(YEAR FROM b.created_at) = $${
-        paramCount + 1
-      }`;
+      query += ` WHERE EXTRACT(MONTH FROM b.created_at) = $${paramCount} AND EXTRACT(YEAR FROM b.created_at) = $${paramCount + 1
+        }`;
       params.push(parseInt(month), parseInt(year));
       paramCount += 2;
     }

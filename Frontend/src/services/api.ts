@@ -1,8 +1,8 @@
 import axios from "axios";
 
 // Base API URL - Backend server address
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "https://railway-api.artechnology.pro/api";
+const API_BASE_URL = "http://localhost:5127/api";
+  // import.meta.env.VITE_API_URL || "https://railway-api.artechnology.pro/api";
 
 // Create axios instance with default config
 const apiClient = axios.create({
@@ -10,6 +10,7 @@ const apiClient = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  timeout: 10000, // 10 seconds
   withCredentials: true, // Important for cookies
 });
 
@@ -113,6 +114,13 @@ export const bookingAPI = {
     apiClient.get("/bookings/get-all-bookings", {
       params: { worker_id: workerId },
     }),
+  
+  // New endpoints for worker dashboard
+  getBookingsWorker: (adminId: string, workerId: string) =>
+    apiClient.get(`/closebook/get-bookings-worker/${adminId}/${workerId}`),
+  
+  getWorkerDashboard: (adminId: string, workerId: string) =>
+    apiClient.get(`/closebook/worker-dashboard/${adminId}/${workerId}`),
 };
 
 // ==================== ANALYTICS/DASHBOARD APIs ====================
@@ -156,24 +164,35 @@ export const analyticsAPI = {
 // ==================== SETTINGS APIs ====================
 
 export const settingsAPI = {
+  // Settings table endpoints - WORKING!
   getSettings: (adminId: string) =>
     apiClient.get(`/settings/get-settings/${adminId}`),
 
   upsertSettings: (adminId: string, data: any) =>
-    apiClient.post(`/settings/upsert-settings/${adminId}`, data),
+    apiClient.post(`/settings/${adminId}`, data),
 
   uploadLogo: (adminId: string, file: File) => {
     const formData = new FormData();
     formData.append("logo", file);
-    return apiClient.post(`/settings/upload-logo/${adminId}`, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
+    // backend may expect multipart/form-data; axios will set headers automatically
+    return apiClient.post(`/settings/upload-logo/${adminId}`, formData);
   },
 
   deleteSettings: (adminId: string) =>
     apiClient.delete(`/settings/delete-settings/${adminId}`),
+
+  // Printer table endpoints
+  getPrinterSettings: (adminId: string) =>
+    apiClient.get(`/printer/get-printer/${adminId}`),
+
+  // Type2 amounts endpoints
+  getType2Amounts: (adminId: string) =>
+    apiClient.get(`/type2-amount/get-amounts/${adminId}`).catch(() => ({ data: { data: [] } })),
+
+  upsertType2Amounts: (adminId: string, data: any[]) =>
+    apiClient
+      .post(`/type2-amount/update-amounts/${adminId}`, { amounts: data })
+      .catch(() => ({ data: { success: false } })),
 };
 
 export default apiClient;

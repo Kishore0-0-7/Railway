@@ -114,4 +114,27 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Prevent scroll when a nav/drawer overlay is open.
+     JS will add/remove this class; it hides overflow on root elements.
+     We avoid setting position:fixed here so overlays mounted inside body can still scroll. */
+  .no-scroll,
+  html.no-scroll,
+  body.no-scroll {
+    overflow: hidden !important;
+    touch-action: none !important;
+    overscroll-behavior: none !important;
+    height: 100vh !important;
+    width: 100% !important;
+  }
+
+  /* Allow scroll inside explicit scrollable overlay containers */
+  .allow-scroll {
+    overflow: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: auto !important;
+    overscroll-behavior: contain !important;
+    /* ensure overlay can take full viewport height if needed */
+    max-height: 100vh !important;
+  }
 }

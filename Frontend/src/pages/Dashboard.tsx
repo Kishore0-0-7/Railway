@@ -105,13 +105,20 @@ const Dashboard = () => {
       const [statsRes, bookingsRes] = await Promise.all([
         analyticsAPI.getDashboardStats({ admin_id: adminId }),
         analyticsAPI.getRecentBookings({
-          limit: 10,
           admin_id: adminId,
+          limit: 10000, // Fetch all bookings (high limit to avoid pagination)
         }),
       ]);
 
+      console.log("Dashboard Stats Response:", statsRes.data);
+      console.log("Recent Bookings Response:", bookingsRes.data);
+
       setDashboardStats(statsRes.data.data);
-      setRecentBookings(bookingsRes.data.data);
+
+      // Handle multiple response shapes for bookings
+      const bookingsData = bookingsRes.data.data || bookingsRes.data.bookings || [];
+      console.log("Processed Bookings Data:", bookingsData);
+      setRecentBookings(Array.isArray(bookingsData) ? bookingsData : []);
 
       await fetchChartData();
     } catch (error: any) {
@@ -199,85 +206,129 @@ const Dashboard = () => {
       });
     }
 
-    const days =
-      rangeFilter === "week" ? 7 : rangeFilter === "month" ? 30 : 365;
-    const cutoff = new Date(now.getTime() - days * msInDay);
+    // For "week": Show only current calendar week (Monday-Sunday)
+    if (rangeFilter === "week") {
+      const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+      const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Adjust to get Monday
+      const weekStart = new Date(now.setDate(diff));
+      weekStart.setHours(0, 0, 0, 0);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      weekEnd.setHours(23, 59, 59, 999);
 
-    return recentBookings.filter((b) => {
-      if (!matchesSearch(b)) return false;
-      const d = parseDate(b);
-      if (!d) return false;
-      return d >= cutoff && d <= now;
-    });
+      return recentBookings.filter((b) => {
+        if (!matchesSearch(b)) return false;
+        const d = parseDate(b);
+        if (!d) return false;
+        return d >= weekStart && d <= weekEnd;
+      });
+    }
+
+    // For "month": Show only current calendar month
+    if (rangeFilter === "month") {
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      monthStart.setHours(0, 0, 0, 0);
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      monthEnd.setHours(23, 59, 59, 999);
+
+      return recentBookings.filter((b) => {
+        if (!matchesSearch(b)) return false;
+        const d = parseDate(b);
+        if (!d) return false;
+        return d >= monthStart && d <= monthEnd;
+      });
+    }
+
+    // For "year": Show only current calendar year
+    if (rangeFilter === "year") {
+      const yearStart = new Date(now.getFullYear(), 0, 1);
+      yearStart.setHours(0, 0, 0, 0);
+      const yearEnd = new Date(now.getFullYear(), 11, 31);
+      yearEnd.setHours(23, 59, 59, 999);
+
+      return recentBookings.filter((b) => {
+        if (!matchesSearch(b)) return false;
+        const d = parseDate(b);
+        if (!d) return false;
+        return d >= yearStart && d <= yearEnd;
+      });
+    }
+
+    return recentBookings.filter((b) => matchesSearch(b));
   }, [recentBookings, rangeFilter, searchTerm]);
+
+  // Debug: log filtered bookings count when range changes
+  useEffect(() => {
+    console.log(`Filter: ${rangeFilter}, Total bookings: ${recentBookings.length}, Filtered: ${filteredBookings.length}`);
+  }, [rangeFilter, filteredBookings, recentBookings.length]);
 
   // Transform monthly revenue data for bar chart
   const bookingData =
     monthlyRevenue.length > 0
       ? monthlyRevenue.map((item) => ({
-          month: item.month?.substring(0, 3) || "N/A",
-          // map backend fields to generic type1/type2/type3 so labels can be dynamic
-          type1: item.sitting_bookings || 0,
-          type2: item.sleeper_bookings || 0,
-          type3: item.type3_bookings || 0,
-        }))
+        month: item.month?.substring(0, 3) || "N/A",
+        // map backend fields to generic type1/type2/type3 so labels can be dynamic
+        type1: item.sitting_bookings || 0,
+        type2: item.sleeper_bookings || 0,
+        type3: item.type3_bookings || 0,
+      }))
       : [
-          { month: "Jan", type1: 0, type2: 0, type3: 0 },
-          { month: "Feb", type1: 0, type2: 0, type3: 0 },
-          { month: "Mar", type1: 0, type2: 0, type3: 0 },
-          { month: "Apr", type1: 0, type2: 0, type3: 0 },
-          { month: "May", type1: 0, type2: 0, type3: 0 },
-          { month: "Jun", type1: 0, type2: 0, type3: 0 },
-          { month: "Jul", type1: 0, type2: 0, type3: 0 },
-          { month: "Aug", type1: 0, type2: 0, type3: 0 },
-          { month: "Sep", type1: 0, type2: 0, type3: 0 },
-          { month: "Oct", type1: 0, type2: 0, type3: 0 },
-          { month: "Nov", type1: 0, type2: 0, type3: 0 },
-          { month: "Dec", type1: 0, type2: 0, type3: 0 },
-        ];
+        { month: "Jan", type1: 0, type2: 0, type3: 0 },
+        { month: "Feb", type1: 0, type2: 0, type3: 0 },
+        { month: "Mar", type1: 0, type2: 0, type3: 0 },
+        { month: "Apr", type1: 0, type2: 0, type3: 0 },
+        { month: "May", type1: 0, type2: 0, type3: 0 },
+        { month: "Jun", type1: 0, type2: 0, type3: 0 },
+        { month: "Jul", type1: 0, type2: 0, type3: 0 },
+        { month: "Aug", type1: 0, type2: 0, type3: 0 },
+        { month: "Sep", type1: 0, type2: 0, type3: 0 },
+        { month: "Oct", type1: 0, type2: 0, type3: 0 },
+        { month: "Nov", type1: 0, type2: 0, type3: 0 },
+        { month: "Dec", type1: 0, type2: 0, type3: 0 },
+      ];
 
   // Donut chart data from stats
   const topCategoryData = dashboardStats
     ? [
-        ...(isTypeEnabled(1)
-          ? [
-              {
-                type: 1,
-                name: getTypeName(1),
-                value: dashboardStats.top_category?.sitting?.percentage || 0,
-              },
-            ]
-          : []),
-        ...(isTypeEnabled(2)
-          ? [
-              {
-                type: 2,
-                name: getTypeName(2),
-                value: dashboardStats.top_category?.sleeper?.percentage || 0,
-              },
-            ]
-          : []),
-        ...(isTypeEnabled(3)
-          ? [
-              {
-                type: 3,
-                name: getTypeName(3),
-                value: dashboardStats.top_category?.type3?.percentage || 0,
-              },
-            ]
-          : []),
-      ]
+      ...(isTypeEnabled(1)
+        ? [
+          {
+            type: 1,
+            name: getTypeName(1),
+            value: dashboardStats.top_category?.sitting?.percentage || 0,
+          },
+        ]
+        : []),
+      ...(isTypeEnabled(2)
+        ? [
+          {
+            type: 2,
+            name: getTypeName(2),
+            value: dashboardStats.top_category?.sleeper?.percentage || 0,
+          },
+        ]
+        : []),
+      ...(isTypeEnabled(3)
+        ? [
+          {
+            type: 3,
+            name: getTypeName(3),
+            value: dashboardStats.top_category?.type3?.percentage || 0,
+          },
+        ]
+        : []),
+    ]
     : [
-        ...(isTypeEnabled(1)
-          ? [{ type: 1, name: getTypeName(1), value: 33 }]
-          : []),
-        ...(isTypeEnabled(2)
-          ? [{ type: 2, name: getTypeName(2), value: 33 }]
-          : []),
-        ...(isTypeEnabled(3)
-          ? [{ type: 3, name: getTypeName(3), value: 34 }]
-          : []),
-      ];
+      ...(isTypeEnabled(1)
+        ? [{ type: 1, name: getTypeName(1), value: 33 }]
+        : []),
+      ...(isTypeEnabled(2)
+        ? [{ type: 2, name: getTypeName(2), value: 33 }]
+        : []),
+      ...(isTypeEnabled(3)
+        ? [{ type: 3, name: getTypeName(3), value: 34 }]
+        : []),
+    ];
 
   // type1 -> blue, type2 -> orange, type3 -> green
   const COLORS = ["#3B82F6", "#F59E0B", "#10B981"];
@@ -302,16 +353,25 @@ const Dashboard = () => {
     color: string;
     label: string;
   }) => {
-    const percentage = (value / max) * 100;
+    // clamp percentage to prevent overflow and negative widths
+    const percentage =
+      max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0;
     return (
       <div className="mb-3">
         <div className="flex justify-between mb-1">
           <span className="text-sm font-medium text-gray-700">{label}</span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-2.5">
+
+        {/* outer bar clips overflow */}
+        <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
           <div
             className="h-2.5 rounded-full"
-            style={{ width: `${percentage}%`, backgroundColor: color }}
+            style={{
+              width: `${percentage}%`,
+              backgroundColor: color,
+              maxWidth: "100%",
+              boxSizing: "border-box",
+            }}
           ></div>
         </div>
       </div>
@@ -335,7 +395,7 @@ const Dashboard = () => {
     <div className="min-h-screen bg-gray-50">
       <Navigation />
 
-      <main className="p-4 md:p-6">
+      <main className="p-2 md:p-4">
         {loading ? (
           <div className="flex items-center justify-center h-96">
             <div className="text-lg text-gray-600">Loading dashboard...</div>
@@ -343,12 +403,12 @@ const Dashboard = () => {
         ) : (
           <>
             {/* Header */}
-            <div className="bg-gradient-to-r from-gray-900 to-black rounded-xl p-4 md:p-6 mb-4 md:mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between shadow-lg">
-              <div className="mb-3 sm:mb-0">
-                <h1 className="text-xl md:text-2xl font-bold text-white">
+            <div className="bg-gradient-to-r from-gray-900 to-black rounded-xl p-3 md:p-4 mb-3 md:mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between shadow-lg">
+              <div className="mb-2 sm:mb-0">
+                <h1 className="text-lg md:text-xl font-bold text-white">
                   Good morning, Admin!
                 </h1>
-                <p className="text-gray-300 mt-1 text-xs md:text-sm">
+                <p className="text-gray-300 mt-0.5 text-xs">
                   Welcome to your dashboard
                 </p>
               </div>
@@ -374,21 +434,20 @@ const Dashboard = () => {
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-5 mb-4 md:mb-6">
-              <div className="bg-gradient-to-br from-gray-900 to-black text-white rounded-lg p-4 md:p-5 shadow-sm h-48 md:h-48 flex flex-col justify-between">
-                <h3 className="text-xs md:text-sm mb-1 md:mb-2 opacity-90">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2 md:gap-3 mb-3 md:mb-4">
+              <div className="bg-gradient-to-br from-gray-900 to-black text-white rounded-lg p-3 md:p-4 shadow-sm h-40 md:h-40 flex flex-col justify-between">
+                <p className="text-xs mb-1 font-semibold text-pacity-90">
                   Total Revenue
-                </h3>
+                </p>
                 <div>
-                  <p className="text-xl md:text-2xl font-bold">
+                  <p className="text-lg md:text-xl font-bold">
                     ₹ {dashboardStats?.revenue?.total?.toLocaleString() || "0"}
                   </p>
                   <p
-                    className={`text-xs mt-1 md:mt-2 ${
-                      dashboardStats?.revenue?.trend === "up"
-                        ? "text-green-300"
-                        : "text-red-300"
-                    }`}
+                    className={`text-xs mt-0.5 ${dashboardStats?.revenue?.trend === "up"
+                      ? "text-green-300"
+                      : "text-red-300"
+                      }`}
                   >
                     {dashboardStats?.revenue?.trend === "up" ? "+" : ""}
                     {dashboardStats?.revenue?.percentage_change || 0}% From last
@@ -397,8 +456,8 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-gray-900 to-black text-white rounded-lg p-5 shadow-sm h-48 flex flex-col justify-between">
-                <p className="text-sm font-semibold mb-4">Top category</p>
+              <div className="bg-gradient-to-br from-gray-900 to-black text-white rounded-lg p-3 md:p-4 shadow-sm h-40 flex flex-col justify-between">
+                <p className="text-sm font-semibold mb-3">Top category</p>
                 <div className="flex items-center justify-between">
                   <div className="w-20 h-20">
                     <ResponsiveContainer>
@@ -445,20 +504,19 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg p-4 md:p-5 shadow-sm h-48 md:h-48 flex flex-col justify-between">
-                <h3 className="text-xs md:text-sm text-gray-500 mb-1 md:mb-2">
+              <div className="bg-white rounded-lg p-3 md:p-4 shadow-sm h-40 md:h-40 flex flex-col justify-between">
+                <p className="text-xs  font-semibold text-black mb-1">
                   Total Bookings
-                </h3>
+                </p>
                 <div>
-                  <p className="text-xl md:text-2xl font-bold text-gray-800">
+                  <p className="text-lg md:text-xl font-bold text-gray-800">
                     {dashboardStats?.bookings?.total || 0}
                   </p>
                   <p
-                    className={`text-xs mt-1 md:mt-2 ${
-                      dashboardStats?.bookings?.trend === "up"
-                        ? "text-green-500"
-                        : "text-red-500"
-                    }`}
+                    className={`text-xs mt-0.5 ${dashboardStats?.bookings?.trend === "up"
+                      ? "text-green-500"
+                      : "text-red-500"
+                      }`}
                   >
                     {dashboardStats?.bookings?.change >= 0 ? "+" : ""}
                     {dashboardStats?.bookings?.change || 0} From last day
@@ -466,20 +524,19 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg p-4 md:p-5 shadow-sm h-48 md:h-48 flex flex-col justify-between">
-                <h3 className="text-xs md:text-sm text-gray-500 mb-1 md:mb-2">
+              <div className="bg-white rounded-lg p-3 md:p-4 shadow-sm h-40 md:h-40 flex flex-col justify-between">
+                <p className="text-xs font-semibold text-black mb-2">
                   Completed
-                </h3>
+                </p>
                 <div>
-                  <p className="text-xl md:text-2xl font-bold text-gray-800">
+                  <p className="text-lg md:text-xl font-bold text-gray-800">
                     {dashboardStats?.completed?.total || 0}
                   </p>
                   <p
-                    className={`text-xs mt-1 md:mt-2 ${
-                      dashboardStats?.completed?.trend === "up"
-                        ? "text-green-500"
-                        : "text-red-500"
-                    }`}
+                    className={`text-xs mt-0.5 ${dashboardStats?.completed?.trend === "up"
+                      ? "text-green-500"
+                      : "text-red-500"
+                      }`}
                   >
                     {dashboardStats?.completed?.trend === "up" ? "+" : ""}
                     {dashboardStats?.completed?.percentage_change || 0}% From
@@ -488,11 +545,11 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg p-4 md:p-5 shadow-sm h-48 md:h-48 flex flex-col justify-between">
-                <h3 className="text-xs md:text-sm text-gray-500 mb-2 md:mb-3">
+              <div className="bg-white rounded-lg p-3 md:p-4 shadow-sm h-40 md:h-40 flex flex-col justify-between">
+                <h3 className="text-xs font-semibold text-gray mb-1">
                   Booked
                 </h3>
-                <div className="space-y-2 md:space-y-2">
+                <div className="space-y-1 md:space-y-1.5">
                   {isTypeEnabled(1) && (
                     <ProgressBar
                       value={
@@ -532,12 +589,12 @@ const Dashboard = () => {
             </div>
 
             {/* Booking List and Chart */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4">
               {/* Booking List */}
               <div className="lg:col-span-2 bg-white border rounded-lg shadow-sm flex flex-col h-[420px]">
-                <div className="p-4 md:p-6 border-b">
-                  <div className="flex items-center justify-between mb-3 md:mb-4">
-                    <h2 className="text-base md:text-lg font-semibold text-gray-800">
+                <div className="p-3 md:p-4 border-b">
+                  <div className="flex items-center justify-between mb-2 md:mb-3">
+                    <h2 className="text-sm md:text-base font-semibold text-gray-800">
                       Booking list
                     </h2>
                   </div>
@@ -572,11 +629,11 @@ const Dashboard = () => {
                 </div>
 
                 <div className="flex-1 overflow-auto">
-                  <div className="min-w-[800px]">
+                  <div className="min-w-0">
                     <table className="w-full">
                       <thead className="bg-black sticky top-0 z-10">
                         <tr>
-                          <th className="text-left p-3 md:p-4 font-medium text-white text-xs uppercase min-w-[120px]">
+                          <th className="text-left p-2 md:p-3 font-medium text-white text-xs uppercase min-w-[100px]">
                             Booking ID
                           </th>
                           <th className="text-left p-3 md:p-4 font-medium text-white text-xs uppercase min-w-[120px]">
@@ -652,11 +709,10 @@ const Dashboard = () => {
                               </td>
                               <td className="p-3 md:p-4 min-w-[100px]">
                                 <span
-                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${
-                                    booking.status === "completed"
-                                      ? "bg-green-100 text-green-800"
-                                      : "bg-amber-100 text-amber-800"
-                                  }`}
+                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${booking.status === "completed"
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-amber-100 text-amber-800"
+                                    }`}
                                 >
                                   {booking.status}
                                 </span>
@@ -750,11 +806,10 @@ const Dashboard = () => {
                 {/* Scrollable Chart Container */}
                 <div
                   ref={chartContainerRef}
-                  className={`flex-1 relative ${
-                    needsScroll
-                      ? "overflow-x-auto overflow-y-hidden scrollable-chart"
-                      : "overflow-hidden"
-                  }`}
+                  className={`flex-1 relative ${needsScroll
+                    ? "overflow-x-auto overflow-y-hidden scrollable-chart"
+                    : "overflow-hidden"
+                    }`}
                 >
                   {chartLoading ? (
                     <div className="flex items-center justify-center h-full">
