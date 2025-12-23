@@ -424,11 +424,33 @@ const WorkerDetails = () => {
     }).length;
   }, [bookings]);
   // Handle balance close confirmation
-  const handleCloseBalance = () => {
-    setBalanceAmount(0);
-    localStorage.setItem(`worker_balance_${workerId}`, "0");
-    setShowCloseConfirm(false);
-    toast.success("Balance reset to ₹0");
+  const handleCloseBalance = async () => {
+    try {
+      const adminId = getCookie("adminId");
+      if (!adminId) {
+        toast.error("Admin ID not found. Please log in again.");
+        return;
+      }
+      
+      // Call the API to update worker balance
+      const response = await bookingAPI.updateWorkerBalance(adminId, String(workerId));
+      
+      if (response?.data?.success) {
+        setBalanceAmount(0);
+        localStorage.setItem(`worker_balance_${workerId}`, "0");
+        setShowCloseConfirm(false);
+        toast.success("Balance reset to ₹0");
+      } else {
+        toast.error(response?.data?.message || "Failed to reset balance");
+      }
+    } catch (err: any) {
+      console.error("Error resetting worker balance:", err);
+      toast.error(
+        err?.response?.data?.message || 
+        err?.message || 
+        "Failed to reset balance"
+      );
+    }
   };
   return (
     <div className="min-h-screen bg-gray-50">

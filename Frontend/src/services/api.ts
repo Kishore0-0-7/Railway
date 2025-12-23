@@ -121,6 +121,9 @@ export const bookingAPI = {
   
   getWorkerDashboard: (adminId: string, workerId: string) =>
     apiClient.get(`/closebook/worker-dashboard/${adminId}/${workerId}`),
+  
+  updateWorkerBalance: (adminId: string, workerId: string) =>
+    apiClient.put(`/closebook/update-worker-balance/${adminId}/${workerId}`),
 };
 
 // ==================== ANALYTICS/DASHBOARD APIs ====================
