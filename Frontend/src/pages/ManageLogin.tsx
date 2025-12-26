@@ -25,10 +25,18 @@ const ManageLogin = () => {
 
   // Scroll to top on route change
   useScrollToTop();
+  // Today's date in YYYY-MM-DD using local time
+  function getTodayInputDate() {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
   const [formData, setFormData] = useState({
     name: "",
     mobileNumber: "",
-    joiningDate: "",
+    joiningDate: getTodayInputDate(),
     gender: "",
     username: "",
     password: "",
@@ -50,6 +58,7 @@ const ManageLogin = () => {
     admin_name?: string;
     // include total bookings so the table can show it without TS errors
     total_bookings?: number;
+    seating_types?: string[];
   }
 
   const [accounts, setAccounts] = useState<Worker[]>([]);
@@ -72,6 +81,7 @@ const ManageLogin = () => {
 
   // Fetch workers and settings on component mount
   useEffect(() => {
+    console.log("[ManageLogin] Component mounted, initializing...");
     fetchWorkers();
     fetchSettings();
   }, []);
@@ -130,6 +140,39 @@ const ManageLogin = () => {
     }
   }, [location.state]);
 
+  // Sync form data with currently edited account when accounts update (e.g., after refresh)
+  useEffect(() => {
+    if (editingWorkerId && accounts.length > 0) {
+      const currentAccount = accounts.find((a) => a.worker_id === editingWorkerId);
+      if (currentAccount) {
+        setFormData((prev) => ({
+          ...prev,
+          seatingTypes: currentAccount.seating_types || [],
+        }));
+      }
+    }
+  }, [accounts, editingWorkerId]);
+
+  // Auto-save seating types to localStorage whenever they change during editing
+  useEffect(() => {
+    if (editingWorkerId && formData.seatingTypes) {
+      const existingTypes = JSON.parse(
+        localStorage.getItem("workerSeatingTypes") || "{}"
+      );
+      existingTypes[editingWorkerId] = formData.seatingTypes;
+      localStorage.setItem(
+        "workerSeatingTypes",
+        JSON.stringify(existingTypes)
+      );
+      console.log(
+        `[ManageLogin] Auto-saved seating types for worker ${editingWorkerId}:`,
+        formData.seatingTypes,
+        "Full storage now:",
+        existingTypes
+      );
+    }
+  }, [formData.seatingTypes, editingWorkerId]);
+
   // Fetch all workers from backend
   const fetchWorkers = async () => {
     try {
@@ -148,6 +191,10 @@ const ManageLogin = () => {
         const storedSeatingTypes = JSON.parse(
           localStorage.getItem("workerSeatingTypes") || "{}"
         );
+        console.log(
+          "[ManageLogin] Loaded stored seating types from localStorage:",
+          storedSeatingTypes
+        );
 
         // normalize fields so ManageLogin table can safely read status and total_bookings
         const normalized: Worker[] = response.data.workers.map((w: any) => ({
@@ -157,10 +204,34 @@ const ManageLogin = () => {
           seating_types: storedSeatingTypes[w.worker_id] || [],
         }));
         setAccounts(normalized);
+        console.log("[ManageLogin] Normalized workers with seating types:", normalized);
+
+        // Ensure localStorage is kept in sync with backend data for persistence across refreshes
+        const updatedSeatingTypes: { [key: string]: string[] } = {};
+        normalized.forEach((worker) => {
+          updatedSeatingTypes[worker.worker_id] = worker.seating_types || [];
+        });
+        localStorage.setItem(
+          "workerSeatingTypes",
+          JSON.stringify(updatedSeatingTypes)
+        );
       }
     } catch (error: any) {
       console.error("Error fetching workers:", error);
-      toast.error(error.response?.data?.error || "Failed to load workers");
+      const msg = error.response?.data?.error || "Failed to load workers";
+      // Only show an error toast if we have no data loaded.
+      // If we already have accounts in state, keep the UI and show a softer notice.
+      if (accounts.length === 0) {
+        toast.error(msg);
+      } else {
+        // Non-blocking notice when refresh fails but cached data is shown
+        if ((toast as any).message) {
+          (toast as any).message("Couldn’t refresh workers; showing existing data");
+        } else {
+          // Fallback to info if supported by sonner
+          (toast as any).info?.("Couldn’t refresh workers; showing existing data");
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -239,6 +310,17 @@ const ManageLogin = () => {
       toast.error("Password is required");
       return;
     }
+    if (formData.password.length < 8 || formData.password.length > 16) {
+      toast.error("Password must be 8–16 characters long");
+      return;
+    }
+    if (
+      availableSeatingTypes.length > 0 &&
+      formData.seatingTypes.length === 0
+    ) {
+      toast.error("Please select at least one seating type");
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -305,7 +387,7 @@ const ManageLogin = () => {
     setFormData({
       name: "",
       mobileNumber: "",
-      joiningDate: "",
+      joiningDate: getTodayInputDate(),
       gender: "",
       username: "",
       password: "",
@@ -327,6 +409,21 @@ const ManageLogin = () => {
   };
 
   const handleRowClick = (account: Worker) => {
+    // Load seating types from localStorage as the source of truth
+    const storedSeatingTypes = JSON.parse(
+      localStorage.getItem("workerSeatingTypes") || "{}"
+    );
+    const seatingTypesForWorker =
+      storedSeatingTypes[account.worker_id] || account.seating_types || [];
+
+    console.log(
+      `[ManageLogin] Loading worker ${account.worker_id}`,
+      "stored data:",
+      storedSeatingTypes,
+      "types for this worker:",
+      seatingTypesForWorker
+    );
+
     setEditingAccount(account);
     setEditingWorkerId(account.worker_id);
     setFormData({
@@ -339,7 +436,9 @@ const ManageLogin = () => {
       confirmPassword: "",
       role: "worker",
       currentPassword: "",
-      seatingTypes: (account as any).seating_types || [],
+      seatingTypes: Array.isArray(seatingTypesForWorker)
+        ? seatingTypesForWorker
+        : [],
     });
     setShowResetPassword(false);
     setShowNewPassword(false);
@@ -363,6 +462,13 @@ const ManageLogin = () => {
       toast.error("Joining date is required");
       return;
     }
+    if (
+      availableSeatingTypes.length > 0 &&
+      formData.seatingTypes.length === 0
+    ) {
+      toast.error("Please select at least one seating type");
+      return;
+    }
     if (!editingWorkerId) {
       toast.error("No worker selected for update");
       return;
@@ -370,6 +476,13 @@ const ManageLogin = () => {
 
     if (showResetPassword && formData.password.trim() === "") {
       toast.error("Please enter new password before saving.");
+      return;
+    }
+    if (
+      showResetPassword &&
+      (formData.password.length < 8 || formData.password.length > 16)
+    ) {
+      toast.error("New password must be 8–16 characters long");
       return;
     }
 
@@ -422,6 +535,7 @@ const ManageLogin = () => {
 
       await fetchWorkers(); // Refresh the list
       handleCancel();
+      navigate("/workerlist");
     } catch (error: any) {
       console.error("Error updating worker:", error);
       const errorMessage =
@@ -516,7 +630,7 @@ const ManageLogin = () => {
               {/* Seating Types */}
               <div>
                 <label className="block text-sm font-medium mb-2">
-                  Seating Types
+                  Seating Types (Required)
                 </label>
                 <div className="border rounded-md p-4 space-y-3 bg-background">
                   {availableSeatingTypes.length === 0 ? (
@@ -533,20 +647,30 @@ const ManageLogin = () => {
                           id={`seating-${type.name}`}
                           checked={formData.seatingTypes.includes(type.name)}
                           onCheckedChange={(checked) => {
+                            console.log(
+                              `[Checkbox] ${type.name} toggled to:`,
+                              checked,
+                              "Current seatingTypes before:",
+                              formData.seatingTypes
+                            );
                             if (checked) {
+                              const updated = [
+                                ...formData.seatingTypes,
+                                type.name,
+                              ];
+                              console.log("Updated to:", updated);
                               setFormData({
                                 ...formData,
-                                seatingTypes: [
-                                  ...formData.seatingTypes,
-                                  type.name,
-                                ],
+                                seatingTypes: updated,
                               });
                             } else {
+                              const updated = formData.seatingTypes.filter(
+                                (t) => t !== type.name
+                              );
+                              console.log("Updated to:", updated);
                               setFormData({
                                 ...formData,
-                                seatingTypes: formData.seatingTypes.filter(
-                                  (t) => t !== type.name
-                                ),
+                                seatingTypes: updated,
                               });
                             }
                           }}
@@ -561,6 +685,24 @@ const ManageLogin = () => {
                     ))
                   )}
                 </div>
+                {editingAccount && (
+                  <div className="mt-2">
+                    <span className="text-sm text-muted-foreground">
+                      Currently selected:
+                    </span>
+                    {formData.seatingTypes.length > 0 ? (
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {formData.seatingTypes.map((t) => (
+                          <Badge key={t} variant="secondary" className="capitalize">
+                            {t}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">None selected</p>
+                    )}
+                  </div>
+                )}
               </div>
               {/* Username */}
               <div>
@@ -600,6 +742,7 @@ const ManageLogin = () => {
                       onChange={(e) =>
                         setFormData({ ...formData, password: e.target.value })
                       }
+                      maxLength={16}
                       onKeyDown={(e) => handleKeyDown(e, "buttons")}
                     />
                     <button
@@ -637,6 +780,7 @@ const ManageLogin = () => {
                               password: e.target.value,
                             })
                           }
+                          maxLength={16}
                           onKeyDown={(e) => handleKeyDown(e, "buttons")}
                         />
                         <button

@@ -320,6 +320,15 @@ const WorkerDetails = () => {
   };
 
   const handleEditDetails = () => {
+    // Pull seating types from localStorage so edit screen can show the current selection
+    const storedSeatingTypes = JSON.parse(
+      localStorage.getItem("workerSeatingTypes") || "{}"
+    );
+    const workerSeatingTypes =
+      storedSeatingTypes[worker.worker_id || worker.id || worker.loginId] ||
+      worker.seating_types ||
+      [];
+
     // Navigate to ManageLogin page with worker data
     navigate("/manage-login", {
       state: {
@@ -333,6 +342,7 @@ const WorkerDetails = () => {
           created_at: worker.created_at,
           status: worker.status || "active",
           total_bookings: stats.totalBookings,
+          seating_types: workerSeatingTypes,
         },
       },
     });

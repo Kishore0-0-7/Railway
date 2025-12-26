@@ -31,6 +31,8 @@ import {
   Upload,
   Image as ImageIcon,
   Clock,
+  Plus,
+  Trash2,
 } from "lucide-react";
 
 // API
@@ -45,7 +47,8 @@ interface SeatingType {
   amount: string;
   enabled: boolean;
   breakdown?: Record<string, string>;
-  grace_time?: string; 
+  grace_time?: string;
+  formats?: string[];
 }
 
 interface SettingsData {
@@ -91,6 +94,7 @@ const INITIAL_SETTINGS: SettingsData = {
       enabled: true,
       breakdown: { "1-3": "", "1-6": "", "1-12": "", "1-24": "" },
       grace_time: "0",
+      formats: ["1-3", "1-6", "1-12", "1-24"],
     },
   ],
   advance_payment_enabled: true,
@@ -203,6 +207,9 @@ interface SeatingCardProps {
   onCancelEdit: () => void;
   onEditValueChange: (value: string) => void;
   onBreakdownChange: (index: number, slot: string, value: string) => void;
+  onAddFormat?: (index: number, format: string) => void;
+  onRemoveFormat?: (index: number, format: string) => void;
+  onUpdateSettings?: (updater: (prev: SettingsData) => SettingsData) => void;
 }
 
 const SeatingCard = React.memo<SeatingCardProps>((
@@ -217,8 +224,153 @@ const SeatingCard = React.memo<SeatingCardProps>((
     onCancelEdit,
     onEditValueChange,
     onBreakdownChange,
+    onAddFormat,
+    onRemoveFormat,
+    onUpdateSettings,
   }
 ) => {
+  const [newFormat, setNewFormat] = React.useState("");
+  const [formatStart, setFormatStart] = React.useState("");
+  const [formatEnd, setFormatEnd] = React.useState("");
+  const [showPriceModal, setShowPriceModal] = React.useState(false);
+  const [priceForNewFormat, setPriceForNewFormat] = React.useState("");
+  const [newFormatToAdd, setNewFormatToAdd] = React.useState<string | null>(null);
+  const [editingFormatLabel, setEditingFormatLabel] = React.useState<string | null>(null);
+  const [showEditModal, setShowEditModal] = React.useState(false);
+  const [editFormatStart, setEditFormatStart] = React.useState("");
+  const [editFormatEnd, setEditFormatEnd] = React.useState("");
+  const [editPriceValue, setEditPriceValue] = React.useState("");
+  const formats = seatType.formats || (index === 1 ? ["1-3", "1-6", "1-12", "1-24"] : []);
+
+  const addFormat = () => {
+    const start = parseInt(formatStart);
+    const end = parseInt(formatEnd);
+    const format = `${start}-${end}`;
+    
+    // Validation checks
+    if (!formatStart.trim() || !formatEnd.trim()) {
+      toast.error("Please enter both start and end values");
+      return;
+    }
+
+    if (isNaN(start) || isNaN(end)) {
+      toast.error("Please enter valid numbers");
+      return;
+    }
+
+    if (start < 1 || start > 24) {
+      toast.error("Start value must be between 1 and 24");
+      return;
+    }
+
+    if (end < 1 || end > 24) {
+      toast.error("End value must be between 1 and 24");
+      return;
+    }
+
+    if (end <= start) {
+      toast.error("End value must be greater than start value");
+      return;
+    }
+
+    if (formats.includes(format)) {
+      toast.error("This format already exists");
+      return;
+    }
+
+    // Show modal to set price
+    setNewFormatToAdd(format);
+    setPriceForNewFormat("");
+    setShowPriceModal(true);
+    setFormatStart("");
+    setFormatEnd("");
+  };
+
+  const savePriceAndAddFormat = () => {
+    if (!newFormatToAdd) return;
+
+    if (!priceForNewFormat.trim()) {
+      toast.error("Please enter a price");
+      return;
+    }
+
+    onAddFormat?.(index, newFormatToAdd);
+    onBreakdownChange(index, newFormatToAdd, priceForNewFormat);
+    
+    setShowPriceModal(false);
+    setNewFormatToAdd(null);
+    setPriceForNewFormat("");
+    toast.success(`Format "${newFormatToAdd}" added with price ₹${priceForNewFormat}`);
+  };
+
+  const handleEditFormatLabel = (format: string) => {
+    const [start, end] = format.split("-").map(Number);
+    setEditingFormatLabel(format);
+    setEditFormatStart(start.toString());
+    setEditFormatEnd(end.toString());
+    setEditPriceValue(seatType.breakdown?.[format] || "");
+    setShowEditModal(true);
+  };
+
+  const saveEditedFormat = () => {
+    if (!editingFormatLabel) return;
+
+    // Validate price
+    if (!editPriceValue.trim()) {
+      toast.error("Please enter a price");
+      return;
+    }
+
+    const start = parseInt(editFormatStart);
+    const end = parseInt(editFormatEnd);
+
+    if (isNaN(start) || isNaN(end) || start < 1 || start > 24 || end < 1 || end > 24 || end <= start) {
+      toast.error("Invalid format. Start and end must be between 1-24, and end > start");
+      return;
+    }
+
+    const newFormat = `${start}-${end}`;
+
+    if (newFormat !== editingFormatLabel && formats.includes(newFormat)) {
+      toast.error("This format already exists");
+      return;
+    }
+
+    // Update breakdown with new format key and price
+    const oldPrice = seatType.breakdown?.[editingFormatLabel];
+    
+    onUpdateSettings?.((prev) => {
+      const updated = JSON.parse(JSON.stringify(prev)) as SettingsData;
+      const formatList = updated.seating_types[index].formats || [...formats];
+      const formatIdx = formatList.indexOf(editingFormatLabel);
+      
+      // Update format in formats array if changed
+      if (newFormat !== editingFormatLabel && formatIdx !== -1) {
+        formatList[formatIdx] = newFormat;
+      }
+      updated.seating_types[index].formats = formatList;
+
+      // Update breakdown object
+      if (updated.seating_types[index].breakdown) {
+        if (newFormat !== editingFormatLabel) {
+          delete updated.seating_types[index].breakdown![editingFormatLabel];
+        }
+        updated.seating_types[index].breakdown![newFormat] = editPriceValue;
+      }
+
+      return updated;
+    });
+
+    if (newFormat !== editingFormatLabel) {
+      toast.success(`Format updated from "${editingFormatLabel}" to "${newFormat}" with price ₹${editPriceValue}`);
+    } else {
+      toast.success(`Price updated to ₹${editPriceValue}`);
+    }
+    
+    setShowEditModal(false);
+    setEditingFormatLabel(null);
+  };
+
   return (
     <Card className="border-2 hover:border-blue-300 transition-colors">
       <CardContent className="p-4">
@@ -286,29 +438,114 @@ const SeatingCard = React.memo<SeatingCardProps>((
           </div>
 
           {/* Price Section */}
-          <div className="space-y-2">
-            <Label className="text-xs text-gray-600">Price for Hours (₹)</Label>
+          <div className="space-y-3">
+            <Label className="text-xs text-gray-600 font-medium">Price for Hours (₹)</Label>
             {index === 1 ? (
-              // Sleeping breakdown: four editable inputs
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {["1-3", "1-6", "1-12", "1-24"].map((slot) => (
-                  <div key={slot} className="flex items-center gap-2">
-                    <span className="w-20 text-sm text-gray-700">{slot}</span>
-                    <div className="relative flex-1">
-                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">
-                        ₹
-                      </span>
-                      <Input
-                        type="number"
-                        value={seatType.breakdown?.[slot] || ""}
-                        onChange={(e) => onBreakdownChange(index, slot, e.target.value)}
-                        placeholder="0"
-                        className="pl-7 text-sm"
-                      />
+              <>
+                {/* Dynamic Format Price Grid */}
+                <div className="space-y-2 bg-gradient-to-br from-blue-50 via-indigo-50 to-gray-50 p-3 sm:p-4 rounded-xl border-2 border-blue-200 shadow-sm">
+                  <div className="grid gap-3">
+                    {formats.map((slot) => (
+                      <div key={slot} className="flex flex-col sm:flex-row sm:items-center gap-2 bg-white p-3 rounded-lg border border-gray-200 hover:border-blue-400 hover:shadow-md transition-all duration-200">
+                        {/* Mobile: Format on top row full width */}
+                        <button
+                          onClick={() => handleEditFormatLabel(slot)}
+                          className="w-full sm:w-24 text-sm font-bold text-white bg-gradient-to-r from-blue-500 to-blue-600 px-3 py-2 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer text-center"
+                          title="Click to edit format"
+                        >
+                          {slot}
+                        </button>
+
+                        {/* Mobile: Price input on second row full width */}
+                        {/* Desktop: Price input flexes to take available space */}
+                        <div className="relative w-full sm:flex-1 sm:w-40">
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-600 text-sm font-bold">
+                            ₹
+                          </span>
+                          <Input
+                            type="number"
+                            value={seatType.breakdown?.[slot] || ""}
+                            placeholder="0"
+                            onClick={() => handleEditFormatLabel(slot)}
+                            className="pl-7 w-full text-sm sm:text-base font-semibold bg-white border border-gray-300 focus:border-blue-500 cursor-pointer hover:bg-blue-50 hover:border-blue-400 transition-all rounded-lg"
+                            readOnly
+                            title="Click to edit format and price"
+                          />
+                        </div>
+
+                        {/* Mobile: Delete button on third row full width */}
+                        {/* Desktop: Delete button fixed size */}
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="w-full sm:w-9 sm:h-9 p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-200"
+                          onClick={() => {
+                            if (formats.length <= 1) {
+                              toast.error("Cannot delete the last format. At least one format is required.");
+                            } else {
+                              onRemoveFormat?.(index, slot);
+                            }
+                          }}
+                          title="Remove format"
+                        >
+                          <Trash2 className="w-4 h-4 mx-auto" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Add Format Section */}
+                  <div className="mt-4 pt-4 border-t-2 border-blue-200">
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-center">
+                      <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide whitespace-nowrap">Add Format:</span>
+                      <div className="flex gap-2 flex-1">
+                        <Input
+                          type="number"
+                          value={formatStart}
+                          onChange={(e) => setFormatStart(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              addFormat();
+                            }
+                          }}
+                          placeholder="Start"
+                          className="flex-1 sm:w-20 text-sm font-semibold text-center"
+                          min="1"
+                          max="24"
+                        />
+                        <span className="text-gray-600 font-bold text-lg flex items-center">-</span>
+                        <Input
+                          type="number"
+                          value={formatEnd}
+                          onChange={(e) => setFormatEnd(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              addFormat();
+                            }
+                          }}
+                          placeholder="End"
+                          className="flex-1 sm:w-20 text-sm font-semibold text-center"
+                          min="1"
+                          max="24"
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white h-9 px-3 sm:px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 font-semibold flex items-center gap-1 w-full sm:w-auto justify-center"
+                        onClick={addFormat}
+                        title="Add format (End must be > Start)"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Add
+                      </Button>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              </>
             ) : (
               // Sitting: single amount input
               <>
@@ -368,6 +605,193 @@ const SeatingCard = React.memo<SeatingCardProps>((
             )}
           </div>
         </div>
+
+        {/* Edit Format & Price Modal */}
+        {showEditModal && editingFormatLabel && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <Card className="w-full max-w-md shadow-2xl border-2 border-blue-300">
+              <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 sm:p-6 rounded-t-lg">
+                <CardTitle className="flex items-center text-lg sm:text-xl">
+                  <Train className="w-5 h-5 mr-2" />
+                  Edit Format & Price
+                </CardTitle>
+                <CardDescription className="text-blue-100 text-sm mt-1">
+                  Update the format and price ({editingFormatLabel})
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-4 sm:p-6 space-y-5">
+                {/* Current Format Badge */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">Current Format</Label>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold inline-block">
+                      {editingFormatLabel}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Format Section */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold text-gray-700">New Format (Optional)</Label>
+                  <div className="flex gap-2 items-center">
+                    <Input
+                      type="number"
+                      value={editFormatStart}
+                      onChange={(e) => setEditFormatStart(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Tab") return;
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          saveEditedFormat();
+                        }
+                      }}
+                      placeholder="Start"
+                      className="flex-1 text-sm font-semibold text-center border-2 border-gray-300 focus:border-blue-500 rounded-lg"
+                      min="1"
+                      max="24"
+                    />
+                    <span className="text-gray-600 font-bold text-lg">-</span>
+                    <Input
+                      type="number"
+                      value={editFormatEnd}
+                      onChange={(e) => setEditFormatEnd(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          saveEditedFormat();
+                        }
+                      }}
+                      placeholder="End"
+                      className="flex-1 text-sm font-semibold text-center border-2 border-gray-300 focus:border-blue-500 rounded-lg"
+                      min="1"
+                      max="24"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500">Values must be 1-24, end {`>`} start</p>
+                </div>
+
+                {/* Price Section */}
+                <div className="space-y-2 pt-3 border-t">
+                  <Label className="text-sm font-semibold text-gray-700">Price (₹)</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-600 text-lg font-bold">
+                      ₹
+                    </span>
+                    <Input
+                      type="number"
+                      value={editPriceValue}
+                      onChange={(e) => setEditPriceValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          saveEditedFormat();
+                        }
+                      }}
+                      placeholder="0"
+                      className="pl-8 text-lg font-semibold border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 rounded-lg"
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-2 pt-4 border-t">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowEditModal(false);
+                      setEditingFormatLabel(null);
+                    }}
+                    className="flex-1"
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={saveEditedFormat}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                  >
+                    <Check className="w-4 h-4 mr-2" />
+                    Save Changes
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Price Modal for New Format */}
+        {showPriceModal && newFormatToAdd && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <Card className="w-full max-w-sm shadow-2xl border-2 border-blue-300">
+              <CardHeader className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 sm:p-6 rounded-t-lg">
+                <CardTitle className="flex items-center text-lg sm:text-xl">
+                  <Train className="w-5 h-5 mr-2" />
+                  Set Price for Format
+                </CardTitle>
+                <CardDescription className="text-blue-100 text-sm mt-1">
+                  Enter the price for {newFormatToAdd} hours
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-4 sm:p-6 space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">
+                    Format: <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold">{newFormatToAdd}</span>
+                  </Label>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-gray-700">Price (₹)</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-600 text-lg font-bold">
+                      ₹
+                    </span>
+                    <Input
+                      type="number"
+                      value={priceForNewFormat}
+                      onChange={(e) => setPriceForNewFormat(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          savePriceAndAddFormat();
+                        }
+                      }}
+                      placeholder="0"
+                      className="pl-8 text-lg font-semibold border-2 border-gray-300 focus:border-blue-500"
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-4 border-t">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setShowPriceModal(false);
+                      setNewFormatToAdd(null);
+                      setPriceForNewFormat("");
+                    }}
+                    className="flex-1"
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={savePriceAndAddFormat}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <Check className="w-4 h-4 mr-2" />
+                    Save Format
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -493,20 +917,24 @@ function Settings() {
       ]);
 
       const settingsData = settingsResponse.data?.data || {};
-      const breakdown: Record<string, string> = {
-        "1-3": "",
-        "1-6": "",
-        "1-12": "",
-        "1-24": ""
-      };
-
-      if (settingsData.type2_breakdown) {
-        Object.assign(breakdown, {
-          "1-3": settingsData.type2_breakdown["1-3"]?.toString() || breakdown["1-3"],
-          "1-6": settingsData.type2_breakdown["1-6"]?.toString() || breakdown["1-6"],
-          "1-12": settingsData.type2_breakdown["1-12"]?.toString() || breakdown["1-12"],
-          "1-24": settingsData.type2_breakdown["1-24"]?.toString() || breakdown["1-24"],
+      
+      // Extract all formats and their prices from type2_breakdown
+      const type2BreakdownData = settingsData.type2_breakdown || {};
+      const allFormats = Object.keys(type2BreakdownData);
+      const breakdown: Record<string, string> = {};
+      
+      // Populate breakdown with all formats from server (including those with empty values)
+      if (allFormats.length > 0) {
+        allFormats.forEach(format => {
+          const value = type2BreakdownData[format];
+          breakdown[format] = (value !== null && value !== undefined) ? value.toString() : "";
         });
+      } else {
+        // Fallback to default formats if no formats exist
+        breakdown["1-3"] = "";
+        breakdown["1-6"] = "";
+        breakdown["1-12"] = "";
+        breakdown["1-24"] = "";
       }
 
       const drafts = loadDrafts();
@@ -523,7 +951,7 @@ function Settings() {
             settingsData.type1_amount ?? settingsData.type_1_amount,
             drafts[0]?.amount
           ),
-          enabled: true,
+          enabled: settingsData.type1_enabled ?? settingsData.type_1_enabled ?? true,
           grace_time: resolveOrDraft(
             settingsData.type1_grace_time ?? settingsData.grace_amount ?? settingsData.grace_amount_type1 ?? "0",
             "0"
@@ -536,12 +964,10 @@ function Settings() {
             drafts[1]?.amount
           ),
           breakdown: {
-            "1-3": resolveOrDraft(breakdown["1-3"], drafts[1]?.breakdown?.["1-3"]),
-            "1-6": resolveOrDraft(breakdown["1-6"], drafts[1]?.breakdown?.["1-6"]),
-            "1-12": resolveOrDraft(breakdown["1-12"], drafts[1]?.breakdown?.["1-12"]),
-            "1-24": resolveOrDraft(breakdown["1-24"] || settingsData.type2_amount, drafts[1]?.breakdown?.["1-24"]),
+            ...breakdown
           },
-          enabled: true,
+          formats: Object.keys(breakdown),
+          enabled: settingsData.type2_enabled ?? settingsData.type_2_enabled ?? true,
           grace_time: resolveOrDraft(
             settingsData.type2_grace_time ?? settingsData.grace_amount_type2 ?? "0",
             "0"
@@ -603,6 +1029,7 @@ function Settings() {
                 name: FIXED_SEATING_NAMES[1],
                 amount: parsed.seating_types?.sleeper?.amount || prev.seating_types[1].amount,
                 breakdown: parsed.seating_types?.sleeper?.breakdown || prev.seating_types[1].breakdown,
+                formats: parsed.seating_types?.sleeper?.formats || Object.keys(parsed.seating_types?.sleeper?.breakdown || prev.seating_types[1].breakdown || {}),
                 enabled: parsed.seating_types?.sleeper?.enabled ?? true,
                 grace_time: parsed.seating_types?.sleeper?.grace_time || prev.seating_types[1].grace_time,
               },
@@ -625,7 +1052,7 @@ function Settings() {
     // Validate file type
     if (!file.type.startsWith("image/")) {
       toast.error("Please upload an image file");
-      return;
+      return; 
     }
 
     // Validate file size (max 2MB)
@@ -686,6 +1113,43 @@ function Settings() {
     toast.info("Image removed");
   };
 
+  const handleAddFormat = useCallback((index: number, newFormat: string) => {
+    setSettings((prev) => {
+      const updated = JSON.parse(JSON.stringify(prev)) as SettingsData;
+      const formats = updated.seating_types[index].formats || ["1-3", "1-6", "1-12", "1-24"];
+      
+      if (!formats.includes(newFormat)) {
+        formats.push(newFormat);
+        updated.seating_types[index].formats = formats;
+        // Initialize breakdown for new format
+        if (!updated.seating_types[index].breakdown) {
+          updated.seating_types[index].breakdown = {};
+        }
+        updated.seating_types[index].breakdown![newFormat] = "";
+      }
+      return updated;
+    });
+    toast.success(`Format "${newFormat}" added successfully`);
+  }, []);
+
+  const handleRemoveFormat = useCallback((index: number, format: string) => {
+    setSettings((prev) => {
+      const updated = JSON.parse(JSON.stringify(prev)) as SettingsData;
+      const formats = updated.seating_types[index].formats || ["1-3", "1-6", "1-12", "1-24"];
+      const newFormats = formats.filter(f => f !== format);
+      
+      if (newFormats.length > 0) {
+        updated.seating_types[index].formats = newFormats;
+        // Remove price for that format
+        if (updated.seating_types[index].breakdown) {
+          delete updated.seating_types[index].breakdown![format];
+        }
+      }
+      return updated;
+    });
+    toast.success(`Format "${format}" removed`);
+  }, []);
+
   const handleSave = async () => {
     // Validation
     if (!settings.heading1.trim() && !settings.hall_name.trim()) {
@@ -705,6 +1169,14 @@ function Settings() {
       // Prepare payload for backend, consolidating seating info
       const settingsToSave = JSON.parse(JSON.stringify(settings));
       const sleeper = settingsToSave.seating_types[1] || { breakdown: {}, amount: "" };
+      
+      // Build type2_breakdown from all formats
+      const type2_breakdown: Record<string, number> = {};
+      const formats = sleeper.formats || ["1-3", "1-6", "1-12", "1-24"];
+      formats.forEach((fmt: string) => {
+        type2_breakdown[fmt] = parseInt(sleeper.breakdown?.[fmt] || "0");
+      });
+      
       // ensure canonical sleeping amount uses 1-24 slot if present
       if (sleeper.breakdown && sleeper.breakdown["1-24"]) {
         sleeper.amount = sleeper.breakdown["1-24"];
@@ -717,12 +1189,7 @@ function Settings() {
         grace_amount: settingsToSave.seating_types[0].grace_time ? parseInt(settingsToSave.seating_types[0].grace_time) : 0,
         type_2: settingsToSave.seating_types[1].name || FIXED_SEATING_NAMES[1],
         grace_amount_type2: settingsToSave.seating_types[1].grace_time ? parseInt(settingsToSave.seating_types[1].grace_time) : 0,
-        type2_breakdown: {
-          "1-3": parseInt(settingsToSave.seating_types[1].breakdown?.["1-3"] || "0"),
-          "1-6": parseInt(settingsToSave.seating_types[1].breakdown?.["1-6"] || "0"),
-          "1-12": parseInt(settingsToSave.seating_types[1].breakdown?.["1-12"] || "0"),
-          "1-24": parseInt(settingsToSave.seating_types[1].breakdown?.["1-24"] || settingsToSave.seating_types[1].amount || "0"),
-        },
+        type2_breakdown: type2_breakdown,
         advance_payment_enabled: !!settingsToSave.advance_payment_enabled,
         default_advance_percentage: parseFloat(settingsToSave.default_advance_percentage) || 20,
         // Printer-related fields
@@ -748,6 +1215,7 @@ function Settings() {
           amount: settingsToSave.seating_types[1].breakdown?.["1-24"] || settingsToSave.seating_types[1].amount || "0",
           enabled: true,
           breakdown: settingsToSave.seating_types[1].breakdown || {},
+          formats: settingsToSave.seating_types[1].formats || Object.keys(settingsToSave.seating_types[1].breakdown || {}),
           grace_time: settingsToSave.seating_types[1].grace_time || "0",
         },
       };
@@ -1044,32 +1512,43 @@ function Settings() {
                   Seating Types & Pricing
                 </CardTitle>
                 <CardDescription className="text-sm sm:text-base">
-                  Manage seating categories and their pricing (2 types)
+                  Manage seating categories and their pricing ({settings.seating_types.filter(st => st.enabled).length} {settings.seating_types.filter(st => st.enabled).length === 1 ? 'type' : 'types'})
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-4 sm:p-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Seating Type Cards */}
-                  {settings.seating_types.map((seatType, index) => {
-                    const color = seatingColors[index];
+                {settings.seating_types.filter(st => st.enabled).length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p className="text-sm">No seating types enabled. Please contact super admin to enable seating types.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4">
+                    {/* Seating Type Cards - Only show enabled types */}
+                    {settings.seating_types.map((seatType, index) => {
+                      if (!seatType.enabled) return null;
 
-                    return (
-                      <SeatingCard
-                        key={index}
-                        seatType={seatType}
-                        index={index}
-                        color={color}
-                        editing={editing}
-                        editValue={editValue}
-                        onStartEdit={startEditing}
-                        onSaveSeatingEdit={saveSeatingEdit}
-                        onCancelEdit={cancelEdit}
-                        onEditValueChange={handleEditValueChange}
-                        onBreakdownChange={handleBreakdownChange}
-                      />
-                    );
-                  })}
-                </div>
+                      const color = seatingColors[index];
+
+                      return (
+                        <SeatingCard
+                          key={index}
+                          seatType={seatType}
+                          index={index}
+                          color={color}
+                          editing={editing}
+                          editValue={editValue}
+                          onStartEdit={startEditing}
+                          onSaveSeatingEdit={saveSeatingEdit}
+                          onCancelEdit={cancelEdit}
+                          onEditValueChange={handleEditValueChange}
+                          onBreakdownChange={handleBreakdownChange}
+                          onAddFormat={handleAddFormat}
+                          onRemoveFormat={handleRemoveFormat}
+                          onUpdateSettings={setSettings}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -1108,6 +1587,6 @@ function Settings() {
       </div>
     </div>
   );
-};
+}
 
 export default Settings;

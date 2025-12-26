@@ -172,7 +172,7 @@ export const settingsAPI = {
     apiClient.get(`/settings/get-settings/${adminId}`),
 
   upsertSettings: (adminId: string, data: any) =>
-    apiClient.post(`/settings/${adminId}`, data),
+    apiClient.post(`/settings/upsert-settings/${adminId}`, data),
 
   uploadLogo: (adminId: string, file: File) => {
     const formData = new FormData();
