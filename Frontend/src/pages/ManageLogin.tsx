@@ -341,8 +341,7 @@ const ManageLogin = () => {
         gender: formData.gender || null,
         user_name: formData.username,
         password: formData.password,
-        // Note: seating_types will be added when backend support is ready
-        // seating_types: formData.seatingTypes,
+        seating_types: formData.seatingTypes,
       };
 
       const response = await workerAPI.createWorker(workerData);
@@ -494,7 +493,7 @@ const ManageLogin = () => {
         mobile_number: formData.mobileNumber,
         joining_date: formData.joiningDate,
         gender: formData.gender || null,
-        // Note: seating_types will be added when backend support is ready
+        seating_types: formData.seatingTypes,
       };
 
       await workerAPI.updateWorker(editingWorkerId, workerData);

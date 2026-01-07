@@ -11,6 +11,7 @@ const {
   updateWorkerPassword,
   deleteWorker,
   workerLogin,
+  getWorkerSeatingTypes,
 } = require("../controller/workerController");
 
 // Imports from the folder Middleware for the authentication (if you have one)
@@ -37,6 +38,9 @@ router.get("/get-worker/:id", getWorkerById);
 
 // Get Workers by Admin ID
 router.get("/get-workers-by-admin/:admin_id", getWorkersByAdminId);
+
+// Get Worker Seating Types Flag
+router.get("/get-seating-types/:admin_id/:worker_id", getWorkerSeatingTypes);
 
 // ==================== PUT Routes ====================
 

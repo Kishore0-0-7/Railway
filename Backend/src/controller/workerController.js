@@ -4,6 +4,44 @@ const bcrypt = require("bcrypt");
 // Import from the Database folder
 const db = require("../config/db.js");
 
+// Helper function to convert frontend seating types array to database integer
+// Frontend sends: ['Sitting'] or ['Sleeping'] or ['Sitting', 'Sleeping']
+// Database stores: 0 (Sitting only), 1 (Sleeping only), 2 (Both)
+function convertSeatingTypesToInt(seatingTypesArray) {
+  if (!seatingTypesArray || seatingTypesArray.length === 0) {
+    return 2; // Default: both types
+  }
+  
+  const hasSitting = seatingTypesArray.includes('Sitting');
+  const hasSleeping = seatingTypesArray.includes('Sleeping');
+  
+  if (hasSitting && hasSleeping) {
+    return 2; // Both
+  } else if (hasSitting) {
+    return 0; // Sitting only
+  } else if (hasSleeping) {
+    return 1; // Sleeping only
+  }
+  
+  return 2; // Default: both
+}
+
+// Helper function to convert database integer to frontend seating types array
+// Database stores: 0, 1, or 2
+// Frontend expects: ['Sitting'], ['Sleeping'], or ['Sitting', 'Sleeping']
+function convertIntToSeatingTypes(seatingTypeValue) {
+  switch (seatingTypeValue) {
+    case 0:
+      return ['Sitting'];
+    case 1:
+      return ['Sleeping'];
+    case 2:
+      return ['Sitting', 'Sleeping'];
+    default:
+      return ['Sitting', 'Sleeping'];
+  }
+}
+
 // Create Worker Account
 const createWorker = async (req, res) => {
   const {
@@ -14,6 +52,7 @@ const createWorker = async (req, res) => {
     gender,
     user_name,
     password,
+    seating_types,
   } = req.body;
 
   // Validation
@@ -82,17 +121,19 @@ const createWorker = async (req, res) => {
       const newNumber = lastNumber + 1;
       newWorkerId = `WOR${String(newNumber).padStart(3, "0")}`;
     }
-
     // Hash the password
     const saltRounds = 10;
     const password_hash = await bcrypt.hash(password, saltRounds);
 
+    // Convert seating_types array to integer
+    const seatingTypeValue = convertSeatingTypesToInt(seating_types);
+
     // Insert new worker with auto-generated ID
     const insertQuery = `
       INSERT INTO worker_accounts (
-        worker_id, admin_id, full_name, mobile_number, joining_date, gender, user_name, password_hash
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING worker_id, admin_id, full_name, mobile_number, worker_status AS status, joining_date, gender, user_name, created_at, updated_at;
+        worker_id, admin_id, full_name, mobile_number, joining_date, gender, user_name, password_hash, seating_types
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING worker_id, admin_id, full_name, mobile_number, worker_status AS status, joining_date, gender, user_name, created_at, updated_at, seating_types;
     `;
 
     const values = [
@@ -104,15 +145,22 @@ const createWorker = async (req, res) => {
       gender || null,
       user_name,
       password_hash,
+      seatingTypeValue,
     ];
 
     const { rows } = await client.query(insertQuery, values);
+
+    // Convert seating_types back to array for response
+    const worker = rows[0];
+    if (worker.seating_types !== undefined && worker.seating_types !== null) {
+      worker.seating_types = convertIntToSeatingTypes(worker.seating_types);
+    }
 
     await client.query("COMMIT");
 
     res.status(201).json({
       message: "Worker account created successfully",
-      worker: rows[0],
+      worker: worker,
     });
   } catch (err) {
     await client.query("ROLLBACK");
@@ -149,6 +197,7 @@ const getAllWorkers = async (req, res) => {
         w.user_name, 
         w.created_at, 
         w.updated_at,
+        w.seating_types,
         a.full_name as admin_name,
         COALESCE(COUNT(b.booking_id), 0) as total_bookings
       FROM worker_accounts w
@@ -166,16 +215,24 @@ const getAllWorkers = async (req, res) => {
 
     query += `
       GROUP BY w.worker_id, w.admin_id, w.full_name, w.mobile_number, w.worker_status, 
-               w.joining_date, w.gender, w.user_name, w.created_at, w.updated_at, a.full_name
+               w.joining_date, w.gender, w.user_name, w.created_at, w.updated_at, w.seating_types, a.full_name
       ORDER BY w.created_at DESC;
     `;
 
     const { rows } = await client.query(query, params);
 
+    // Convert seating_types integers to arrays for all workers
+    const workers = rows.map(worker => ({
+      ...worker,
+      seating_types: worker.seating_types !== undefined && worker.seating_types !== null 
+        ? convertIntToSeatingTypes(worker.seating_types)
+        : ['Sitting', 'Sleeping']
+    }));
+
     res.status(200).json({
       message: "Workers retrieved successfully",
-      count: rows.length,
-      workers: rows,
+      count: workers.length,
+      workers: workers,
     });
   } catch (err) {
     console.error("Error retrieving workers:", err);
@@ -207,6 +264,7 @@ const getWorkerById = async (req, res) => {
         w.user_name, 
         w.created_at, 
         w.updated_at,
+        w.seating_types,
         a.full_name as admin_name
       FROM worker_accounts w
       LEFT JOIN admin_accounts a ON w.admin_id = a.admin_id
@@ -219,9 +277,15 @@ const getWorkerById = async (req, res) => {
       return res.status(404).json({ message: "Worker not found" });
     }
 
+    // Convert seating_types to array
+    const worker = rows[0];
+    if (worker.seating_types !== undefined && worker.seating_types !== null) {
+      worker.seating_types = convertIntToSeatingTypes(worker.seating_types);
+    }
+
     res.status(200).json({
       message: "Worker retrieved successfully",
-      worker: rows[0],
+      worker: worker,
     });
   } catch (err) {
     console.error("Error retrieving worker:", err);
@@ -252,7 +316,8 @@ const getWorkersByAdminId = async (req, res) => {
         gender, 
         user_name, 
         created_at, 
-        updated_at
+        updated_at,
+        seating_types
       FROM worker_accounts
       WHERE admin_id = $1
       ORDER BY created_at DESC;
@@ -260,10 +325,18 @@ const getWorkersByAdminId = async (req, res) => {
 
     const { rows } = await client.query(query, [admin_id]);
 
+    // Convert seating_types for all workers
+    const workers = rows.map(worker => ({
+      ...worker,
+      seating_types: worker.seating_types !== undefined && worker.seating_types !== null 
+        ? convertIntToSeatingTypes(worker.seating_types)
+        : ['Sitting', 'Sleeping']
+    }));
+
     res.status(200).json({
       message: "Workers retrieved successfully",
-      count: rows.length,
-      workers: rows,
+      count: workers.length,
+      workers: workers,
     });
   } catch (err) {
     console.error("Error retrieving workers by admin:", err);
@@ -284,12 +357,12 @@ const updateWorker = async (req, res) => {
     user_name,
     status,
     worker_status,
+    seating_types,
   } = req.body;
 
   if (!id || id.trim() === "") {
     return res.status(400).json({ message: "Worker ID is required" });
   }
-
   // Check if at least one field is provided for update
   if (
     !full_name &&
@@ -298,7 +371,8 @@ const updateWorker = async (req, res) => {
     !gender &&
     !user_name &&
     !status &&
-    !worker_status
+    !worker_status &&
+    !seating_types
   ) {
     return res.status(400).json({
       message: "At least one field must be provided for update",
@@ -341,6 +415,9 @@ const updateWorker = async (req, res) => {
     // Update worker
     // Prefer worker_status if provided, otherwise use status
     const statusValue = worker_status || status;
+    
+    // Convert seating_types array to integer if provided
+    const seatingTypeValue = seating_types ? convertSeatingTypesToInt(seating_types) : undefined;
 
     const updateQuery = `
       UPDATE worker_accounts
@@ -350,9 +427,10 @@ const updateWorker = async (req, res) => {
           gender = COALESCE($4, gender),
           user_name = COALESCE($5, user_name),
           worker_status = COALESCE($6, worker_status),
+          seating_types = COALESCE($7, seating_types),
           updated_at = CURRENT_TIMESTAMP
-      WHERE worker_id = $7
-      RETURNING worker_id, admin_id, full_name, mobile_number, worker_status AS status, joining_date, gender, user_name, created_at, updated_at;
+      WHERE worker_id = $8
+      RETURNING worker_id, admin_id, full_name, mobile_number, worker_status AS status, joining_date, gender, user_name, created_at, updated_at, seating_types;
     `;
 
     const values = [
@@ -362,16 +440,23 @@ const updateWorker = async (req, res) => {
       gender,
       user_name,
       statusValue,
+      seatingTypeValue,
       id,
     ];
 
     const { rows } = await client.query(updateQuery, values);
 
+    // Convert seating_types back to array for response
+    const worker = rows[0];
+    if (worker.seating_types !== undefined && worker.seating_types !== null) {
+      worker.seating_types = convertIntToSeatingTypes(worker.seating_types);
+    }
+
     await client.query("COMMIT");
 
     res.status(200).json({
       message: "Worker details updated successfully",
-      worker: rows[0],
+      worker: worker,
     });
   } catch (err) {
     await client.query("ROLLBACK");
@@ -565,6 +650,42 @@ const workerLogin = async (req, res) => {
   }
 };
 
+// Get Worker Seating Types Flag
+const getWorkerSeatingTypes = async (req, res) => {
+  const { admin_id, worker_id } = req.params;
+
+  if (!admin_id || !worker_id) {
+    return res.status(400).json({
+      message: "Admin ID and Worker ID are required",
+    });
+  }
+
+  const client = await db.connect();
+  try {
+    const query = `
+      SELECT seating_types 
+      FROM worker_accounts 
+      WHERE admin_id = $1 AND worker_id = $2;
+    `;
+    const { rows } = await client.query(query, [admin_id, worker_id]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Worker not found" });
+    }
+
+    const seatingTypeValue = rows[0].seating_types;
+
+    res.status(200).json({
+      seating_types: seatingTypeValue !== null && seatingTypeValue !== undefined ? seatingTypeValue : 2,
+    });
+  } catch (err) {
+    console.error("Error retrieving worker seating types:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = {
   createWorker,
   getAllWorkers,
@@ -574,4 +695,5 @@ module.exports = {
   updateWorkerPassword,
   deleteWorker,
   workerLogin,
+  getWorkerSeatingTypes,
 };
