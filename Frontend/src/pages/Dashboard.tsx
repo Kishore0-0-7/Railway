@@ -45,13 +45,28 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   // table date range filter: all / today / week / month / year
   const [rangeFilter, setRangeFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
   const [chartLoading, setChartLoading] = useState(false);
   const [dashboardStats, setDashboardStats] = useState<any>(null);
   const [recentBookings, setRecentBookings] = useState<any[]>([]);
   const [monthlyRevenue, setMonthlyRevenue] = useState<any[]>([]);
   const [needsScroll, setNeedsScroll] = useState(false);
-  const [selectedYear, setSelectedYear] = useState("2025");
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const chartContainerRef = useRef<HTMLDivElement>(null);
+
+  // Current month index for "this month" metrics
+  const currentMonthIndex = useMemo(() => new Date().getMonth(), []);
+  const currentMonthRevenue = useMemo(() => {
+    return parseFloat(
+      monthlyRevenue?.[currentMonthIndex]?.total_revenue || 0
+    );
+  }, [monthlyRevenue, currentMonthIndex]);
+  const currentMonthBookings = useMemo(() => {
+    return parseInt(
+      monthlyRevenue?.[currentMonthIndex]?.total_bookings || 0
+    );
+  }, [monthlyRevenue, currentMonthIndex]);
 
   // App settings (dynamic seating type names) and enabled flags
   const { getTypeName, isTypeEnabled } = useAppSettings();
@@ -189,13 +204,18 @@ const Dashboard = () => {
       );
     };
 
+    const matchesStatus = (b: any) => {
+      if (statusFilter === "all") return true;
+      return (b.status || "").toLowerCase() === statusFilter.toLowerCase();
+    };
+
     if (rangeFilter === "all") {
-      return recentBookings.filter((b) => matchesSearch(b));
+      return recentBookings.filter((b) => matchesSearch(b) && matchesStatus(b));
     }
 
     if (rangeFilter === "today") {
       return recentBookings.filter((b) => {
-        if (!matchesSearch(b)) return false;
+        if (!matchesSearch(b) || !matchesStatus(b)) return false;
         const d = parseDate(b);
         if (!d) return false;
         return (
@@ -217,7 +237,7 @@ const Dashboard = () => {
       weekEnd.setHours(23, 59, 59, 999);
 
       return recentBookings.filter((b) => {
-        if (!matchesSearch(b)) return false;
+        if (!matchesSearch(b) || !matchesStatus(b)) return false;
         const d = parseDate(b);
         if (!d) return false;
         return d >= weekStart && d <= weekEnd;
@@ -232,7 +252,7 @@ const Dashboard = () => {
       monthEnd.setHours(23, 59, 59, 999);
 
       return recentBookings.filter((b) => {
-        if (!matchesSearch(b)) return false;
+        if (!matchesSearch(b) || !matchesStatus(b)) return false;
         const d = parseDate(b);
         if (!d) return false;
         return d >= monthStart && d <= monthEnd;
@@ -247,20 +267,44 @@ const Dashboard = () => {
       yearEnd.setHours(23, 59, 59, 999);
 
       return recentBookings.filter((b) => {
-        if (!matchesSearch(b)) return false;
+        if (!matchesSearch(b) || !matchesStatus(b)) return false;
         const d = parseDate(b);
         if (!d) return false;
         return d >= yearStart && d <= yearEnd;
       });
     }
 
-    return recentBookings.filter((b) => matchesSearch(b));
-  }, [recentBookings, rangeFilter, searchTerm]);
+    return recentBookings.filter((b) => matchesSearch(b) && matchesStatus(b));
+  }, [recentBookings, rangeFilter, searchTerm, statusFilter]);
 
   // Debug: log filtered bookings count when range changes
   useEffect(() => {
     console.log(`Filter: ${rangeFilter}, Total bookings: ${recentBookings.length}, Filtered: ${filteredBookings.length}`);
   }, [rangeFilter, filteredBookings, recentBookings.length]);
+
+  // Reset to page 1 when filter or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [rangeFilter, searchTerm, statusFilter]);
+
+  // Pagination logic
+  const ITEMS_PER_PAGE = 30;
+  const totalPages = Math.ceil(filteredBookings.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedBookings = filteredBookings.slice(startIndex, endIndex);
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
 
   // Transform monthly revenue data for bar chart
   const bookingData =
@@ -287,57 +331,99 @@ const Dashboard = () => {
         { month: "Dec", type1: 0, type2: 0, type3: 0 },
       ];
 
-  // Donut chart data from stats
-  const topCategoryData = dashboardStats
-    ? [
-      ...(isTypeEnabled(1)
-        ? [
-          {
-            type: 1,
-            name: getTypeName(1),
-            value: dashboardStats.top_category?.sitting?.percentage || 0,
-          },
-        ]
-        : []),
-      ...(isTypeEnabled(2)
-        ? [
-          {
-            type: 2,
-            name: getTypeName(2),
-            value: dashboardStats.top_category?.sleeper?.percentage || 0,
-          },
-        ]
-        : []),
-      ...(isTypeEnabled(3)
-        ? [
-          {
-            type: 3,
-            name: getTypeName(3),
-            value: dashboardStats.top_category?.type3?.percentage || 0,
-          },
-        ]
-        : []),
-    ]
-    : [
-      ...(isTypeEnabled(1)
-        ? [{ type: 1, name: getTypeName(1), value: 33 }]
-        : []),
-      ...(isTypeEnabled(2)
-        ? [{ type: 2, name: getTypeName(2), value: 33 }]
-        : []),
-      ...(isTypeEnabled(3)
-        ? [{ type: 3, name: getTypeName(3), value: 34 }]
-        : []),
-    ];
+  // Compute booking counts from recent bookings (fallback when backend is empty)
+  const bookingTypeCounts = useMemo(() => {
+    const counts = { sitting: 0, sleeper: 0, type3: 0 };
+    recentBookings.forEach((b) => {
+      const t = (b.booking_type || "").toLowerCase();
+      if (t === "sitting") counts.sitting += 1;
+      else if (t === "sleeper" || t === "sleeping") counts.sleeper += 1;
+      else if (t === "type3") counts.type3 += 1;
+    });
+    return counts;
+  }, [recentBookings]);
+
+  // Derived active counts from recent bookings (fallback when backend active_bookings misses items)
+  const derivedActiveCounts = useMemo(() => {
+    const counts = { sitting: 0, sleeper: 0, type3: 0 };
+    recentBookings.forEach((b) => {
+      const status = (b.status || "").toLowerCase();
+      if (status !== "active") return;
+      const t = (b.booking_type || "").toLowerCase();
+      if (t === "sitting") counts.sitting += 1;
+      else if (t === "sleeper" || t === "sleeping") counts.sleeper += 1;
+      else if (t === "type3") counts.type3 += 1;
+    });
+    return counts;
+  }, [recentBookings]);
+
+  // Booked counts: prefer backend active_bookings, but use derived active counts when backend is zero
+  const bookedCounts = {
+    sitting: Math.max(
+      dashboardStats?.active_bookings?.sitting?.count || 0,
+      derivedActiveCounts.sitting
+    ),
+    sleeper: Math.max(
+      dashboardStats?.active_bookings?.sleeper?.count || 0,
+      derivedActiveCounts.sleeper
+    ),
+    type3: Math.max(
+      dashboardStats?.active_bookings?.type3?.count || 0,
+      derivedActiveCounts.type3
+    ),
+  };
+
+  const bookedCapacities = {
+    // Prefer backend capacity; if absent, fall back to the count so bar compares to itself
+    sitting: dashboardStats?.active_bookings?.sitting?.capacity || bookedCounts.sitting || 1,
+    sleeper: dashboardStats?.active_bookings?.sleeper?.capacity || bookedCounts.sleeper || 1,
+    type3: dashboardStats?.active_bookings?.type3?.capacity || bookedCounts.type3 || 1,
+  };
+
+  // Total for percentage comparison across types
+  const bookedTotal = bookedCounts.sitting + bookedCounts.sleeper + bookedCounts.type3;
+
+  // Donut chart should match the "Booked" progress bar (active bookings)
+  const topCategoryData = (() => {
+    const sittingCount = bookedCounts.sitting || 0;
+    const sleeperCount = bookedCounts.sleeper || 0;
+    const type3Count = bookedCounts.type3 || 0;
+    const total = sittingCount + sleeperCount + type3Count;
+
+    if (total === 0) return [];
+
+    const result = [];
+    if (isTypeEnabled(1) && sittingCount > 0) {
+      result.push({ type: 1, name: getTypeName(1), value: sittingCount });
+    }
+    if (isTypeEnabled(2) && sleeperCount > 0) {
+      result.push({ type: 2, name: getTypeName(2), value: sleeperCount });
+    }
+    if (isTypeEnabled(3) && type3Count > 0) {
+      result.push({ type: 3, name: getTypeName(3), value: type3Count });
+    }
+
+    return result;
+  })();
+  
+  // Debug logging
+  console.log("=== PIE CHART DEBUG ===");
+  console.log("Top Category Data for chart:", topCategoryData);
+  console.log("Backend top_category:", dashboardStats?.top_category);
+  console.log("Computed counts from recent bookings:", bookingTypeCounts);
 
   // type1 -> blue, type2 -> orange, type3 -> green
   const COLORS = ["#3B82F6", "#F59E0B", "#10B981"];
 
   const handleBookingClick = (booking: any) => {
     if (booking.status === "active") {
-      navigate(`/booking-details-active/${booking.booking_id}`);
+      navigate(`/booking-details-active/${booking.booking_id}`, {
+        state: { from: "/dashboard" },
+      });
     } else {
-      navigate(`/booking-details-completed/${booking.booking_id}`);
+      navigate(`/booking-details-completed/${booking.booking_id}`, {
+        state: { from: "/dashboard" },
+      });
     }
   };
 
@@ -347,19 +433,26 @@ const Dashboard = () => {
     max,
     color,
     label,
+    percent,
   }: {
     value: number;
     max: number;
     color: string;
     label: string;
+    percent?: number;
   }) => {
-    // clamp percentage to prevent overflow and negative widths
-    const percentage =
-      max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0;
+    // percentage based on provided percent override; otherwise use value/max (or value when max missing)
+    const denominator = max > 0 ? max : value || 1;
+    const rawPercent = percent !== undefined ? percent : (value / denominator) * 100;
+    const percentage = Math.min(100, Math.max(0, rawPercent));
+    const overCapacity = rawPercent > 100;
+    const rightText = `${value} (${Math.round(rawPercent)}%${overCapacity ? " over" : ""})`;
+
     return (
       <div className="mb-3">
         <div className="flex justify-between mb-1">
           <span className="text-sm font-medium text-gray-700">{label}</span>
+          <span className="text-xs text-gray-600">{rightText}</span>
         </div>
 
         {/* outer bar clips overflow */}
@@ -368,7 +461,7 @@ const Dashboard = () => {
             className="h-2.5 rounded-full"
             style={{
               width: `${percentage}%`,
-              backgroundColor: color,
+              backgroundColor: overCapacity ? "#EF4444" : color,
               maxWidth: "100%",
               boxSizing: "border-box",
             }}
@@ -378,8 +471,12 @@ const Dashboard = () => {
     );
   };
 
-  // Year selection options
-  const years = ["2025", "2024", "2023", "2022"];
+  // Year selection options - dynamically generate from 2022 to current year + 5 years
+  const currentYear = new Date().getFullYear();
+  const years = Array.from(
+    { length: currentYear - 2022 + 6 },
+    (_, i) => (currentYear + 5 - i).toString()
+  );
 
   // Calendar-style year navigation
   const handleYearChange = (direction: "prev" | "next") => {
@@ -441,17 +538,10 @@ const Dashboard = () => {
                 </p>
                 <div>
                   <p className="text-lg md:text-xl font-bold">
-                    ₹ {dashboardStats?.revenue?.total?.toLocaleString() || "0"}
+                    ₹ {currentMonthRevenue.toLocaleString("en-IN")}
                   </p>
-                  <p
-                    className={`text-xs mt-0.5 ${dashboardStats?.revenue?.trend === "up"
-                      ? "text-green-300"
-                      : "text-red-300"
-                      }`}
-                  >
-                    {dashboardStats?.revenue?.trend === "up" ? "+" : ""}
-                    {dashboardStats?.revenue?.percentage_change || 0}% From last
-                    month
+                  <p className="text-xs mt-0.5 text-green-300">
+                    {currentMonthBookings} bookings this month
                   </p>
                 </div>
               </div>
@@ -466,15 +556,16 @@ const Dashboard = () => {
                           data={topCategoryData}
                           innerRadius={30}
                           outerRadius={40}
-                          paddingAngle={5}
+                          paddingAngle={topCategoryData.length > 1 ? 2 : 0}
                           cornerRadius={8}
                           dataKey="value"
                           stroke="none"
+                          minAngle={5}
                         >
                           {topCategoryData.map((entry, index) => (
                             <Cell
                               key={`cell-${index}`}
-                              fill={entry.type === 1 ? COLORS[0] : COLORS[1]}
+                              fill={COLORS[entry.type - 1]}
                             />
                           ))}
                         </Pie>
@@ -552,11 +643,12 @@ const Dashboard = () => {
                 <div className="space-y-1 md:space-y-1.5">
                   {isTypeEnabled(1) && (
                     <ProgressBar
-                      value={
-                        dashboardStats?.active_bookings?.sitting?.count || 0
-                      }
-                      max={
-                        dashboardStats?.active_bookings?.sitting?.capacity || 50
+                      value={bookedCounts.sitting || 0}
+                      max={bookedCapacities.sitting}
+                      percent={
+                        bookedTotal > 0
+                          ? (bookedCounts.sitting / bookedTotal) * 100
+                          : 0
                       }
                       color="#3B82F6"
                       label={getTypeName(1)}
@@ -564,11 +656,12 @@ const Dashboard = () => {
                   )}
                   {isTypeEnabled(2) && (
                     <ProgressBar
-                      value={
-                        dashboardStats?.active_bookings?.sleeper?.count || 0
-                      }
-                      max={
-                        dashboardStats?.active_bookings?.sleeper?.capacity || 50
+                      value={bookedCounts.sleeper || 0}
+                      max={bookedCapacities.sleeper}
+                      percent={
+                        bookedTotal > 0
+                          ? (bookedCounts.sleeper / bookedTotal) * 100
+                          : 0
                       }
                       color="#F59E0B"
                       label={getTypeName(2)}
@@ -576,9 +669,12 @@ const Dashboard = () => {
                   )}
                   {isTypeEnabled(3) && (
                     <ProgressBar
-                      value={dashboardStats?.active_bookings?.type3?.count || 0}
-                      max={
-                        dashboardStats?.active_bookings?.type3?.capacity || 50
+                      value={bookedCounts.type3 || 0}
+                      max={bookedCapacities.type3}
+                      percent={
+                        bookedTotal > 0
+                          ? (bookedCounts.type3 / bookedTotal) * 100
+                          : 0
                       }
                       color="#10B981"
                       label={getTypeName(3)}
@@ -651,15 +747,28 @@ const Dashboard = () => {
                           <th className="text-left p-3 md:p-4 font-medium text-white text-xs uppercase min-w-[100px]">
                             In Time
                           </th>
-                          <th className="text-left p-3 md:p-4 font-medium text-white text-xs uppercase min-w-[100px]">
-                            Status
+                          <th className="text-left p-3 md:p-4 font-medium text-white text-xs min-w-[100px]">
+                            <Select
+                              value={statusFilter}
+                              onValueChange={(v) => setStatusFilter(v)}
+                            >
+                              <SelectTrigger className="w-full bg-transparent border-0 text-white text-xs uppercase h-auto p-0 font-medium hover:text-gray-300 [&>svg]:text-white focus:ring-0 focus:ring-offset-0">
+                                <SelectValue placeholder="STATUS" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">Status</SelectItem>
+                                <SelectItem value="active">Active</SelectItem>
+                                <SelectItem value="completed">Completed</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </th>
-                          <th className="w-10 md:w-12 text-white min-w-[40px]"></th>
+                          <th className="w-10 md:w-12 text-white min-w-[40px]">
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredBookings.length > 0 ? (
-                          filteredBookings.map((booking, index) => (
+                        {paginatedBookings.length > 0 ? (
+                          paginatedBookings.map((booking, index) => (
                             <tr
                               key={index}
                               className="border-b hover:bg-gray-50 cursor-pointer transition-colors"
@@ -736,6 +845,33 @@ const Dashboard = () => {
                     </table>
                   </div>
                 </div>
+
+                {/* Pagination Controls */}
+                {filteredBookings.length > 0 && (
+                  <div className="px-3 md:px-4 py-2 border-t flex items-center justify-between">
+                    <div className="text-sm text-gray-600">
+                      {startIndex + 1}-{Math.min(endIndex, filteredBookings.length)} of {filteredBookings.length}
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={handlePreviousPage}
+                        disabled={currentPage === 1}
+                        className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        aria-label="Previous page"
+                      >
+                        <ChevronLeft className="w-5 h-5 text-gray-600" />
+                      </button>
+                      <button
+                        onClick={handleNextPage}
+                        disabled={currentPage >= totalPages}
+                        className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        aria-label="Next page"
+                      >
+                        <ChevronRight className="w-5 h-5 text-gray-600" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Chart - Scrollable when window < 1300px */}
@@ -842,6 +978,8 @@ const Dashboard = () => {
                           <YAxis
                             stroke="#888"
                             fontSize={needsScroll ? 10 : 11}
+                            domain={[0, 'auto']}
+                            allowDecimals={false}
                           />
                           <Tooltip />
                           {isTypeEnabled(1) && (

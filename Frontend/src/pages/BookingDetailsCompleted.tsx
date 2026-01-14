@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import { formatSeatingTypeLabel } from "@/lib/settingsUtils";
 import { Input } from "@/components/ui/input";
@@ -31,6 +31,19 @@ interface BookingDetailsData {
 const BookingDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const locationState =
+    (location.state as { from?: string; workerId?: string | number }) || {};
+  const [bookingWorkerId, setBookingWorkerId] = useState<string | number | null>(
+    locationState.workerId ?? null
+  );
+  const backTarget = useMemo(() => {
+    // If we have an explicit 'from' path, use it
+    // This handles both dashboard (/dashboard) and worker details (/worker-details/{id})
+    if (locationState.from) return locationState.from;
+    // Fallback to dashboard if no from is specified
+    return "/dashboard";
+  }, [locationState.from]);
 
   // Scroll to top on route change
   useScrollToTop();
@@ -49,6 +62,13 @@ const BookingDetails = () => {
           return;
         }
         setBooking(bookingData);
+        setBookingWorkerId(
+          bookingData.worker_id ||
+            bookingData.workerId ||
+            bookingData.worker?.id ||
+            bookingData.worker?.worker_id ||
+            null
+        );
       } catch (error: any) {
         console.error("Error fetching booking", error);
         toast.error(
@@ -78,7 +98,21 @@ const BookingDetails = () => {
     return Math.max(balance, 0);
   }, [booking]);
 
-  const handleBack = () => navigate("/");
+  const handleBack = () => {
+    if (backTarget && backTarget !== "/dashboard") {
+      // If redirecting to worker details, pass minimal worker object in state
+      navigate(backTarget, {
+        state: {
+          worker: {
+            worker_id: bookingWorkerId,
+            id: bookingWorkerId,
+          },
+        },
+      });
+    } else {
+      navigate(backTarget || "/dashboard");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-muted">

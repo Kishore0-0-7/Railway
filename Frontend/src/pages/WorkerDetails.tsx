@@ -193,32 +193,83 @@ const WorkerDetails = () => {
 
           setBookings(fetchedBookings);
 
-          // Use data from worker-dashboard API if available, otherwise calculate
-          if (dashboardData && dashboardData.success !== false) {
-            // Update stats from API response
-            const seatingTypeStats: Record<string, number> = {};
+          // Derived metrics from bookings (always computed for fallback/merge)
+          const derivedTotalRevenue = fetchedBookings.reduce((sum, booking) => {
+            // prefer any known amount field to keep lifetime revenue accurate
+            const rawAmount =
+              booking.total_amount ??
+              booking.totalAmount ??
+              booking.amount ??
+              booking.total ??
+              booking.price ??
+              booking.booking_amount ??
+              booking.paidAmount ??
+              0;
+            const parsed = parseFloat(rawAmount) || 0;
+            return sum + parsed;
+          }, 0);
 
-            // Map API response to seating type stats
-            enabledSeatingTypes.forEach((seatingType) => {
-              if (seatingType.key === 'sitting') {
-                seatingTypeStats[seatingType.key] = dashboardData.sittingCount || dashboardData.sitting_count || 0;
-              } else if (seatingType.key === 'sleeper') {
-                seatingTypeStats[seatingType.key] = dashboardData.sleeperCount || dashboardData.sleeper_count || 0;
+          const derivedCompleted = fetchedBookings.filter(
+            (b) => (b.status || "").toLowerCase() === "completed"
+          ).length;
+
+          const derivedActive = fetchedBookings.filter((b) => {
+            const s = (b.status || "").toLowerCase();
+            return s === "active" || s === "booked";
+          }).length;
+
+          const derivedSeatingTypeStats: Record<string, number> = {};
+          enabledSeatingTypes.forEach((seatingType) => {
+            derivedSeatingTypeStats[seatingType.key] = fetchedBookings.filter((b) => {
+              const bookingType = mapLegacyBookingType(b.booking_type || b.type || "");
+              const s = (b.status || "").toLowerCase();
+              const isActive = s === "active" || s === "booked";
+              return bookingType === seatingType.key && isActive;
+            }).length;
+          });
+
+          // Merge API data (if present) with derived values
+          const statsFromApi = dashboardData && dashboardData.success !== false;
+          const apiTotalRevenue = statsFromApi
+            ? parseFloat(dashboardData.totalRevenue || dashboardData.total_revenue || 0)
+            : undefined;
+          const apiTotalBookings = statsFromApi
+            ? parseInt(dashboardData.totalBookings || dashboardData.total_bookings || 0)
+            : undefined;
+          const apiCompletedBookings = statsFromApi
+            ? parseInt(dashboardData.completedBookings || dashboardData.completed_bookings || 0)
+            : undefined;
+          const apiActiveBookings = statsFromApi
+            ? parseInt(dashboardData.activeBookings || dashboardData.active_bookings || 0)
+            : undefined;
+
+          const seatingTypeStats: Record<string, number> = {};
+          enabledSeatingTypes.forEach((seatingType) => {
+            let apiValue = 0;
+            if (statsFromApi) {
+              if (seatingType.key === "sitting") {
+                apiValue = dashboardData.sittingCount || dashboardData.sitting_count || 0;
+              } else if (seatingType.key === "sleeper") {
+                apiValue = dashboardData.sleeperCount || dashboardData.sleeper_count || 0;
               } else {
-                // For other types, try to find in response
-                seatingTypeStats[seatingType.key] = dashboardData[`${seatingType.key}Count`] || dashboardData[`${seatingType.key}_count`] || 0;
+                apiValue = dashboardData[`${seatingType.key}Count`] || dashboardData[`${seatingType.key}_count`] || 0;
               }
-            });
+            }
+            const derivedValue = derivedSeatingTypeStats[seatingType.key] || 0;
+            seatingTypeStats[seatingType.key] = apiValue || derivedValue;
+          });
 
-            setStats({
-              totalRevenue: parseFloat(dashboardData.totalRevenue || dashboardData.total_revenue || 0),
-              totalBookings: parseInt(dashboardData.totalBookings || dashboardData.total_bookings || 0),
-              completedBookings: parseInt(dashboardData.completedBookings || dashboardData.completed_bookings || 0),
-              activeBookings: parseInt(dashboardData.activeBookings || dashboardData.active_bookings || 0),
-              seatingTypeStats,
-            });
+          setStats({
+            // keep lifetime revenue: prefer the higher of API vs derived booking totals
+            totalRevenue: Math.max(apiTotalRevenue ?? 0, derivedTotalRevenue),
+            totalBookings: apiTotalBookings || fetchedBookings.length,
+            completedBookings: apiCompletedBookings || derivedCompleted,
+            activeBookings: apiActiveBookings || derivedActive,
+            seatingTypeStats,
+          });
 
-            // Update balance and today's amount from dashboard data
+          // Update balance and today's amount from dashboard data when available
+          if (statsFromApi) {
             if (dashboardData.balanceAmount !== undefined || dashboardData.balance_amount !== undefined) {
               const balance = parseFloat(dashboardData.balanceAmount || dashboardData.balance_amount || 0);
               setBalanceAmount(balance);
@@ -228,48 +279,6 @@ const WorkerDetails = () => {
             if (dashboardData.todaysAmount !== undefined || dashboardData.todays_amount !== undefined) {
               setTodaysAmount(parseFloat(dashboardData.todaysAmount || dashboardData.todays_amount || 0));
             }
-          } else {
-            // Fallback: Calculate statistics from bookings if API data not available
-            const totalRevenue = fetchedBookings.reduce((sum, booking) => {
-              return (
-                sum + parseFloat(booking.total_amount || booking.totalAmount || 0)
-              );
-            }, 0);
-
-            const completedBookings = fetchedBookings.filter(
-              (b) => b.status === "completed" || b.status === "Completed"
-            ).length;
-
-            const activeBookings = fetchedBookings.filter(
-              (b) =>
-                b.status === "active" ||
-                b.status === "Active" ||
-                b.status === "Booked"
-            ).length;
-
-            // Calculate stats for each enabled seating type
-            const seatingTypeStats: Record<string, number> = {};
-            enabledSeatingTypes.forEach((seatingType) => {
-              seatingTypeStats[seatingType.key] = fetchedBookings.filter((b) => {
-                const bookingType = mapLegacyBookingType(
-                  b.booking_type || b.type || ""
-                );
-                return (
-                  bookingType === seatingType.key &&
-                  (b.status === "active" ||
-                    b.status === "Active" ||
-                    b.status === "Booked")
-                );
-              }).length;
-            });
-
-            setStats({
-              totalRevenue,
-              totalBookings: fetchedBookings.length,
-              completedBookings,
-              activeBookings,
-              seatingTypeStats,
-            });
           }
         }
       } catch (err: any) {
@@ -316,6 +325,22 @@ const WorkerDetails = () => {
         (err as any)?.message ||
         "Failed to update status"
       );
+    }
+  };
+
+  // Open booking details page matching status
+  const handleBookingOpen = (booking: any) => {
+    const status = (booking?.status || "").toString().toLowerCase();
+    const id = booking?.booking_id || booking?.id;
+    if (!id) return;
+    if (status === "active" || status === "booked") {
+      navigate(`/booking-details-active/${id}`, {
+        state: { from: location.pathname, workerId },
+      });
+    } else {
+      navigate(`/booking-details-completed/${id}`, {
+        state: { from: location.pathname, workerId },
+      });
     }
   };
 
@@ -716,7 +741,8 @@ const WorkerDetails = () => {
                       filteredBookings.map((b, i) => (
                         <tr
                           key={i}
-                          className="border-t hover:bg-gray-50 transition-colors"
+                          className="border-t hover:bg-gray-50 transition-colors cursor-pointer"
+                          onClick={() => handleBookingOpen(b)}
                         >
                           <td className="py-3 px-2 sm:px-4 text-xs sm:text-sm">
                             {b.booking_id || b.id}

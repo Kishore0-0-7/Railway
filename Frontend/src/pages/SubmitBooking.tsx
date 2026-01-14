@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import Navigation from "@/components/Navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,19 @@ import { formatSeatingTypeLabel } from "@/lib/settingsUtils";
 const SubmitBooking = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const locationState =
+    (location.state as { from?: string; workerId?: string | number }) || {};
+  const [bookingWorkerId, setBookingWorkerId] = useState<string | number | null>(
+    locationState.workerId ?? null
+  );
+  const backTarget = useMemo(() => {
+    // If we have an explicit 'from' path, use it
+    // This handles both dashboard (/dashboard) and worker details (/worker-details/{id})
+    if (locationState.from) return locationState.from;
+    // Fallback to dashboard if no from is specified
+    return "/dashboard";
+  }, [locationState.from]);
 
   // Scroll to top on route change
   useScrollToTop();
@@ -97,6 +110,13 @@ const SubmitBooking = () => {
         });
 
         setInitialHours(Number(booking.total_hours) || 0);
+        setBookingWorkerId(
+          booking.worker_id ||
+            booking.workerId ||
+            booking.worker?.id ||
+            booking.worker?.worker_id ||
+            null
+        );
       } catch (error: any) {
         console.error("Error loading booking", error);
         toast.error(
@@ -206,7 +226,13 @@ const SubmitBooking = () => {
       setSubmitting(true);
       await bookingAPI.submitBooking(bookingId, payload);
       toast.success("Booking submitted successfully");
-      navigate(`/booking-details-completed/${bookingId}`);
+      navigate(`/booking-details-completed/${bookingId}` , {
+        state: {
+          ...locationState,
+          workerId: bookingWorkerId || locationState.workerId,
+          from: backTarget || locationState.from || location.pathname,
+        },
+      });
     } catch (error: any) {
       console.error("Error submitting booking", error);
       const message =
@@ -220,7 +246,19 @@ const SubmitBooking = () => {
   };
 
   const handleCancel = () => {
-    navigate(-1);
+    if (backTarget && backTarget !== "/dashboard") {
+      // If redirecting to worker details, pass minimal worker object in state
+      navigate(backTarget, {
+        state: {
+          worker: {
+            worker_id: bookingWorkerId,
+            id: bookingWorkerId,
+          },
+        },
+      });
+    } else {
+      navigate(backTarget || "/dashboard");
+    }
   };
 
   return (

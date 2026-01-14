@@ -19,7 +19,9 @@ import { getAdminId } from "@/lib/cookieUtils";
 
 const Report = () => {
   const [timePeriod, setTimePeriod] = useState("year");
-  const [selectedYear, setSelectedYear] = useState("2025");
+  const [selectedYear, setSelectedYear] = useState(
+    () => new Date().getFullYear().toString()
+  );
 
   // Scroll to top on route change
   useScrollToTop();
@@ -52,8 +54,9 @@ const Report = () => {
   const graphContainerRef = useRef<HTMLDivElement>(null);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
 
-  // Available years & months
-  const years = ["2025", "2024", "2023", "2022"];
+  // Available years & months (current year + last 3)
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 4 }, (_, i) => (currentYear - i).toString());
   const months = [
     "Jan",
     "Feb",

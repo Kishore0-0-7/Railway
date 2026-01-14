@@ -1184,10 +1184,10 @@ function Settings() {
 
       const settingsApiData: any = {
         full_name: payloadAdminName,
-        type1: settingsToSave.seating_types[0].name || FIXED_SEATING_NAMES[0],
-        type1_amount: settingsToSave.seating_types[0].amount ? parseInt(settingsToSave.seating_types[0].amount) : null,
+        type_1: settingsToSave.seating_types[0].name || FIXED_SEATING_NAMES[0],
+        type_1_amount: settingsToSave.seating_types[0].amount ? parseInt(settingsToSave.seating_types[0].amount) : null,
         grace_amount: settingsToSave.seating_types[0].grace_time ? parseInt(settingsToSave.seating_types[0].grace_time) : 0,
-        type2: settingsToSave.seating_types[1].name || FIXED_SEATING_NAMES[1],
+        type_2: settingsToSave.seating_types[1].name || FIXED_SEATING_NAMES[1],
         grace_amount_type2: settingsToSave.seating_types[1].grace_time ? parseInt(settingsToSave.seating_types[1].grace_time) : 0,
         type2_breakdown: type2_breakdown,
         advance_payment_enabled: !!settingsToSave.advance_payment_enabled,
