@@ -88,33 +88,33 @@ const createAdmin = async (req, res) => {
     const { rows } = await client.query(insertQuery, values);
 
     // Create default settings for the new admin
-    const defaultSettingsQuery = `
-      INSERT INTO settings (
-        admin_id, admin_name, hall_name, 
-        type1, type1_amount, 
-        type2, type2_amount, 
-        type3, type3_amount, 
-        type4, type4_amount,
-        advance_payment_enabled, default_advance_percentage
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-      ON CONFLICT (admin_id) DO NOTHING;
-    `;
+    // const defaultSettingsQuery = `
+    //   INSERT INTO settings (
+    //     admin_id, admin_name, hall_name, 
+    //     type1, type1_amount, 
+    //     type2, type2_amount, 
+    //     type3, type3_amount, 
+    //     type4, type4_amount,
+    //     advance_payment_enabled, default_advance_percentage
+    //   ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+    //   ON CONFLICT (admin_id) DO NOTHING;
+    // `;
 
-    await client.query(defaultSettingsQuery, [
-      newAdminId,
-      full_name,
-      "Default Hall", // Default hall name
-      "Sitting",
-      100, // Default type1
-      "Sleeper",
-      150, // Default type2
-      "AC",
-      200, // Default type3
-      "Premium",
-      250, // Default type4
-      0, // advance_payment_enabled (disabled by default)
-      0, // default_advance_percentage
-    ]);
+    // await client.query(defaultSettingsQuery, [
+    //   newAdminId,
+    //   full_name,
+    //   "Default Hall", // Default hall name
+    //   "Sitting",
+    //   100, // Default type1
+    //   "Sleeper",
+    //   150, // Default type2
+    //   "AC",
+    //   200, // Default type3
+    //   "Premium",
+    //   250, // Default type4
+    //   0, // advance_payment_enabled (disabled by default)
+    //   0, // default_advance_percentage
+    // ]);
 
     await client.query("COMMIT");
 
